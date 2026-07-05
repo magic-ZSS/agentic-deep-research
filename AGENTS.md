@@ -52,6 +52,11 @@ Open Deep Research 是一个可配置、完全开源的深度研究智能体(dee
 * `pubmed.md` - PubMed 研究示例
 * `inference-market.md` - 推理市场分析示例
 
+### 作者笔记(`author notes/`)
+
+* 本作者开发过程中用来做临时过长期笔记、随意工作区、备份区等空间
+* 本作者严格保证该区内容绝对不会对项目的正常运行产生任何影响
+* 正常情况可以忽略无需关注，仅在明确要求必须访问该区域时才关注
 
 ## 核心技术
 
@@ -61,24 +66,24 @@ Open Deep Research 是一个可配置、完全开源的深度研究智能体(dee
 * **搜索 API** - 支持 Tavily、OpenAI/Anthropic 原生搜索、DuckDuckGo 和 Exa
 * **MCP Servers** - 通过 Model Context Protocol 扩展智能体能力
 
-# Open Deep Research 智能体工作规范
+# 智能体工作规范
 
 ## 启动流程（Startup Workflow）
 
 开始修改前：
 
-1. 确认位于仓库根目录并阅读 `README.md`。
-2. 阅读 `feature_list.json`、`progress.md` 和 `session-handoff.md`。
-3. 执行 `git status --short`，保留用户已有及无关改动。
-4. 一次只处理一个功能（One feature at a time）。
-5. 运行 `./init.sh`；若基线失败，先记录证据再修改。
-6. 所有命令都倾向于使用conda或langgraph原生命令，用户天然排除uv命令
+1. 本项目的本地固有运行环境为 conda activate open-deep-research
+2. 确认位于仓库根目录并阅读 `README.md`。
+3. 阅读 `feature_list.json`、`progress.md` 和 `session-handoff.md`。
+4. 执行 `git status --short`，保留用户已有及无关改动。
+5. 一次只处理一个功能（One feature at a time）。
+6. 运行 `./init.sh`；若基线失败，先记录证据再修改。
+7. 所有命令都倾向于使用conda或langgraph原生命令，用户天然排除uv命令
 
 ## 项目范围（Scope）
 
 核心代码位于 `src/open_deep_research/`，认证代码位于 `src/security/`，
 评估工具位于 `tests/`，遗留实现位于 `src/legacy/`。
-`deep_research_from_scratch/` 是独立教学模块，除非当前功能明确要求，否则不要修改。
 
 - 不得静默扩大功能范围。
 - 不得覆盖或清理无关工作树改动。
