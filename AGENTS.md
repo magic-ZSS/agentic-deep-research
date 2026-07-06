@@ -70,8 +70,13 @@ Open Deep Research 是一个可配置、完全开源的深度研究智能体(dee
 
 ## 启动流程（Startup Workflow）
 
-开始修改前：
+### Codex Instructions
 
+每次新对话开始时，先读取 `docs/codebase/` 下的项目文档，恢复项目上下文。除非用户明确要求重新生成项目文档，否则不要自动运行 `$acquire-codebase-knowledge`。
+
+默认使用简体中文回答。修改代码前，必须先阅读与任务直接相关的源码、测试和配置文件。
+
+### 需要注意的规范
 1. 本项目的本地固有运行环境为 conda activate open-deep-research
 2. 确认位于仓库根目录并阅读 `README.md`。
 3. 阅读 `feature_list.json`、`progress.md` 和 `session-handoff.md`。

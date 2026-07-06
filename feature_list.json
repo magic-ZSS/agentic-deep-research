@@ -15,6 +15,14 @@
       "dependencies": [],
       "status": "completed",
       "evidence": "新增 run.py；直接导入 deep_researcher，使用 HumanMessage 构造输入，加载项目根目录 .env，不覆盖图默认配置；compileall 通过，单文件 Ruff 通过，空 QUESTION 路径给出本地错误提示。init.sh 基线返回 0 但仍混入 WSL/CRLF 与 python: command not found 输出，已记录。"
+    },
+    {
+      "id": "codebase-onboarding-001",
+      "name": "生成中文 codebase onboarding 文档",
+      "description": "在不修改业务代码的前提下，使用 acquire-codebase-knowledge 流程理解项目，并生成 docs/codebase 下七份中文 onboarding 文档。",
+      "dependencies": [],
+      "status": "completed",
+      "evidence": "已生成 docs/codebase/STACK.md、STRUCTURE.md、ARCHITECTURE.md、CONVENTIONS.md、INTEGRATIONS.md、TESTING.md、CONCERNS.md；确认 docs/codebase 仅包含这七份文件；模板占位符检查通过；每份文档包含证据章节；compileall src 通过；legacy pytest collect 通过；记录了 init.sh、ruff、mypy 环境风险。"
     }
   ]
 }
