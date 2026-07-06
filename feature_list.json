@@ -7,6 +7,14 @@
       "dependencies": [],
       "status": "completed",
       "evidence": "五个 Harness 文件已生成；结构验证 100/100（25/25），JSON 与格式检查通过，未修改业务代码。"
+    },
+    {
+      "id": "cli-runner-001",
+      "name": "新增 IDE 友好的 Deep Research 运行入口",
+      "description": "新增 src/open_deep_research/run.py，使用户无需启动 langgraph dev，可直接在 IDE 中修改 QUESTION 并运行已编译的 Deep Research 图，同时兼容简单命令行问题参数。",
+      "dependencies": [],
+      "status": "completed",
+      "evidence": "新增 run.py；直接导入 deep_researcher，使用 HumanMessage 构造输入，加载项目根目录 .env，不覆盖图默认配置；compileall 通过，单文件 Ruff 通过，空 QUESTION 路径给出本地错误提示。init.sh 基线返回 0 但仍混入 WSL/CRLF 与 python: command not found 输出，已记录。"
     }
   ]
 }

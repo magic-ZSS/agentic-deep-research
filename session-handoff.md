@@ -2,41 +2,42 @@
 
 ## 当前目标（Current Objective）
 
-- 目标：初始化并验证最小可用智能体 Harness。
-- 当前状态：已完成，所有结构检查通过。
+- 目标：新增 IDE 友好的 Deep Research 普通运行入口。
+- 当前状态：completed。
 - 分支 / 提交：当前工作树，未创建提交。
 
 ## 本次已完成
 
-- 添加指令、状态、验证、范围和生命周期文件。
-- 保持业务代码不变。
+- 新增 `src/open_deep_research/run.py`。
+- 入口默认适合 IDE：修改 `QUESTION = "..."` 后直接运行文件。
+- 入口也兼容轻量命令行：`python src/open_deep_research/run.py "你的研究问题"`。
+- 保留原本 LangGraph 图和默认配置：直接导入 `deep_researcher`，不修改 `deep_researcher.py`，不传入 clarification/model/search 等配置覆盖。
+- 更新 `feature_list.json` 和 `progress.md`，记录功能状态、设计决定、验证证据和风险。
 
 ## 验证证据
 
 | 检查 | 命令 | 结果 | 备注 |
 |---|---|---|---|
-| 结构验证 | `validate-harness.mjs --target .` | 通过 | 100/100，25/25 项 |
-| 功能清单 | JSON 解析与格式检查 | 通过 | JSON 有效，无尾随空格 |
-| 变更范围 | Git 路径检查 | 通过 | 未修改业务代码或项目配置 |
+| 统一入口基线 | `bash ./init.sh` | 异常输出 | 沙盒内 WSL `E_ACCESSDENIED`；提权后返回 0，但混入 CRLF/WSL 与 `python: command not found` 报错 |
+| 单文件编译 | `conda run --no-capture-output -n open-deep-research python -m compileall -q src/open_deep_research/run.py` | 通过 | 未触发模型调用 |
+| 单文件 Ruff | `conda run --no-capture-output -n hf-agent python -m ruff check src/open_deep_research/run.py` | 通过 | 仅目标文件 |
+| 空问题路径 | `conda run --no-capture-output -n open-deep-research python src/open_deep_research/run.py` | 通过预期 | 未设置 `QUESTION` 时给出本地错误提示，不调用图 |
 
 ## 修改文件（Files Changed）
 
-- `AGENTS.md`
+- `src/open_deep_research/run.py`
 - `feature_list.json`
 - `progress.md`
-- `init.sh`
 - `session-handoff.md`
 
 ## 阻塞项与风险（Blockers / Risks）
 
-- 当前 Python 环境缺少 Ruff、mypy 和 pytest；运行完整 `init.sh` 前需执行 `uv sync --extra dev`。
+- `init.sh` 当前在 Windows/WSL 调用链中输出不可靠，需要单独修复 CRLF/WSL/Python 环境问题。
+- `open-deep-research` conda 环境未发现可用 `mypy` 模块。
+- 未执行真实研究调用，以避免调用外部模型/搜索服务和产生费用。
 
 ## 下次会话启动（Next Session）
 
-1. 阅读 `AGENTS.md`、`feature_list.json` 和 `progress.md`。
-2. 查看本交接文件与 `git status --short`。
-3. 修改前运行 `./init.sh`。
-
-## 建议下一步（Recommended Next Step）
-
-- 修改业务代码前，在 `feature_list.json` 新增一个具体功能。
+1. 阅读 `AGENTS.md`、`feature_list.json`、`progress.md` 和本文件。
+2. 执行 `git status --short`，保留用户已有改动。
+3. 如需真实运行，先配置 `.env`，再编辑 `src/open_deep_research/run.py` 顶部 `QUESTION`。
