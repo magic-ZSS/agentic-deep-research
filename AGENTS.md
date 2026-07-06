@@ -1,131 +1,192 @@
-# Open Deep Research 仓库概览
+# AGENTS.md
 
-## 项目描述
+本文件是本仓库的智能体工作规范。Codex / coding agent 每次进入本仓库时，必须优先遵守本文件；用户在当前对话中的明确要求优先级更高。
 
-Open Deep Research 是一个可配置、完全开源的深度研究智能体(deep research agent)，支持多个模型提供商、搜索工具以及 MCP（Model Context Protocol，模型上下文协议）服务器。它能够通过并行处理自动执行研究任务，并生成内容全面的研究报告。
+## 1. 项目定位
 
-## 仓库结构
+本项目是一个基于 LangGraph / LangChain 的 Open Deep Research 智能体工程，核心目标是支持可配置的深度研究流程，包括模型配置、搜索工具、MCP 工具接入、研究任务拆分、并行研究、结果压缩和最终报告生成。
 
-### 根目录
+主要维护范围：
 
-* `README.md` - 完整的项目文档，包含快速入门指南
-* `pyproject.toml` - Python 项目配置与依赖声明
-* `langgraph.json` - LangGraph 配置文件，用于定义主图(Graph)的入口点
-* `uv.lock` - UV 包管理器的依赖锁定文件
-* `LICENSE` - MIT 许可证
-* `.env.example` - 环境变量模板（不受版本控制追踪）
+* `src/open_deep_research/`：当前主实现，默认优先维护。
+* `src/security/`：LangGraph 部署相关鉴权代码。
+* `tests/`：Deep Research Bench / LangSmith 评估脚本。
+* `docs/codebase/`：阶段性项目认知文档。
+* `src/legacy/`：历史实现，仅作参考；除非用户明确要求，否则不要主动修改。
 
-### 核心实现（`src/open_deep_research/`）
+## 2. 每次新会话启动流程
 
-* `deep_researcher.py` - LangGraph 的主要实现文件（入口点：`deep_researcher`）
-* `configuration.py` - 配置管理与设置
-* `state.py` - 图状态(Graph state)定义与数据结构
-* `prompts.py` - 系统提示词与提示词模板
-* `utils.py` - 工具函数与辅助功能
-* `files/` - 研究输出文件与示例文件
+开始任何开发、调试、重构或文档任务前，先执行以下上下文恢复流程：
 
-### 遗留实现（`src/legacy/`）
+1. 确认当前位于仓库根目录。
+2. 读取 `AGENTS.md`。
+3. 读取动态状态文件：
 
-包含两种早期的研究实现：
+   * `feature_list.json`
+   * `progress.md`
+   * `session-handoff.md`
+4. 如果存在 `docs/codebase/`，优先阅读其中与当前任务相关的文档：
 
-* `graph.py` - 带有人机协同(human-in-the-loop)机制的规划与执行(plan-and-execute)工作流
-* `multi_agent.py` - 监督者—研究员(supervisor-researcher)多智能体架构
-* `legacy.md` - 遗留实现的说明文档
-* `CLAUDE.md` - 面向遗留实现的 Claude 专用指令
-* `tests/` - 遗留实现专用测试
+   * `STACK.md`
+   * `STRUCTURE.md`
+   * `ARCHITECTURE.md`
+   * `CONVENTIONS.md`
+   * `INTEGRATIONS.md`
+   * `TESTING.md`
+   * `CONCERNS.md`
+5. 执行 `git status --short`，识别并保留用户已有改动。
+6. 在修改代码前，必须再阅读与当前任务直接相关的源码、测试和配置文件。
 
-### 安全模块（`src/security/`）
+不要只根据文件名、README 或历史聊天记录推断实现细节。
 
-* `auth.py` - 用于 LangGraph 部署的身份验证处理程序
+## 3. 工作范围控制
 
-### 测试（`tests/`）
+默认一次只处理一个明确功能或问题。
 
-* `run_evaluate.py` - 主评估脚本，配置为在 Deep Research Bench 上运行
-* `evaluators.py` - 专用评估函数
-* `prompts.py` - 评估提示词与评估标准
-* `pairwise_evaluation.py` - 对比评估工具
-* `supervisor_parallel_evaluation.py` - 多线程并行评估
+不得：
 
-### 示例（`examples/`）
+* 静默扩大功能范围；
+* 顺手重构无关模块；
+* 覆盖、清理或格式化无关工作树改动；
+* 主动修改 `src/legacy/`；
+* 主动运行会调用外部模型、搜索 API、LangSmith 或产生费用的评估任务；
+* 提交 `.env`、API key、私有 MCP 配置、敏感日志或敏感报告。
 
-* `arxiv.md` - ArXiv 研究示例
-* `pubmed.md` - PubMed 研究示例
-* `inference-market.md` - 推理市场分析示例
+如果任务需要扩大范围，先说明原因并等待用户确认。
 
-### 作者笔记(`author notes/`)
+## 4. 环境与命令偏好
 
-* 本作者开发过程中用来做临时过长期笔记、随意工作区、备份区等空间
-* 本作者严格保证该区内容绝对不会对项目的正常运行产生任何影响
-* 正常情况可以忽略无需关注，仅在明确要求必须访问该区域时才关注
+本项目默认本地环境：
 
-## 核心技术
+```bash
+conda activate open-deep-research
+```
 
-* **LangGraph** - 工作流编排与图执行(Graph execution)
-* **LangChain** - 大语言模型集成与工具调用(tool calling)
-* **多个 LLM 提供商** - 支持 OpenAI、Anthropic、Google、Groq 和 DeepSeek
-* **搜索 API** - 支持 Tavily、OpenAI/Anthropic 原生搜索、DuckDuckGo 和 Exa
-* **MCP Servers** - 通过 Model Context Protocol 扩展智能体能力
+默认使用 conda / pip / Python 原生命令 / LangGraph 原生命令。除非用户明确要求或分析上游兼容性时必须涉及，否则不要推荐 uv 作为本项目默认操作路径。
 
-# 智能体工作规范
+常用命令：
 
-## 启动流程（Startup Workflow）
+```bash
+pip install -e .
+langgraph dev
+python src/open_deep_research/run.py "你的研究问题"
+```
 
-### Codex Instructions
+完整 Deep Research Bench 评估可能调用外部服务并产生成本，不要主动运行：
 
-每次新对话开始时，先读取 `docs/codebase/` 下的项目文档，恢复项目上下文。除非用户明确要求重新生成项目文档，否则不要自动运行 `$acquire-codebase-knowledge`。
+```bash
+python tests/run_evaluate.py
+```
 
-默认使用简体中文回答。修改代码前，必须先阅读与任务直接相关的源码、测试和配置文件。
+## 5. 验证策略
 
-### 需要注意的规范
-1. 本项目的本地固有运行环境为 conda activate open-deep-research
-2. 确认位于仓库根目录并阅读 `README.md`。
-3. 阅读 `feature_list.json`、`progress.md` 和 `session-handoff.md`。
-4. 执行 `git status --short`，保留用户已有及无关改动。
-5. 一次只处理一个功能（One feature at a time）。
-6. 运行 `./init.sh`；若基线失败，先记录证据再修改。
-7. 所有命令都倾向于使用conda或langgraph原生命令，用户天然排除uv命令
-
-## 项目范围（Scope）
-
-核心代码位于 `src/open_deep_research/`，认证代码位于 `src/security/`，
-评估工具位于 `tests/`，遗留实现位于 `src/legacy/`。
-
-- 不得静默扩大功能范围。
-- 不得覆盖或清理无关工作树改动。
-- 不得提交 `.env`、API 密钥、私有 MCP 配置或敏感报告。
-
-## 状态文件
-
-- `feature_list.json`：功能 status、dependencies 和 evidence 的唯一来源。
-- `progress.md`：记录当前状态、决定、阻塞项、文件和下一步。
-- `session-handoff.md`：跨会话恢复入口。
-- `init.sh`：统一验证入口。
-
-状态仅使用 `not-started`、`in-progress`、`blocked`、`completed`。
-
-## 验证命令（Verification Commands）
+统一验证入口是：
 
 ```bash
 ./init.sh
 ```
 
-脚本执行源码编译、Ruff、mypy 和遗留测试收集。它不会运行
-`python tests/run_evaluate.py`，因为完整评估依赖外部服务并可能产生费用。
+但当前该脚本在 Windows / WSL / conda 链路中可能存在输出不可靠问题。因此：
 
-## 完成标准（Definition of Done）
+1. 如果可以，优先运行 `./init.sh`。
+2. 如果 `./init.sh` 失败、输出异常，或无法证明结果可靠，必须记录失败证据。
+3. 根据任务范围运行可用的子检查，例如：
 
-功能只有同时满足以下条件才算完成：
+```bash
+python -m compileall -q src
+python -m pytest --collect-only -q src/legacy/tests
+python -m ruff check .
+python -m mypy src
+```
 
-- 范围内行为已实现。
-- 相关验证已运行并通过。
-- 命令结果或其他证据已记录。
-- 相关文档已更新。
-- 状态文件足以让下一会话独立恢复。
+如果 `ruff` 或 `mypy` 在当前环境中缺失，不要伪造通过；应明确记录为环境缺口。
 
-## 会话结束（End of Session）
+## 6. 状态文件规则
 
-1. 更新功能 status 和 evidence。
-2. 在 `progress.md` 记录验证、文件、阻塞项和下一步。
-3. 未完成时更新 `session-handoff.md`。
-4. 检查 `git status --short`。
-5. 留下 clean、可重复验证且不依赖聊天记录的恢复路径。
+状态文件是跨会话恢复的主要依据：
+
+* `feature_list.json`：功能状态、依赖和 evidence 的来源。
+* `progress.md`：当前状态、验证证据、决策、风险和下一步。
+* `session-handoff.md`：下一次会话恢复入口。
+
+状态值只能使用：
+
+* `not-started`
+* `in-progress`
+* `blocked`
+* `completed`
+
+修改功能状态时，必须同步更新 evidence，避免只有状态没有证据。
+
+## 7. docs/codebase 维护规则
+
+`docs/codebase/` 是阶段性项目认知文档，不是每次小改都要全量重写。
+
+默认策略：
+
+* 新会话：只读取 `docs/codebase/`，不要自动重跑 skill。
+* 小改动：仅当项目结构、入口、测试、配置、架构或集成结论发生变化时，局部更新相关文档。
+* 大改动：当目录结构、核心流程、运行入口、技术栈或外部集成显著变化时，可以运行：
+
+```text
+$acquire-codebase-knowledge
+```
+
+更新文档时必须遵守：
+
+1. 使用简体中文；
+2. 代码、命令、路径、类名、函数名、包名、API 名、环境变量名和配置键名保持英文；
+3. 新增或修改的结论必须有 evidence 文件路径；
+4. 无法确认的内容标记为 `[TODO]`；
+5. 需要用户确认团队意图的内容标记为 `[ASK USER]`；
+6. 删除或修正已经过时的描述；
+7. 最后说明更新了哪些文档，以及为什么更新。
+
+## 8. 编码与修改原则
+
+修改代码时遵守：
+
+* 优先最小改动；
+* 优先修复根因，不做表面绕过；
+* 保持现有 LangGraph / LangChain 架构风格；
+* 不引入不必要的新依赖；
+* 新增依赖前先说明理由；
+* 不把本地路径、个人环境或真实 secret 写入代码；
+* 对涉及外部服务、费用、鉴权、MCP token、LangSmith 评估的改动保持保守。
+
+核心主图相关改动通常需要优先阅读：
+
+* `src/open_deep_research/deep_researcher.py`
+* `src/open_deep_research/configuration.py`
+* `src/open_deep_research/state.py`
+* `src/open_deep_research/prompts.py`
+* `src/open_deep_research/utils.py`
+* `langgraph.json`
+
+## 9. 完成标准
+
+一个任务只有同时满足以下条件，才可以标记为完成：
+
+* 范围内行为已实现；
+* 相关源码、测试、配置或文档已按需修改；
+* 相关验证已运行，或明确记录无法运行的原因；
+* 命令结果、文件路径或其他 evidence 已记录；
+* `feature_list.json`、`progress.md`、`session-handoff.md` 已按需更新；
+* 最终回复说明：
+
+  * 修改了什么；
+  * 为什么这样改；
+  * 运行了哪些验证；
+  * 哪些问题仍然阻塞或需要用户确认。
+
+## 10. 会话结束流程
+
+结束一次开发会话前：
+
+1. 更新 `feature_list.json` 中相关功能的 status 和 evidence。
+2. 在 `progress.md` 记录本次修改、验证、决策、风险和下一步。
+3. 如果任务未完成，更新 `session-handoff.md`。
+4. 再次执行 `git status --short`。
+5. 留下不依赖聊天记录即可恢复的下一步说明。
+
+默认使用简体中文回复用户。

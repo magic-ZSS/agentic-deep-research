@@ -31,7 +31,7 @@
 - Credential sources: `.env`、环境变量、`RunnableConfig["configurable"]["apiKeys"]`、`x-supabase-access-token`。
 - `.env` 被 `.gitignore` 忽略，`langgraph.json` 指向 `./.env`。
 - `GET_API_KEYS_FROM_CONFIG=true` 时，OpenAI/Anthropic/Google/Tavily key 从 config 的 `apiKeys` 读取；否则从环境变量读取。
-- README 和 AGENTS 提到 `.env.example`，本次文件搜索未发现该文件；需要在 `CONCERNS.md` 中确认文档还是文件应调整。
+- 作者已确认 `.env` 是正式本地环境配置文件；不再要求维护或引用单独的环境模板文件。
 - 轮换与生命周期: MCP token 根据 `expires_in` 清理；其他 provider key rotation 未在代码中定义。[TODO]
 
 ## 4) 可靠性与失败行为

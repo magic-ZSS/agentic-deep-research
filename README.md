@@ -20,14 +20,7 @@ Deep research has broken out as one of the most popular agent applications. This
 
 ### 🚀 Quickstart
 
-1. Clone the repository and activate a virtual environment:
-```bash
-git clone https://github.com/langchain-ai/open_deep_research.git
-cd open_deep_research
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
-
+1. Clone the repository and activate the project conda environment:
 ```bash
 git clone https://github.com/langchain-ai/open_deep_research.git
 cd open_deep_research
@@ -39,26 +32,18 @@ python -m pip install --upgrade pip setuptools wheel
 
 2. Install dependencies:
 ```bash
-uv sync
-# or
-uv pip install -r pyproject.toml
-```
-
-```bash
 pip install -e . # 可编辑模式安装当前目录中的项目，并基于pyproject.toml进行依赖解析
 ```
 
 3. Set up your `.env` file to customize the environment variables (for model selection, search tools, and other configuration settings):
 ```bash
-cp .env.example .env
+# Create or update the local .env file at the project root.
+# Do not commit .env or API keys.
 ```
 
 4. Launch agent with the LangGraph server locally:
 
 ```bash
-# Install dependencies and start the LangGraph server
-uvx --refresh --from "langgraph-cli[inmem]" --with-editable . --python 3.11 langgraph dev --allow-blocking
-
 langgraph dev
 ```
 
@@ -149,7 +134,7 @@ You can also deploy your own instance of OAP, and make your own custom agents (l
 
 ### Legacy Implementations 🏛️
 
-The `src/legacy/` folder contains two earlier implementations that provide alternative approaches to automated research. They are less performant than the current implementation, but provide alternative ideas understanding the different approaches to deep research.
+The `src/legacy/` folder contains two earlier implementations that provide alternative approaches to automated research. They are less performant than the current implementation and are kept as historical reference material. Ongoing support is scoped to the current implementation in `src/open_deep_research/`.
 
 #### 1. Workflow Implementation (`legacy/graph.py`)
 - **Plan-and-Execute**: Structured workflow with human-in-the-loop planning

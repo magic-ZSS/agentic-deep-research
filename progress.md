@@ -3,37 +3,36 @@
 ## 当前状态（Current State）
 
 **最后更新（Last Updated）：** 2026-07-06
-**当前功能：** `codebase-onboarding-001`
+**当前功能：** `author-decisions-001`
 **状态：** completed
 
 ## 已完成（What's Done）
 
-- 使用 `acquire-codebase-knowledge` skill 完成项目级 onboarding 调查。
-- 运行扫描脚本生成临时 scan 输出，并基于 scan、README、状态文件、配置、核心源码、legacy 实现、测试脚本和 CI 配置取证。
-- 生成七份中文 codebase 文档：
-  - `docs/codebase/STACK.md`
-  - `docs/codebase/STRUCTURE.md`
-  - `docs/codebase/ARCHITECTURE.md`
-  - `docs/codebase/CONVENTIONS.md`
-  - `docs/codebase/INTEGRATIONS.md`
-  - `docs/codebase/TESTING.md`
-  - `docs/codebase/CONCERNS.md`
-- 删除本次扫描产生的临时 `docs/codebase/.codebase-scan.txt`，使 `docs/codebase/` 最终只保留七份 onboarding 文档。
+- 基于作者对 onboarding 未决问题的回答，固化 5 条项目规则：
+  - `.env` 是正式本地环境配置文件；不再要求维护或引用单独环境模板文件；不得提交 `.env`、API key 或私有 MCP 配置。
+  - 后续文档、命令示例和操作路径统一使用 conda/pip 与 LangGraph 原生命令，不再推荐 uv。
+  - `init.sh` 若在 Windows/WSL 链路不可靠，后续执行者可在最小化改动、最低修复工作量、不影响其他任务封装性的前提下自行选择修复方式。
+  - 后续只保证主实现 `src/open_deep_research/`；`src/legacy/` 仅作为历史参考。
+  - 多 MCP server 支持是明确后续 feature，需要单独建功能项并更新状态文件。
+- 更新 `README.md` Quickstart，移除 uv 命令和旧环境模板复制步骤，改为 conda/pip + `langgraph dev`。
+- 更新 `AGENTS.md`，加入作者已确认的项目规则和保证范围。
+- 更新 `docs/codebase/` 相关 onboarding 文档，将未决问题改为已决策规则。
 - 未修改业务代码。
 
 ## 设计决定（Decisions）
 
-- 文档使用简体中文；代码名、包名、命令、API 名和配置 key 保持英文。
-- 未推断无法从文件或命令输出确认的团队意图；未知项使用 `[TODO]`，需要用户决策的项集中记录在 `CONCERNS.md` 的 `[ASK USER]` 问题中。
-- README/AGENTS 与实际文件存在偏差时，同时记录“声明意图”和“当前现实”，不静默修正。
-- `init.sh` 提权后返回 0 但输出混有 CRLF/WSL 与 `python: command not found`，因此记录为验证风险，而不是干净通过证据。
+- 不在本次直接修复 `init.sh`；作者给的是策略授权，不是当前要求修复脚本。
+- 不新增单独环境模板文件；作者确认 `.env` 是正式本地环境配置文件。
+- 不删除或重构 `src/legacy/`；只在文档中明确其为历史参考、不在后续保证范围。
+- 不在本次开发多 MCP；只把多 MCP server 支持记录为明确后续 feature。
 
 ## 本次修改文件（Files Modified This Session）
 
+- `README.md`
+- `AGENTS.md`
 - `docs/codebase/STACK.md`
 - `docs/codebase/STRUCTURE.md`
 - `docs/codebase/ARCHITECTURE.md`
-- `docs/codebase/CONVENTIONS.md`
 - `docs/codebase/INTEGRATIONS.md`
 - `docs/codebase/TESTING.md`
 - `docs/codebase/CONCERNS.md`
@@ -43,28 +42,18 @@
 
 ## 验证证据（Verification Evidence）
 
-- `git status --short`：开始时仅有未跟踪 `.agents/`；保留未改。
-- `conda run -n open-deep-research python .agents/skills/acquire-codebase-knowledge/scripts/scan.py --output docs/codebase/.codebase-scan.txt`：扫描完成。
-- `bash ./init.sh`：沙箱内失败，错误为 WSL `E_ACCESSDENIED`。
-- `bash ./init.sh`（提权）：返回 0，但输出混有 CRLF/WSL 与 `python: command not found`。
-- `conda run --no-capture-output -n open-deep-research python -m compileall -q src`：通过。
-- `conda run --no-capture-output -n open-deep-research python -m pytest --collect-only -q src/legacy/tests`：通过，收集 1 个测试，存在 LangGraph/langchain-community deprecation warnings。
-- `conda run --no-capture-output -n open-deep-research python -m mypy src`：失败，当前 conda 环境没有 `mypy` 模块。
-- `conda run --no-capture-output -n open-deep-research python -m ruff check src tests`：失败，当前 conda 环境没有 `ruff` 模块。
-- `Get-ChildItem -File docs/codebase`：确认仅有七份指定 Markdown 文档。
-- `rg` 模板占位符检查：未发现 `[VALUE]`、`[FILE_PATH]` 等模板残留。
-- `rg "^## [0-9]+\\) 证据" docs/codebase`：七份文档均包含证据章节。
+- `git status --short`：开始时已有 `AGENTS.md` 改动；本次保留并在其上追加规则。
+- `conda run --no-capture-output -n open-deep-research python -m json.tool feature_list.json`：通过。
+- 规则残留检查：README/AGENTS/onboarding 文档中不再保留旧环境模板文件名、uv 推荐命令或未决问题标记。
+- `git diff --check`：通过；仅输出 Git 下次触碰部分文本文件时 LF 会替换为 CRLF 的提示。
 
 ## 阻塞项与风险（Blockers / Risks）
 
-- `init.sh` 在当前 Windows/WSL 调用链中输出不可靠，可能返回 0 但实际命令未执行成功。
-- `open-deep-research` conda 环境缺少 `ruff` 和 `mypy`，与 `init.sh` 的验证预期不一致。
-- README/AGENTS 提到 `.env.example`，但当前文件搜索未发现该文件。
-- `.github/dependabot.yml` 有两个顶层 `updates` key，需要确认是否会覆盖 pip 配置。
-- `src/open_deep_research/deep_researcher.py` 中 `or True` 异常分支会掩盖非 token-limit 错误。
+- `init.sh` 仍未修复；只是记录了后续最小化修复策略。
+- 当前环境之前已确认缺少 `ruff` 和 `mypy`；本次文档规则更新不依赖运行它们。
 
 ## 下次会话说明
 
-1. 先阅读 `docs/codebase/` 七份 onboarding 文档获取项目全局上下文。
-2. 若继续做修复，优先从 `docs/codebase/CONCERNS.md` 的 `[ASK USER]` 问题中选择一个明确范围。
-3. 若要恢复可靠验证入口，建议单独处理 `init.sh` 的 CRLF/WSL/Python 环境问题，并补齐 `ruff`/`mypy` 环境。
+1. 先阅读 `AGENTS.md` 和 `docs/codebase/CONCERNS.md` 的作者已决策规则。
+2. 后续新增文档或命令示例时，只使用 conda/pip 与 LangGraph 原生命令。
+3. 多 MCP server 支持是明确后续 feature；开发前需要在 `feature_list.json` 建独立功能项。

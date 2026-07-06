@@ -23,6 +23,14 @@
       "dependencies": [],
       "status": "completed",
       "evidence": "已生成 docs/codebase/STACK.md、STRUCTURE.md、ARCHITECTURE.md、CONVENTIONS.md、INTEGRATIONS.md、TESTING.md、CONCERNS.md；确认 docs/codebase 仅包含这七份文件；模板占位符检查通过；每份文档包含证据章节；compileall src 通过；legacy pytest collect 通过；记录了 init.sh、ruff、mypy 环境风险。"
+    },
+    {
+      "id": "author-decisions-001",
+      "name": "固化作者对 onboarding 问题的决策",
+      "description": "将作者关于 .env、conda/pip、init.sh 修复策略、legacy 保证范围和多 MCP feature 的回答写入仓库规则与 onboarding 文档。",
+      "dependencies": ["codebase-onboarding-001"],
+      "status": "completed",
+      "evidence": "已更新 AGENTS.md、README.md、docs/codebase/STACK.md、STRUCTURE.md、ARCHITECTURE.md、INTEGRATIONS.md、TESTING.md、CONCERNS.md；CONCERNS.md 中未决问题列表已替换为作者已决策规则；后续文档统一 conda/pip，仅引用 .env；legacy 仅历史参考；多 MCP server 支持列为明确后续 feature。"
     }
   ]
 }

@@ -6,7 +6,7 @@
 |------|---------|----------|
 | `README.md` | 项目说明、快速启动、配置、评估和部署入口说明。 | `README.md` |
 | `pyproject.toml` | Python 包元数据、依赖、setuptools 映射和 Ruff 配置。 | `pyproject.toml` |
-| `uv.lock` | 锁定依赖版本；本地规范仍要求优先 conda/LangGraph 命令。 | `uv.lock`, `AGENTS.md` |
+| `uv.lock` | 历史依赖锁定文件；作者已确认后续文档和操作不再推荐 uv 命令。 | `uv.lock`, `AGENTS.md` |
 | `langgraph.json` | LangGraph 图入口、Python 版本、`.env`、本地依赖和 auth 入口。 | `langgraph.json` |
 | `init.sh` | 统一验证入口：compileall、Ruff、mypy、legacy 测试收集。 | `init.sh` |
 | `feature_list.json` | 功能状态、依赖和 evidence 的状态源。 | `feature_list.json`, `AGENTS.md` |
@@ -15,7 +15,7 @@
 | `.github/` | Claude Code workflows 和 Dependabot 配置。 | `.github/workflows/claude.yml`, `.github/workflows/claude-code-review.yml`, `.github/dependabot.yml` |
 | `src/open_deep_research/` | 当前主实现：LangGraph 深度研究 agent。 | `src/open_deep_research/deep_researcher.py` |
 | `src/security/` | LangGraph 部署鉴权处理。 | `src/security/auth.py`, `langgraph.json` |
-| `src/legacy/` | 早期 workflow 和 multi-agent 实现、legacy 测试与说明。 | `src/legacy/legacy.md`, `src/legacy/graph.py`, `src/legacy/multi_agent.py` |
+| `src/legacy/` | 早期 workflow 和 multi-agent 实现、legacy 测试与说明；后续仅作历史参考，不在保证范围。 | `src/legacy/legacy.md`, `src/legacy/graph.py`, `src/legacy/multi_agent.py`, `AGENTS.md` |
 | `tests/` | 当前 Deep Research Bench / LangSmith 评估脚本与评估器。 | `tests/run_evaluate.py`, `tests/evaluators.py` |
 | `examples/` | 生成报告示例。 | `examples/arxiv.md`, `examples/pubmed.md`, `examples/inference-market.md` |
 | `docs/codebase/` | 本次生成的 codebase onboarding 文档。 | `docs/codebase/STACK.md` |
@@ -40,7 +40,7 @@
 | `src/open_deep_research/utils.py` | 搜索工具、MCP 工具、token、API key、token-limit 辅助。 | 顶层 LangGraph graph 构造。 |
 | `src/security/auth.py` | Supabase-backed LangGraph auth hooks。 | 研究逻辑和搜索工具。 |
 | `tests/` | 当前评估、LangSmith extraction、pairwise/supervisor 评估。 | 生产运行时逻辑。 |
-| `src/legacy/` | 历史 workflow/multi-agent 实现和 legacy 测试。 | 新主图的默认逻辑。 |
+| `src/legacy/` | 历史 workflow/multi-agent 实现和 legacy 测试，仅作参考。 | 新主图的默认逻辑；后续保证范围。 |
 
 ## 4) 命名与组织规则
 

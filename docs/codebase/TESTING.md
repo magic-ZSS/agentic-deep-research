@@ -15,7 +15,7 @@ python tests/run_evaluate.py
 python tests/extract_langsmith_data.py --project-name "YOUR_EXPERIMENT_NAME" --model-name "your-model-name" --dataset-name "deep_research_bench"
 ```
 
-`tests/run_evaluate.py` 会调用外部模型、Tavily 和 LangSmith；README 明确提示完整评估可能产生成本。
+`tests/run_evaluate.py` 会调用外部模型、Tavily 和 LangSmith；README 明确提示完整评估可能产生成本。后续文档中的安装和运行示例统一使用 conda/pip 与 LangGraph 原生命令，不推荐 uv。
 
 ## 2) 本次会话观察到的验证结果
 

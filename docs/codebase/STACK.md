@@ -6,7 +6,7 @@
 |------|-------|----------|
 | Primary language | Python | `pyproject.toml`, `src/open_deep_research/deep_researcher.py` |
 | Runtime + version | 包元数据要求 `>=3.10`；LangGraph 配置指定 `3.11`；README 的本地 conda 示例也创建 Python 3.11 环境。 | `pyproject.toml`, `langgraph.json`, `README.md` |
-| Package manager | 项目有 `pyproject.toml` 和 `uv.lock`；README 同时给出 `uv` 与 `pip install -e .`；本仓库本地规范要求优先 `conda`/LangGraph 命令并排除直接使用 `uv`。 | `pyproject.toml`, `uv.lock`, `README.md`, `AGENTS.md` |
+| Package manager | 项目使用 `pyproject.toml` + pip editable install；作者已确认后续文档和操作路径统一使用 conda/pip 与 LangGraph 原生命令，不再推荐 uv 命令。 | `pyproject.toml`, `README.md`, `AGENTS.md` |
 | Module/build system | `setuptools.build_meta`，包从 `src/` 映射到 `open_deep_research`、`legacy`、`tests`。 | `pyproject.toml` |
 
 ## 2) 生产依赖与框架
@@ -63,7 +63,7 @@ python tests/run_evaluate.py
 - Core env vars observed in code: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `TAVILY_API_KEY`, `GET_API_KEYS_FROM_CONFIG`, `SUPABASE_URL`, `SUPABASE_KEY`。
 - Evaluation env vars observed in code: `LANGSMITH_API_KEY` and LangSmith client environment variables.
 - Legacy/search env vars observed in code: `AZURE_AI_SEARCH_ENDPOINT`, `AZURE_AI_SEARCH_INDEX_NAME`, `AZURE_AI_SEARCH_API_KEY`, `PERPLEXITY_API_KEY`, `EXA_API_KEY`, `GOOGLE_CX`, `EVAL_MODEL`, `RESEARCH_AGENT`, `SEARCH_API`, `SUPERVISOR_MODEL`, `RESEARCHER_MODEL`, `PLANNER_PROVIDER`, `PLANNER_MODEL`, `WRITER_PROVIDER`, `WRITER_MODEL`, `MAX_SEARCH_DEPTH`。
-- README 和 `AGENTS.md` 都提到 `.env.example`，但本次文件搜索没有找到该文件；需要在 `CONCERNS.md` 中确认后续处理。
+- 作者已确认 `.env` 是本项目正式本地环境配置文件；不再要求维护或引用单独的环境模板文件。
 - Runtime constraints: 默认搜索 API 为 Tavily；默认模型为 OpenAI `gpt-4.1*`；本地规范要求优先 conda/LangGraph 命令。
 
 ## 6) 证据
