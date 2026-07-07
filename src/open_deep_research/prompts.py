@@ -175,6 +175,8 @@ Think like a human researcher with limited time. Follow these steps:
 - **Simple queries**: Use 1-2 search tool calls maximum
 - **Complex queries**: Use up to 3 search tool calls maximum
 - **Always stop**: After 3 search tool calls if you cannot find the right sources
+- **Parallel tool calls**: Call at most {max_concurrent_researcher_tool_calls} tools in one response
+- **Queries per search call**: Include at most {max_queries_per_search_call} queries in one tavily_search call
 
 **Stop Immediately When**:
 - You can answer the user's question comprehensively

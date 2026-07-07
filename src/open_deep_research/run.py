@@ -55,16 +55,7 @@ from langchain_core.messages import HumanMessage
 # 默认研究问题。
 # 适合在 IDE 中直接修改此变量，然后点击运行当前文件。
 # 如果命令行传入了参数，则命令行参数优先级更高。
-QUESTION = '''请基于 2–3 个官方或权威来源，简要说明 MCP 是什么、解决什么问题、核心组件有哪些，以及它适合哪些 Agent 场景。
-
-限制：
-
-1. 最多使用 3 个来源；
-2. 最终回答不超过 600 字；
-3. 用表格为主；
-4. 不要扩展到无关主题；
-5. 无法确认的内容写“未公开”。
-'''
+QUESTION = '''我想快速理解上下文工程（Context Engineering）在 AI Agent 中到底解决什么问题。请结合 DeepResearch 和 Coding Agent 两类场景，说明它和 Prompt Engineering 的区别。'''
 
 
 # 定位项目根目录。

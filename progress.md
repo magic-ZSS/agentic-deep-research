@@ -2,39 +2,35 @@
 
 ## 当前状态（Current State）
 
-**最后更新（Last Updated）：** 2026-07-06
-**当前功能：** `author-decisions-001`
+**最后更新（Last Updated）：** 2026-07-07
+**当前功能：** `researcher-tool-fanout-001`
 **状态：** completed
 
 ## 已完成（What's Done）
 
-- 基于作者对 onboarding 未决问题的回答，固化 5 条项目规则：
-  - `.env` 是正式本地环境配置文件；不再要求维护或引用单独环境模板文件；不得提交 `.env`、API key 或私有 MCP 配置。
-  - 后续文档、命令示例和操作路径统一使用 conda/pip 与 LangGraph 原生命令，不再推荐 uv。
-  - `init.sh` 若在 Windows/WSL 链路不可靠，后续执行者可在最小化改动、最低修复工作量、不影响其他任务封装性的前提下自行选择修复方式。
-  - 后续只保证主实现 `src/open_deep_research/`；`src/legacy/` 仅作为历史参考。
-  - 多 MCP server 支持是明确后续 feature，需要单独建功能项并更新状态文件。
-- 更新 `README.md` Quickstart，移除 uv 命令和旧环境模板复制步骤，改为 conda/pip + `langgraph dev`。
-- 更新 `AGENTS.md`，加入作者已确认的项目规则和保证范围。
-- 更新 `docs/codebase/` 相关 onboarding 文档，将未决问题改为已决策规则。
-- 未修改业务代码。
+- 在 `Configuration` 中新增 `max_concurrent_researcher_tool_calls` 和 `max_queries_per_search_call`，默认值均为 `3`，约束为 `1..10`，并补充 OAP UI slider metadata。
+- 在 `researcher_tools` 中按 `max_concurrent_researcher_tool_calls` 截断单轮 tool calls，只并行执行 allowed 部分；overflow 部分返回对应 `ToolMessage`，保持每个原始 tool call 都有结果。
+- 在 `tavily_search` 中按 `max_queries_per_search_call` 截断 `queries`，并在输出中提示 skipped queries。
+- 在 `tavily_search` 的 raw content 摘要阶段复用 `max_queries_per_search_call` 创建 `asyncio.Semaphore`，限制摘要并发但不丢弃已返回的 unique URL。
+- 更新 `research_system_prompt`，明确单轮工具并发上限、单次 `tavily_search` query 上限，并保留 `think_tool` 不与其他工具并行的现有约束。
+- 新增 `tests/test_research_limits.py`，用 fake tool / monkeypatch 验证 researcher tool overflow、Tavily query 截断和摘要 semaphore。
+- 局部更新 `docs/codebase/ARCHITECTURE.md` 与 `docs/codebase/CONCERNS.md`，记录新的 fan-out 控制结论与后续调优风险。
 
 ## 设计决定（Decisions）
 
-- 不在本次直接修复 `init.sh`；作者给的是策略授权，不是当前要求修复脚本。
-- 不新增单独环境模板文件；作者确认 `.env` 是正式本地环境配置文件。
-- 不删除或重构 `src/legacy/`；只在文档中明确其为历史参考、不在后续保证范围。
-- 不在本次开发多 MCP；只把多 MCP server 支持记录为明确后续 feature。
+- `max_queries_per_search_call` 同时作为 Tavily 单次 query 上限和摘要并发上限；后续如需更细粒度控制，再单独增加摘要并发配置。
+- overflow tool call 返回错误型文本 `ToolMessage`，不静默丢弃，以避免破坏 tool-calling 消息协议。
+- 不新增依赖，不修改 `src/legacy/`，不运行真实 Tavily/OpenAI/Anthropic/MCP 调用或 Deep Research Bench 评估。
+- 新增默认值 `3` 仅作为保守起点，仍需按实际 API rate limit、模型 RPM/TPM、Tavily key 类型和部署并发量调优。
 
 ## 本次修改文件（Files Modified This Session）
 
-- `README.md`
-- `AGENTS.md`
-- `docs/codebase/STACK.md`
-- `docs/codebase/STRUCTURE.md`
+- `src/open_deep_research/configuration.py`
+- `src/open_deep_research/deep_researcher.py`
+- `src/open_deep_research/utils.py`
+- `src/open_deep_research/prompts.py`
+- `tests/test_research_limits.py`
 - `docs/codebase/ARCHITECTURE.md`
-- `docs/codebase/INTEGRATIONS.md`
-- `docs/codebase/TESTING.md`
 - `docs/codebase/CONCERNS.md`
 - `feature_list.json`
 - `progress.md`
@@ -42,18 +38,18 @@
 
 ## 验证证据（Verification Evidence）
 
-- `git status --short`：开始时已有 `AGENTS.md` 改动；本次保留并在其上追加规则。
-- `conda run --no-capture-output -n open-deep-research python -m json.tool feature_list.json`：通过。
-- 规则残留检查：README/AGENTS/onboarding 文档中不再保留旧环境模板文件名、uv 推荐命令或未决问题标记。
-- `git diff --check`：通过；仅输出 Git 下次触碰部分文本文件时 LF 会替换为 CRLF 的提示。
+- `bash ./init.sh`：sandbox 内失败，显示 WSL/Bash `E_ACCESSDENIED`；按策略升级后返回 0，但输出包含 CRLF/乱码、`set: -\r invalid option` 和 `python: command not found`，因此判定为当前 Windows/WSL 链路不可靠，不能作为通过证据。
+- `conda run --no-capture-output -n open-deep-research python -m compileall -q src tests/test_research_limits.py`：通过。
+- `conda run --no-capture-output -n open-deep-research python -m pytest -q tests/test_research_limits.py`：通过，`2 passed`；仅有既有 Pydantic/LangGraph deprecation warnings 和 `.pytest_cache` WinError 5 warning。
 
 ## 阻塞项与风险（Blockers / Risks）
 
-- `init.sh` 仍未修复；只是记录了后续最小化修复策略。
-- 当前环境之前已确认缺少 `ruff` 和 `mypy`；本次文档规则更新不依赖运行它们。
+- `init.sh` 仍存在 Windows/WSL/conda 链路输出不可靠问题，本次没有修复脚本。
+- `max_concurrent_researcher_tool_calls=3` 和 `max_queries_per_search_call=3` 需要人工结合真实 API rate limit、模型 RPM/TPM、Tavily key 类型和部署并发量继续调优。
+- Pydantic `Field(..., metadata=...)` 与 LangGraph `config_schema/input/output` deprecation warnings 是现有风格问题，本次未重构。
 
 ## 下次会话说明
 
-1. 先阅读 `AGENTS.md` 和 `docs/codebase/CONCERNS.md` 的作者已决策规则。
-2. 后续新增文档或命令示例时，只使用 conda/pip 与 LangGraph 原生命令。
-3. 多 MCP server 支持是明确后续 feature；开发前需要在 `feature_list.json` 建独立功能项。
+1. 先阅读 `AGENTS.md`、`feature_list.json`、`progress.md`、`session-handoff.md` 和相关 `docs/codebase/` 文档。
+2. 若继续优化 fan-out 控制，优先评估是否需要拆分 `max_concurrent_search_summarization_tasks`、provider-aware throttling/backoff、成本预算或 cache。
+3. 不要主动运行 `tests/run_evaluate.py` 或真实外部搜索/模型调用，除非用户明确确认成本与外部服务调用。

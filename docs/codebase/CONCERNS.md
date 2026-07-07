@@ -39,7 +39,7 @@
 | 问题 | 证据 | 当前表现 | 扩展风险 | 建议改进 |
 |---------|----------|-----------------|--------------|-----------------------|
 | 并行 researcher 可能触发 provider rate limit | `src/open_deep_research/configuration.py`, `README.md` | 配置 metadata 提示并发高会遇到 rate limit。 | 用户调高到 20 后可能批量失败。 | 增加 provider-aware throttling/backoff。 |
-| Tavily raw content 摘要并行 fan-out | `src/open_deep_research/utils.py` | 每个 unique URL 都可能触发摘要模型调用。 | 搜索结果多时成本和延迟上升。 | 加入并发 semaphore、成本预算和 cache。 |
+| Researcher 工具调用和 Tavily raw content 摘要 fan-out | `src/open_deep_research/configuration.py`, `src/open_deep_research/deep_researcher.py`, `src/open_deep_research/utils.py` | `max_concurrent_researcher_tool_calls` 限制 researcher 单轮工具并发；`max_queries_per_search_call` 限制 Tavily 单次 query 数并复用为摘要并发 semaphore。 | 默认值仍需按实际 API rate limit、模型 RPM/TPM 和部署并发调优。 | 后续如需更精细控制，可单独增加摘要并发配置、provider-aware throttling/backoff、成本预算和 cache。 |
 | Final report token truncation 用字符数近似 token | `src/open_deep_research/deep_researcher.py`, `src/open_deep_research/utils.py` | `model_token_limit * 4` 截断 findings。 | 对非英文或不同 tokenizer 不稳定。 | 使用 provider tokenizer 或 LangChain token counter。 |
 | Full benchmark cost high | `README.md`, `tests/run_evaluate.py` | README 警告 100 examples 可能花费约 `$20-$100`。 | 误运行会产生成本。 | 保持评估命令显式、加 dry-run 或确认门槛。 |
 

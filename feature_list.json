@@ -31,6 +31,14 @@
       "dependencies": ["codebase-onboarding-001"],
       "status": "completed",
       "evidence": "已更新 AGENTS.md、README.md、docs/codebase/STACK.md、STRUCTURE.md、ARCHITECTURE.md、INTEGRATIONS.md、TESTING.md、CONCERNS.md；CONCERNS.md 中未决问题列表已替换为作者已决策规则；后续文档统一 conda/pip，仅引用 .env；legacy 仅历史参考；多 MCP server 支持列为明确后续 feature。"
+    },
+    {
+      "id": "researcher-tool-fanout-001",
+      "name": "限制 researcher 工具并发与 Tavily 搜索 fan-out",
+      "description": "新增 max_concurrent_researcher_tool_calls 和 max_queries_per_search_call，分别限制 researcher 单轮工具并发、Tavily 单次 query 数和网页摘要并发。",
+      "dependencies": [],
+      "status": "completed",
+      "evidence": "已更新 src/open_deep_research/configuration.py、deep_researcher.py、utils.py、prompts.py；新增 tests/test_research_limits.py；局部更新 docs/codebase/ARCHITECTURE.md 和 CONCERNS.md；bash ./init.sh 在 Windows/WSL 链路输出不可靠，已记录；compileall 通过；pytest tests/test_research_limits.py 通过。"
     }
   ]
 }

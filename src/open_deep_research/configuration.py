@@ -52,7 +52,7 @@ class Configuration(BaseModel):
         }
     )
     allow_clarification: bool = Field(
-        default=True,
+        default=False,
         metadata={
             "x_oap_ui_config": {
                 "type": "boolean",
@@ -75,6 +75,21 @@ class Configuration(BaseModel):
         }
     )
     # Research Configuration
+    max_concurrent_researcher_tool_calls: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        metadata={
+            "x_oap_ui_config": {
+                "type": "slider",
+                "default": 3,
+                "min": 1,
+                "max": 10,
+                "step": 1,
+                "description": "Maximum number of tool calls a single researcher may execute concurrently in one tool-calling round."
+            }
+        }
+    )
     search_api: SearchAPI = Field(
         default=SearchAPI.TAVILY,
         metadata={
@@ -88,6 +103,21 @@ class Configuration(BaseModel):
                     {"label": "Anthropic Native Web Search", "value": SearchAPI.ANTHROPIC.value},
                     {"label": "None", "value": SearchAPI.NONE.value}
                 ]
+            }
+        }
+    )
+    max_queries_per_search_call: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        metadata={
+            "x_oap_ui_config": {
+                "type": "slider",
+                "default": 3,
+                "min": 1,
+                "max": 10,
+                "step": 1,
+                "description": "Maximum number of Tavily queries in one search tool call. Also limits concurrent webpage summarization tasks for that search call."
             }
         }
     )

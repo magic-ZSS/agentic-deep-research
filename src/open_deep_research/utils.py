@@ -58,9 +58,25 @@ async def tavily_search(
     Returns:
         Formatted string containing summarized search results
     """
+    configurable = Configuration.from_runnable_config(config)
+    max_queries = max(1, configurable.max_queries_per_search_call)
+    
+    allowed_queries = queries[:max_queries]
+    skipped_queries = queries[max_queries:]
+    skipped_queries_message = ""
+    if skipped_queries:
+        skipped_queries_message = (
+            f"Note: Skipped {len(skipped_queries)} search queries because "
+            f"max_queries_per_search_call is {max_queries}. Issue another "
+            "search call if those queries are still needed.\n\n"
+        )
+
+    if not allowed_queries:
+        return "No search queries provided. Please provide at least one query."
+
     # Step 1: Execute search queries asynchronously
     search_results = await tavily_search_async(
-        queries,
+        allowed_queries,
         max_results=max_results,
         topic=topic,
         include_raw_content=True,
@@ -76,8 +92,6 @@ async def tavily_search(
                 unique_results[url] = {**result, "query": response['query']}
     
     # Step 3: Set up the summarization model with configuration
-    configurable = Configuration.from_runnable_config(config)
-    
     # Character limit to stay within model token limits (configurable)
     max_char_to_include = configurable.max_content_length
     
@@ -92,21 +106,25 @@ async def tavily_search(
         stop_after_attempt=configurable.max_structured_output_retries
     )
     
-    # Step 4: Create summarization tasks (skip empty content)
-    async def noop():
-        """No-op function for results without raw content."""
-        return None
-    
+    # Step 4: Create summarization tasks with bounded concurrency
+    summarization_semaphore = asyncio.Semaphore(max_queries)
+
+    async def summarize_with_limit(result):
+        """Summarize a result while respecting per-search concurrency limits."""
+        if not result.get("raw_content"):
+            return None
+        async with summarization_semaphore:
+            return await summarize_webpage(
+                summarization_model,
+                result['raw_content'][:max_char_to_include]
+            )
+
     summarization_tasks = [
-        noop() if not result.get("raw_content") 
-        else summarize_webpage(
-            summarization_model, 
-            result['raw_content'][:max_char_to_include]
-        )
+        summarize_with_limit(result)
         for result in unique_results.values()
     ]
     
-    # Step 5: Execute all summarization tasks in parallel
+    # Step 5: Execute all summarization tasks with the semaphore above
     summaries = await asyncio.gather(*summarization_tasks)
     
     # Step 6: Combine results with their summaries
@@ -124,9 +142,14 @@ async def tavily_search(
     
     # Step 7: Format the final output
     if not summarized_results:
-        return "No valid search results found. Please try different search queries or use a different search API."
+        return (
+            skipped_queries_message
+            + "No valid search results found. Please try different search queries or use a different search API."
+        )
     
     formatted_output = "Search results: \n\n"
+    formatted_output += skipped_queries_message
+
     for i, (url, result) in enumerate(summarized_results.items()):
         formatted_output += f"\n\n--- SOURCE {i+1}: {result['title']} ---\n"
         formatted_output += f"URL: {url}\n\n"

@@ -8,6 +8,7 @@
   - 研究过程依赖支持 structured output 和 tool calling 的模型。
   - 搜索和 MCP 可能调用外部服务，API key 来自环境变量或 `RunnableConfig`。
   - 并行 researcher 数由 `max_concurrent_research_units` 限制，README 和配置都提示更高并发可能触发 rate limit。
+  - 单个 researcher 每轮并行工具调用由 `max_concurrent_researcher_tool_calls` 限制；Tavily 单次搜索 query fan-out 和摘要并发由 `max_queries_per_search_call` 限制。
 
 ## 2) 系统流程
 
@@ -27,7 +28,7 @@ messages
 3. `write_research_brief` 用 structured output 生成 `ResearchQuestion.research_brief`，并初始化 supervisor messages。
 4. `supervisor` 绑定 `ConductResearch`、`ResearchComplete` 和 `think_tool`，决定是否继续委派研究。
 5. `supervisor_tools` 将多个 `ConductResearch` tool call 截断到 `max_concurrent_research_units`，用 `asyncio.gather` 并行调用 `researcher_subgraph`。
-6. `researcher` 通过 `get_all_tools` 获取 `ResearchComplete`、`think_tool`、搜索工具和 MCP 工具；`researcher_tools` 并行执行 tool calls；`compress_research` 将结果压缩成 `compressed_research`。
+6. `researcher` 通过 `get_all_tools` 获取 `ResearchComplete`、`think_tool`、搜索工具和 MCP 工具；`researcher_tools` 将 tool calls 截断到 `max_concurrent_researcher_tool_calls` 后并行执行，溢出调用返回错误型 `ToolMessage`；`compress_research` 将结果压缩成 `compressed_research`。
 7. `final_report_generation` 汇总 `notes`、`research_brief` 和原始 messages，生成 `final_report`，并在 token-limit 异常时按模型 token map 截断 findings 后重试。
 
 ## 3) 层与模块职责
@@ -53,6 +54,7 @@ messages
 | Config from env + `RunnableConfig` | `configuration.py` | 支持 LangGraph Studio/OAP 配置和环境变量覆盖。 |
 | Tool adapter list | `utils.py` | 根据 `search_api` 和 `mcp_config` 拼装 researcher 可用工具。 |
 | Async fan-out/fan-in | `deep_researcher.py`, `utils.py` | 并行 researcher 和并行搜索/摘要，提高吞吐。 |
+| Bounded tool/search fan-out | `deep_researcher.py`, `configuration.py`, `utils.py`, `prompts.py` | 用配置限制 researcher 单轮工具并发、Tavily 单次 query 数和摘要并发，降低 rate limit 与成本风险。 |
 | Retry/truncation on structured output/token limit | `deep_researcher.py`, `utils.py` | 处理模型 structured output 和上下文长度失败。 |
 
 ## 5) 已知架构风险

@@ -404,7 +404,9 @@ async def researcher(state: ResearcherState, config: RunnableConfig) -> Command[
     # Prepare system prompt with MCP context if available
     researcher_prompt = research_system_prompt.format(
         mcp_prompt=configurable.mcp_prompt or "", 
-        date=get_today_str()
+        date=get_today_str(),
+        max_concurrent_researcher_tool_calls=configurable.max_concurrent_researcher_tool_calls,
+        max_queries_per_search_call=configurable.max_queries_per_search_call
     )
     
     # Configure model with tools, retry logic, and settings
@@ -475,12 +477,17 @@ async def researcher_tools(state: ResearcherState, config: RunnableConfig) -> Co
         for tool in tools
     }
     
-    # Execute all tool calls in parallel
+    # Execute only the allowed number of tool calls in parallel
     tool_calls = most_recent_message.tool_calls
+
+    allowed_tool_calls = tool_calls[:configurable.max_concurrent_researcher_tool_calls]
+    overflow_tool_calls = tool_calls[configurable.max_concurrent_researcher_tool_calls:]
+
     tool_execution_tasks = [
         execute_tool_safely(tools_by_name[tool_call["name"]], tool_call["args"], config) 
-        for tool_call in tool_calls
+        for tool_call in allowed_tool_calls
     ]
+    
     observations = await asyncio.gather(*tool_execution_tasks)
     
     # Create tool messages from execution results
@@ -490,8 +497,16 @@ async def researcher_tools(state: ResearcherState, config: RunnableConfig) -> Co
             name=tool_call["name"],
             tool_call_id=tool_call["id"]
         ) 
-        for observation, tool_call in zip(observations, tool_calls)
+        for observation, tool_call in zip(observations, allowed_tool_calls)
     ]
+
+    # Return an explicit result for every overflow call to preserve tool-call protocol.
+    for overflow_call in overflow_tool_calls:
+        tool_outputs.append(ToolMessage(
+            content=f"Error: Did not run this tool call because the researcher exceeded the maximum number of concurrent tool calls. Please try again with {configurable.max_concurrent_researcher_tool_calls} or fewer tool calls in one round.",
+            name=overflow_call["name"],
+            tool_call_id=overflow_call["id"]
+        ))
     
     # Step 3: Check late exit conditions (after processing tools)
     exceeded_iterations = state.get("tool_call_iterations", 0) >= configurable.max_react_tool_calls
