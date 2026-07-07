@@ -362,6 +362,11 @@ supervisor_builder.add_edge(START, "supervisor")  # Entry point to supervisor
 # Compile supervisor subgraph for use in main workflow
 supervisor_subgraph = supervisor_builder.compile()
 
+
+
+
+
+
 async def researcher(state: ResearcherState, config: RunnableConfig) -> Command[Literal["researcher_tools"]]:
     """Individual researcher that conducts focused research on specific topics.
     
@@ -539,7 +544,7 @@ async def compress_research(state: ResearcherState, config: RunnableConfig):
     
     # Step 3: Attempt compression with retry logic for token limit issues
     synthesis_attempts = 0
-    max_attempts = 3
+    max_attempts = 1
     
     while synthesis_attempts < max_attempts:
         try:
@@ -603,6 +608,11 @@ researcher_builder.add_edge("compress_research", END)      # Exit point after co
 
 # Compile researcher subgraph for parallel execution by supervisor
 researcher_subgraph = researcher_builder.compile()
+
+
+
+
+
 
 async def final_report_generation(state: AgentState, config: RunnableConfig):
     """Generate the final comprehensive research report with retry logic for token limits.

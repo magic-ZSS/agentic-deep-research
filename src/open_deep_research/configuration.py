@@ -40,11 +40,11 @@ class Configuration(BaseModel):
     
     # General Configuration
     max_structured_output_retries: int = Field(
-        default=3,
+        default=1,
         metadata={
             "x_oap_ui_config": {
                 "type": "number",
-                "default": 3,
+                "default": 1,
                 "min": 1,
                 "max": 10,
                 "description": "Maximum number of retries for structured output calls from models"
@@ -62,11 +62,11 @@ class Configuration(BaseModel):
         }
     )
     max_concurrent_research_units: int = Field(
-        default=5,
+        default=3,
         metadata={
             "x_oap_ui_config": {
                 "type": "slider",
-                "default": 5,
+                "default": 3,
                 "min": 1,
                 "max": 20,
                 "step": 1,
@@ -92,11 +92,11 @@ class Configuration(BaseModel):
         }
     )
     max_researcher_iterations: int = Field(
-        default=6,
+        default=3,
         metadata={
             "x_oap_ui_config": {
                 "type": "slider",
-                "default": 6,
+                "default": 3,
                 "min": 1,
                 "max": 10,
                 "step": 1,
@@ -105,11 +105,11 @@ class Configuration(BaseModel):
         }
     )
     max_react_tool_calls: int = Field(
-        default=10,
+        default=5,
         metadata={
             "x_oap_ui_config": {
                 "type": "slider",
-                "default": 10,
+                "default": 5,
                 "min": 1,
                 "max": 30,
                 "step": 1,
@@ -119,7 +119,7 @@ class Configuration(BaseModel):
     )
     # Model Configuration
     summarization_model: str = Field(
-        default="openai:gpt-4.1-mini",
+        default=os.getenv("SUMMARIZATION_MODEL"),
         metadata={
             "x_oap_ui_config": {
                 "type": "text",
@@ -151,7 +151,7 @@ class Configuration(BaseModel):
         }
     )
     research_model: str = Field(
-        default="openai:gpt-4.1",
+        default=os.getenv("RESEARCH_MODEL"),
         metadata={
             "x_oap_ui_config": {
                 "type": "text",
@@ -171,7 +171,7 @@ class Configuration(BaseModel):
         }
     )
     compression_model: str = Field(
-        default="openai:gpt-4.1",
+        default=os.getenv("COMPRESSION_MODEL"),
         metadata={
             "x_oap_ui_config": {
                 "type": "text",
@@ -191,7 +191,7 @@ class Configuration(BaseModel):
         }
     )
     final_report_model: str = Field(
-        default="openai:gpt-4.1",
+        default=os.getenv("FINAL_REPORT_MODEL"),
         metadata={
             "x_oap_ui_config": {
                 "type": "text",
