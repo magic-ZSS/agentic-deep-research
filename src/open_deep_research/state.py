@@ -5,7 +5,7 @@ from typing import Annotated, Optional
 
 from langchain_core.messages import MessageLikeRepresentation
 from langgraph.graph import MessagesState
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing_extensions import TypedDict
 
 
@@ -25,7 +25,27 @@ class Summary(BaseModel):
     """Research summary with key findings."""
     
     summary: str
-    key_excerpts: str
+    key_excerpts: list[str]
+
+    @field_validator("key_excerpts", mode="before")
+    @classmethod
+    def normalize_key_excerpts(cls, value):
+        """Accept either a list of excerpts or the legacy string shape."""
+        if isinstance(value, str):
+            stripped_value = value.strip()
+            return [stripped_value] if stripped_value else []
+
+        if isinstance(value, list):
+            excerpts = []
+            for item in value:
+                if item is None:
+                    continue
+                excerpt = str(item).strip()
+                if excerpt:
+                    excerpts.append(excerpt)
+            return excerpts
+
+        return value
 
 class ClarifyWithUser(BaseModel):
     """Model for user clarification requests."""

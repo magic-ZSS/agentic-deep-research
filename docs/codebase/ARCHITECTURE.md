@@ -30,6 +30,7 @@ messages
 5. `supervisor_tools` 将多个 `ConductResearch` tool call 截断到 `max_concurrent_research_units`，用 `asyncio.gather` 并行调用 `researcher_subgraph`。
 6. `researcher` 通过 `get_all_tools` 获取 `ResearchComplete`、`think_tool`、搜索工具和 MCP 工具；`researcher_tools` 将 tool calls 截断到 `max_concurrent_researcher_tool_calls` 后并行执行，溢出调用返回错误型 `ToolMessage`；`compress_research` 将结果压缩成 `compressed_research`。
 7. `final_report_generation` 汇总 `notes`、`research_brief` 和原始 messages，生成 `final_report`，并在 token-limit 异常时按模型 token map 截断 findings 后重试。
+8. 可选 `print_process_info` trace 默认关闭；开启后由 `utils.py:process_print` 统一输出 brief、supervisor/researcher 轮次、Tavily search id、summary id、compression 和 final report 生成前事件，正文内容不进入 trace。
 
 ## 3) 层与模块职责
 
@@ -40,7 +41,7 @@ messages
 | Researcher subgraph | 工具调用循环、搜索/MCP 使用、研究压缩。 | 最终全局报告写作。 | `src/open_deep_research/deep_researcher.py` |
 | Configuration | 默认模型、搜索 API、重试次数、并发数、MCP 配置和 OAP UI metadata。 | 业务执行逻辑。 | `src/open_deep_research/configuration.py` |
 | State | graph state、structured output schema、override reducer。 | Prompt 文案。 | `src/open_deep_research/state.py` |
-| Tool/integration utils | Tavily、native web search、MCP、token store、API key、token-limit helper。 | 顶层 graph 节点定义。 | `src/open_deep_research/utils.py` |
+| Tool/integration utils | Tavily、native web search、MCP、token store、API key、token-limit helper、可选运行流程 trace helper。 | 顶层 graph 节点定义。 | `src/open_deep_research/utils.py` |
 | Auth | LangGraph thread/assistant/store 的用户隔离。 | 搜索和报告生成。 | `src/security/auth.py` |
 | Evaluation | Deep Research Bench、LangSmith evaluators、结果导出。 | 生产 graph 默认路径。 | `tests/run_evaluate.py`, `tests/evaluators.py` |
 
@@ -55,6 +56,7 @@ messages
 | Tool adapter list | `utils.py` | 根据 `search_api` 和 `mcp_config` 拼装 researcher 可用工具。 |
 | Async fan-out/fan-in | `deep_researcher.py`, `utils.py` | 并行 researcher 和并行搜索/摘要，提高吞吐。 |
 | Bounded tool/search fan-out | `deep_researcher.py`, `configuration.py`, `utils.py`, `prompts.py` | 用配置限制 researcher 单轮工具并发、Tavily 单次 query 数和摘要并发，降低 rate limit 与成本风险。 |
+| Optional process trace | `configuration.py`, `deep_researcher.py`, `utils.py` | 用 `print_process_info` 开关和 `RunnableConfig` 私有 context 输出短流程 trace，避免污染 graph state 或打印正文。 |
 | Retry/truncation on structured output/token limit | `deep_researcher.py`, `utils.py` | 处理模型 structured output 和上下文长度失败。 |
 
 ## 5) 已知架构风险

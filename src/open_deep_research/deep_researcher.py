@@ -47,9 +47,12 @@ from open_deep_research.utils import (
     get_notes_from_tool_calls,
     get_today_str,
     is_token_limit_exceeded,
+    next_process_id,
     openai_websearch_called,
+    process_print,
     remove_up_to_last_ai_message,
     think_tool,
+    with_process_context,
 )
 
 # Initialize a configurable model that we will use throughout the agent
@@ -152,6 +155,13 @@ async def write_research_brief(state: AgentState, config: RunnableConfig) -> Com
         date=get_today_str()
     )
     response = await research_model.ainvoke([HumanMessage(content=prompt_content)])
+    process_print(
+        config,
+        event="research_brief",
+        name="research_brief",
+        title=response.research_brief,
+        item_id=next_process_id(config, "B"),
+    )
     
     # Step 3: Initialize supervisor with research brief and instructions
     supervisor_system_prompt = lead_researcher_prompt.format(
@@ -212,6 +222,16 @@ async def supervisor(state: SupervisorState, config: RunnableConfig) -> Command[
     # Step 2: Generate supervisor response based on current context
     supervisor_messages = state.get("supervisor_messages", [])
     response = await research_model.ainvoke(supervisor_messages)
+    supervisor_round = state.get("research_iterations", 0) + 1
+    tool_names = [tool_call["name"] for tool_call in getattr(response, "tool_calls", [])]
+    process_print(
+        config,
+        event="supervisor",
+        name="tool_calls",
+        round_id=f"supervisor:{supervisor_round}",
+        item_id=next_process_id(config, "SV"),
+        tools=tool_names,
+    )
     
     # Step 3: Update state and proceed to tool execution
     return Command(
@@ -292,15 +312,23 @@ async def supervisor_tools(state: SupervisorState, config: RunnableConfig) -> Co
             overflow_conduct_research_calls = conduct_research_calls[configurable.max_concurrent_research_units:]
             
             # Execute research tasks in parallel
-            research_tasks = [
-                researcher_subgraph.ainvoke({
+            parent_round_id = f"supervisor:{research_iterations}"
+            research_tasks = []
+            for research_index, tool_call in enumerate(allowed_conduct_research_calls):
+                research_topic = tool_call["args"]["research_topic"]
+                researcher_concurrency_id = f"{parent_round_id}/researcher:{research_index}"
+                researcher_config = with_process_context(
+                    config,
+                    parent=parent_round_id,
+                    concurrency_id=researcher_concurrency_id,
+                    researcher_topic=research_topic,
+                )
+                research_tasks.append(researcher_subgraph.ainvoke({
                     "researcher_messages": [
-                        HumanMessage(content=tool_call["args"]["research_topic"])
+                        HumanMessage(content=research_topic)
                     ],
-                    "research_topic": tool_call["args"]["research_topic"]
-                }, config) 
-                for tool_call in allowed_conduct_research_calls
-            ]
+                    "research_topic": research_topic
+                }, researcher_config))
             
             tool_results = await asyncio.gather(*research_tasks)
             
@@ -420,6 +448,17 @@ async def researcher(state: ResearcherState, config: RunnableConfig) -> Command[
     # Step 3: Generate researcher response with system context
     messages = [SystemMessage(content=researcher_prompt)] + researcher_messages
     response = await research_model.ainvoke(messages)
+    researcher_round = state.get("tool_call_iterations", 0) + 1
+    tool_names = [tool_call["name"] for tool_call in getattr(response, "tool_calls", [])]
+    process_print(
+        config,
+        event="researcher",
+        name="tool_calls",
+        title=state.get("research_topic", ""),
+        round_id=f"researcher:{researcher_round}",
+        item_id=next_process_id(config, "R"),
+        tools=tool_names,
+    )
     
     # Step 4: Update state and proceed to tool execution
     return Command(
@@ -483,10 +522,21 @@ async def researcher_tools(state: ResearcherState, config: RunnableConfig) -> Co
     allowed_tool_calls = tool_calls[:configurable.max_concurrent_researcher_tool_calls]
     overflow_tool_calls = tool_calls[configurable.max_concurrent_researcher_tool_calls:]
 
-    tool_execution_tasks = [
-        execute_tool_safely(tools_by_name[tool_call["name"]], tool_call["args"], config) 
-        for tool_call in allowed_tool_calls
-    ]
+    process_context = (config or {}).get("configurable", {}).get("_process_context", {})
+    researcher_concurrency_id = process_context.get("concurrency_id")
+    tool_round = state.get("tool_call_iterations", 0)
+    tool_execution_tasks = []
+    for tool_index, tool_call in enumerate(allowed_tool_calls):
+        tool_concurrency_id = f"researcher:{tool_round}/tool:{tool_index}"
+        tool_config = with_process_context(
+            config,
+            parent=researcher_concurrency_id,
+            concurrency_id=tool_concurrency_id,
+            tool_name=tool_call["name"],
+        )
+        tool_execution_tasks.append(
+            execute_tool_safely(tools_by_name[tool_call["name"]], tool_call["args"], tool_config)
+        )
     
     observations = await asyncio.gather(*tool_execution_tasks)
     
@@ -544,6 +594,13 @@ async def compress_research(state: ResearcherState, config: RunnableConfig):
     """
     # Step 1: Configure the compression model
     configurable = Configuration.from_runnable_config(config)
+    process_print(
+        config,
+        event="compression",
+        name="compress_research",
+        title=state.get("research_topic", ""),
+        item_id=next_process_id(config, "C"),
+    )
     synthesizer_model = configurable_model.with_config({
         "model": configurable.compression_model,
         "max_tokens": configurable.compression_model_max_tokens,
@@ -655,6 +712,13 @@ async def final_report_generation(state: AgentState, config: RunnableConfig):
         "api_key": get_api_key_for_model(configurable.final_report_model, config),
         "tags": ["langsmith:nostream"]
     }
+    process_print(
+        config,
+        event="final_report",
+        name="final_report_generation",
+        title=state.get("research_brief", ""),
+        item_id=next_process_id(config, "F"),
+    )
     
     # Step 3: Attempt report generation with token limit retry logic
     max_retries = 3

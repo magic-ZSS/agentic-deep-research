@@ -39,13 +39,14 @@ python -m pytest --collect-only -q src/legacy/tests
 - Tool 执行错误策略：`execute_tool_safely` 将异常转成 `"Error executing tool: ..."` 字符串；MCP 认证交互错误转成 `ToolException`。
 - Auth 错误策略：`src/security/auth.py` 用 `Auth.exceptions.HTTPException` 返回 401/500。
 - 日志: `utils.py` 使用标准库 `logging.warning`/`logging.error`；未发现集中 logging 配置、结构化字段或 redaction 规则。[TODO]
+- 流程 trace: `utils.py:process_print` 是当前主实现中唯一集中允许的 `print()` 路径，由 `Configuration.print_process_info` 控制，默认关闭；trace 只输出流程、编号、标题和工具名，不输出正文内容。
 - Sensitive-data redaction: 代码未发现显式敏感数据脱敏策略；`.env` 被 `.gitignore` 忽略，AGENTS 明确禁止提交 API key 和私有 MCP 配置。
 
 ## 5) 测试约定
 
 - Test file location: 当前评估脚本在 `tests/`；legacy pytest 在 `src/legacy/tests/`。
 - Test naming: pytest 文件使用 `test_*.py`，测试函数使用 `test_*`。
-- Mock 与隔离: 当前可见测试主要用 LangGraph `MemorySaver` 和唯一 `thread_id`；未发现系统性 network mocking。[TODO]
+- Mock 与隔离: 当前可见测试包括 `tests/test_research_limits.py` 中对 Tavily、summary 和 researcher model 的 fake；完整 LangSmith/legacy 评估仍可能调用外部服务。
 - 覆盖率预期: 未发现 coverage 工具或阈值配置。[TODO]
 
 ## 6) 证据
@@ -55,6 +56,7 @@ python -m pytest --collect-only -q src/legacy/tests
 - `src/open_deep_research/deep_researcher.py`
 - `src/open_deep_research/utils.py`
 - `src/open_deep_research/run.py`
+- `tests/test_research_limits.py`
 - `src/security/auth.py`
 - `src/legacy/tests/conftest.py`
 - `src/legacy/tests/test_report_quality.py`

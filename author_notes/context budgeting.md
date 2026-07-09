@@ -71,9 +71,21 @@
 
 七. 压缩并综合单个 researcher 的研究结果的compress_research节点的压缩尝试次数max_attempts默认值3->1
 
+八. summery节点配置调整
 
+summarization_timeout_seconds 60->180 # 等待时长
 
-八. 小结：
+max_content_length 500000->300000 # 每个网页结果进入 summarization_model 前的最大字符数
+
+summarization_model_max_tokens 8192->4096 # 总结模型的最大结果长度
+
+新增max_results_per_tavily 5->3 # 每次Tavily调用的内部返回结果个数
+
+九. 运行流程 Print Trace 用于运行时追踪和调试
+
+新增一个总开关 print_process_info: bool = False，默认不打印，开启后用 print() 输出精简运行流程。打印逻辑集中封装到 utils.py，主流程只插入少量 helper 调用。输出只展示流程、编号、轮次、工具名、主题短标题和并发编号，不打印大段搜索内容或模型正文。
+
+十. 小结：
 
     经过上述收紧后，系统从“默认深研究 + 高并发扩展”调整为“受控研究 + 成本优先”的执行模式。
 
@@ -188,6 +200,71 @@
 
 
 
+### 模型调度层
+
+一. 基于规则的成本感知模型调度（Cost-aware Model Orchestration）：
+   
+    a.不同的调用根据所处任务的复杂度和重要性使用不同强度的模型 
+
+    b.不同的任务需求使用具有不同的能力或画像的模型。
+
+    c.Supervisor/final_report_model 用“强但受控”的模型，Researcher 用“主力但成本可控”的模型，Summary/Compression 用低成本模型，Critic 用高价值模型。
+
+- research_model:高 使用计划推理和思考能力突出的模型 例如claude fable5、glm-5.2、**Qwen3.7-plus(较高质量且限时降价)**
+- summarization_model:中低 使用长上下文和总结提炼能力突出的模型 例如 gemini3.1、
+- compression_model:中 使用长上下文和总结提炼能力突出的模型 例如 gemini3.1 pro
+- final_report_model:高 使用思考推理总结写作等综合能力全面的模型 例如 chatgpt5.5
+
+配置如下：
+
+- SUPERVISOR_MODEL=glm-5.2 max / qwen3.7-plus # 高价值强模型
+- RESEARCHER_MODEL=qwen3.7-plus # 均衡模型
+- SUMMARIZATION_MODEL=qwen3.5-flash # 低成本快响应模型
+- COMPRESSION_MODEL=qwen3.5-flash # 低成本快响应模型
+- FINAL_REPORT_MODEL=glm-5.2 max / qwen3.7-plus # 高价值强模型
+- CRITIC_MODEL=glm-5.2 max/ qwen3.7-plus # 高价值强模型
+
+二.
+
+
+附录1. 模型画像表：
+
+| 品牌       | 模型                  | 综合定位                    | 官方一手能力/突出能力                                                                                                                                  | 上下文与模态                                                           | 百炼价格参考                                                                                                      | 百炼功能支持                                                             | 响应速度/吞吐信息                                                                           | DeepResearch 适用任务                                              |
+| -------- | ------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 千问       | `qwen3.7-max`       | 千问旗舰高能力模型               | Qwen 官方将 Qwen3.7-Max 定位为 Agent 时代模型，强调 coding agent、office workflow、长程自主执行等任务；百炼也标注其为“最强推理能力”选择。([Qwen Studio][1])                           | 1M；以文本推理/Agent 为核心，部分版本增强视觉模态。([阿里云帮助中心][2])                     | 百炼全球区示例：`$1.65` 输入 / `$4.951` 输出，每 1M tokens。([AlibabaCloud][3])                                            | 思考、Function Calling、内置工具、Batch；结构化输出需谨慎，不建议作为强 JSON/Pydantic 默认模型。 | 未见官方固定 TPS；百炼公开的是 RPM/TPM 限流而非真实响应时间。                                               | 高难 `research_model`、复杂规划、最终报告升级模型；不建议用于高频摘要压缩。                 |
+| 千问       | `qwen3.7-plus`      | **默认高级主力模型**            | Qwen/百炼均强调其能力与成本均衡，适合 Agent、AI 编程、聊天、内容生成、摘要总结、文档处理；百炼推荐它作为 Agent/编程开发首选。([阿里云帮助中心][4])                                                      | 1M；文本、图像、视频输入到文本输出；具备多模态交互混合智能体能力。([阿里云帮助中心][2])                 | 全球区示例：≤256K 为 `$0.276` 输入 / `$1.101` 输出；256K–1M 为 `$0.826` 输入 / `$3.301` 输出，每 1M tokens。([AlibabaCloud][3]) | 思考、Function Calling、内置工具、结构化输出、Batch 支持较完整。                        | 未见官方固定 TPS；百炼公开限流可用于估算并发上限。                                                         | 默认 `research_model`、`final_report_model`；也可承担高质量摘要/压缩。         |
+| 千问       | `qwen3.6-plus`      | 上一代主力备用                 | Qwen 官方称 Qwen3.6-Plus 是 hosted model，默认 1M 上下文，并提升 agentic coding、多模态能力。([Qwen Studio][5])                                                   | 1M；支持多模态/Agent 场景。                                               | 全球区示例：≤256K 为 `$0.276` 输入 / `$1.651` 输出；256K–1M 为 `$1.101` 输入 / `$6.602` 输出，每 1M tokens。([AlibabaCloud][3]) | 思考、Function Calling、内置工具、结构化输出、Batch。                              | 未见官方固定 TPS。                                                                         | `qwen3.7-plus` 不可用时备用；不建议作为长期首选。                               |
+| 千问       | `qwen3.6-flash`     | **低成本长上下文工作马**          | 百炼文档建议：确认 `qwen3.7-plus` 效果满足需求后，可尝试 `qwen3.6-flash` 降低成本，且拥有相同上下文长度和功能支持。([阿里云帮助中心][4])                                                     | 1M；轻量长上下文。                                                       | 全球区示例：≤256K 为 `$0.165` 输入 / `$0.99` 输出；256K–1M 为 `$0.66` 输入 / `$3.961` 输出，每 1M tokens。([AlibabaCloud][3])   | 思考、Function Calling、内置工具、结构化输出、Batch。                              | 未见官方固定 TPS。                                                                         | 默认 `summarization_model`、`compression_model`；网页摘要、文档压缩、低成本批处理。 |
+| DeepSeek | `deepseek-v4-pro`   | 强推理/强代码备选               | DeepSeek 官方文档标注 V4-Pro 支持思考/非思考模式、1M 上下文、最大 384K 输出、JSON Output、Tool Calls。([DeepSeek API Docs][6])                                          | 1M；最大输出 384K。([DeepSeek API Docs][6])                            | 百炼中国内地：`$1.65` 输入 / `$3.301` 输出，每 1M tokens。([AlibabaCloud][3])                                             | 思考、JSON Output、Tool Calls；百炼集成层面不建议依赖内置工具/Batch。                   | 未见官方固定 TPS；DeepSeek 官方公开并发限制。([DeepSeek API Docs][6])                               | 复杂逻辑推理、代码推理、researcher 中间判断；可作为 `qwen3.7-max` 的性价比替代。          |
+| DeepSeek | `deepseek-v4-flash` | 低成本推理模型                 | DeepSeek 官方同样标注 V4-Flash 支持思考/非思考模式、1M 上下文、最大 384K 输出、JSON Output、Tool Calls。([DeepSeek API Docs][6])                                        | 1M；最大输出 384K。([DeepSeek API Docs][6])                            | 百炼中国内地：`$0.138` 输入 / `$0.275` 输出，每 1M tokens。([AlibabaCloud][3])                                            | 思考、JSON Output、Tool Calls。                                         | DeepSeek 官方标注 V4-Flash 并发限制高于 Pro；固定 TPS 未公开。([DeepSeek API Docs][6])               | 低成本 reasoning fallback、轻量 researcher、快速判断。                     |
+| DeepSeek | `deepseek-v3.2`     | 低成本推理备用                 | 百炼价格页列出 `deepseek-v3.2`；DeepSeek V4 官方已将主力更新到 V4-Pro/Flash，因此 V3.2 更适合作为备用。([AlibabaCloud][3])                                               | 百炼侧需以控制台为准。                                                      | 百炼中国内地：`$0.287` 输入 / `$0.431` 输出，每 1M tokens。([AlibabaCloud][3])                                            | 需以百炼当前模型详情为准。                                                      | 未见官方固定 TPS。                                                                         | 低成本分析备用；优先级低于 V4-Flash。                                        |
+| 智谱AI     | `glm-5.2`           | **高价高价值旗舰模型**           | Z.AI 官方称 GLM-5.2 面向 long-horizon tasks，具备稳定 1M 上下文、长程工作能力、复杂代码/Agent 工程能力。([Z.ai][7])                                                        | 1M；文本推理、长程 Agent、代码工程。([Z.ai][7])                                | 百炼全球区：`$1.1` 输入 / `$3.851` 输出，每 1M tokens；不区分阶梯。([AlibabaCloud][3])                                         | 思考、Function Calling、结构化输出；不建议依赖内置工具/Batch。                         | 未见官方固定 TPS；通常应按高价值节点少量调用。                                                           | `critic_model`、`evaluator_model`、最终审稿、复杂中文报告、结构化评估。            |
+| 智谱AI     | `glm-5.1`           | GLM 高阶备用                | Z.AI 官方将 GLM-5.1 定位于 Agentic Coding、长程规划、分步执行、动态调整和交付能力。([Overview - Z.AI DEVELOPER DOCUMENT][8])                                            | 百炼侧约 200K 阶梯；具体以控制台为准。                                           | 百炼全球区示例：≤32K 为 `$0.825` 输入 / `$3.301` 输出；32K–200K 为 `$1.1` 输入 / `$3.851` 输出。([AlibabaCloud][3])             | 思考、Function Calling、结构化输出。                                         | 未见官方固定 TPS。                                                                         | GLM-5.2 的降级备用；中高质量评估、写作、审查。                                    |
+| 智谱AI     | `glm-5`             | 工程 Agent 基座备用           | GLM-5 论文将其定位为从 vibe coding 到 agentic engineering 的模型，强调复杂系统工程和真实软件工程任务。([arXiv][9])                                                          | 百炼侧上下文/阶梯以控制台为准。                                                 | 百炼价格页中 GLM-5 系列按阶梯计费，具体以当前控制台为准。([AlibabaCloud][3])                                                         | 思考、Function Calling、结构化输出。                                         | 未见官方固定 TPS。                                                                         | GLM 低一档备用；不建议优先于 GLM-5.2。                                      |
+| 月之暗面     | `kimi-k2.7-code`    | **代码 Agent 专用模型**       | Kimi 官方称 K2.7 Code 是其最强 coding model，长上下文指令遵循更可靠、编程任务成功率更高；K2.7 Code HighSpeed 约 180 tokens/s，短上下文最高约 260 tokens/s。([Kimi API Platform][10]) | 256K；文本、图像、视频；K2.7 Code 不支持关闭 thinking。([Kimi API Platform][10]) | 百炼中国内地：`$0.894` 输入 / `$3.713` 输出，每 1M tokens。([AlibabaCloud][3])                                            | 思考、Function Calling、视觉/视频输入、Agent 任务；不适合强结构化输出节点。                  | 标准版未给固定 TPS；HighSpeed 约 180 tokens/s，短上下文最高约 260 tokens/s。([Kimi API Platform][10]) | `coding_model` 首选；代码库理解、多文件重构、长会话调试。                           |
+| 月之暗面     | `kimi-k2.6`         | 通用多模态 Agent 模型          | 百炼/Kimi 说明其具备更强更稳的长程代码编写、指令遵循和自我纠错；支持文本、图片、视频输入，支持思考与非思考模式、对话与 Agent 任务。([阿里云帮助中心][11])                                                      | 256K；文本、图像、视频。([Kimi API Platform][10])                          | 百炼中国内地：`$0.8939` 输入 / `$3.7131` 输出，每 1M tokens。([AlibabaCloud][3])                                          | 思考/非思考、Function Calling、多模态输入、Agent 任务。                            | 未见官方固定 TPS。                                                                         | 多模态理解、通用 Agent 备用；代码任务不如 K2.7 Code 专精。                         |
+| 月之暗面     | `kimi-k2.5`         | 多模态 Agentic 模型          | Kimi K2.5 论文称其面向 visual agentic intelligence，强调文本与视觉联合优化、Agent Swarm、多模态 Agent 能力。([arXiv][12])                                              | 256K；文本、图像、视频。([Kimi API Platform][10])                          | 百炼中国内地：`$0.574` 输入 / `$3.011` 输出，每 1M tokens。([AlibabaCloud][3])                                            | 思考/非思考、多模态、Agent 任务。                                               | 未见官方固定 TPS。                                                                         | 视觉理解、图文 Agent 备用；已被 K2.6/K2.7 覆盖较多。                            |
+| MiniMax  | `MiniMax-M2.5`      | 低成本高速 Agent / 办公 / 代码模型 | MiniMax 官方文档将 M2.5 定位为“顶尖性能与极致性价比，轻松驾驭复杂任务”；OpenRouter 公开模型页显示其面向真实生产力、办公与代码任务，Context 约 205K。([MiniMax 开放平台文档中心][13])                       | 约 204.8K / 205K。([OpenRouter][14])                               | 百炼中国内地：`$0.304` 输入 / `$1.213` 输出，每 1M tokens。([AlibabaCloud][3])                                            | 思考模式、Agent/代码能力；结构化输出与内置工具需以百炼实测为准。                                | `highspeed` 版本官方描述为速度大幅提升；固定 TPS 需实测。([MiniMax 开放平台文档中心][13])                       | 低成本摘要、轻代码、改写、办公类任务；可做 `summarization_model` 备用。                |
+
+
+
+附录2. 模型调度策略表
+
+| DeepResearch 阶段              | 默认模型                | 升级模型                                          | 降级/备用模型                              | 调度规则                                                          | 原因                                                                                             |
+| ---------------------------- | ------------------- | --------------------------------------------- | ------------------------------------ | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `research_model`             | `qwen3.7-plus`      | `qwen3.7-max` / `glm-5.2` / `deepseek-v4-pro` | `deepseek-v4-flash`                  | 默认用 `qwen3.7-plus`；当任务涉及复杂规划、强推理、代码库级分析、证据冲突判断时升级。            | research 阶段决定后续搜索方向和证据链质量，不能太弱；`qwen3.7-plus` 是能力/成本/工具支持最均衡的默认选择。([阿里云帮助中心][1])               |
+| `summarization_model`        | `qwen3.6-flash`     | `qwen3.7-plus`                                | `MiniMax-M2.5` / `deepseek-v4-flash` | 高频网页摘要、文档摘要默认 flash；遇到论文、复杂技术文档、关键证据再升 plus。                  | 摘要调用频率高，不应默认用 `glm-5.2` 或 `qwen3.7-max`；百炼明确建议 flash 用于降低成本且保持相近上下文长度和功能支持。([阿里云帮助中心][1])      |
+| `compression_model`          | `qwen3.6-flash`     | `qwen3.7-plus` / `glm-5.2`                    | `deepseek-v4-flash`                  | 普通上下文压缩用 flash；涉及事实保真、证据冲突、复杂概念压缩时升 plus；极高价值压缩才用 GLM-5.2。    | compression 核心是保真压缩与降低 token，不是追求最强生成质量；成本控制优先。                                                |
+| `final_report_model`         | `qwen3.7-plus`      | `glm-5.2` / `qwen3.7-max`                     | 不建议低于 `qwen3.7-plus`                 | 普通报告默认 plus；中文严肃写作、结构化评估报告、最终审稿用 GLM-5.2；复杂推理型报告用 max。        | 最终报告直接决定用户感知质量；这里可以适当花钱，但仍不建议每次都上最高价模型。                                                        |
+| `critic/evaluator_model`     | `glm-5.2`           | `qwen3.7-max`                                 | `deepseek-v4-pro`                    | 只在少量关键节点调用：真实性检查、证据链审查、评分、结构化评估。                              | GLM-5.2 是高成本高价值模型，适合用在“少次数、高影响”的评估/审稿节点。([Z.ai][2])                                            |
+| `coding_model`               | `kimi-k2.7-code`    | `glm-5.2` / `qwen3.7-max`                     | `MiniMax-M2.5` / `qwen3.7-plus`      | 代码库理解、多文件重构、长会话调试默认 K2.7 Code；普通脚本/轻代码可用 MiniMax 或 Qwen Plus。 | Kimi 官方和百炼都把 K2.7 Code 定位为长程软件工程/编程任务模型，且官方给出更强 coding 与 agentic 表现说明。([Kimi API Platform][3]) |
+| `fast_reasoning_model`       | `deepseek-v4-flash` | `deepseek-v4-pro`                             | `qwen3.6-flash`                      | 用于低成本快速判断、路线选择、轻量反思；失败或不确定时再升 pro。                            | DeepSeek V4-Flash 价格显著低，且官方支持 1M 上下文、JSON Output、Tool Calls。([DeepSeek API Docs][4])           |
+| `structured_output_model`    | `qwen3.7-plus`      | `glm-5.2`                                     | `qwen3.6-flash`                      | 涉及 JSON Schema、Pydantic、评分表、brief schema 的节点优先用支持结构化输出更稳的模型。  | 不建议把 `qwen3.7-max`、Kimi、DeepSeek 作为强 schema 默认模型；结构化稳定性比“裸推理能力”更重要。                            |
+| `vision_understanding_model` | `qwen3.7-plus`      | `kimi-k2.6` / `kimi-k2.7-code`                | `kimi-k2.5`                          | 图像/视频理解、屏幕理解、GUI/视觉参考代码生成用多模态模型；文本研究任务不要默认调用视觉模型。             | `qwen3.7-plus` 和 Kimi K2 系列均支持多模态输入，但视觉 token 成本和延迟更高，应按需调用。([阿里云帮助中心][5])                     |
+
+
+
+
 
 
 
@@ -240,15 +317,5 @@
 
 
 
-### 模型调度层
 
-9. 基于规则的成本感知模型调度（Cost-aware Model Orchestration）：
-   
-    a.不同的调用根据所处任务的复杂度和重要性使用不同强度的模型 
-
-    b.不同的任务需求使用具有不同的能力或画像的模型。
-
-- research_model:高 使用计划推理和思考能力突出的模型 例如claude fable5、glm-5.2、**Qwen3.7-plus(较高质量且限时降价)**
-- summarization_model:中低 使用长上下文和总结提炼能力突出的模型 例如 gemini3.1、
-- compression_model:中 使用长上下文和总结提炼能力突出的模型 例如 gemini3.1 pro
-- final_report_model:高 使用思考推理总结写作等综合能力全面的模型 例如 chatgpt5.5
+    

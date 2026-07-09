@@ -34,6 +34,122 @@ from open_deep_research.prompts import summarize_webpage_prompt
 from open_deep_research.state import ResearchComplete, Summary
 
 ##########################
+# Process Trace Utils
+##########################
+
+PROCESS_TRACE_SEPARATOR = "──────────────────────────────"
+PROCESS_CONTEXT_KEY = "_process_context"
+PROCESS_COUNTERS_KEY = "_process_counters"
+
+
+def process_print_enabled(config: RunnableConfig) -> bool:
+    """Return whether concise process tracing is enabled for this run."""
+    return bool(Configuration.from_runnable_config(config).print_process_info)
+
+
+def _get_configurable(config: RunnableConfig) -> dict:
+    """Return the mutable configurable store on a RunnableConfig."""
+    if config is None:
+        return {}
+    return config.setdefault("configurable", {})
+
+
+def _get_process_context(config: RunnableConfig) -> dict:
+    """Return process trace context attached to a RunnableConfig."""
+    if config is None:
+        return {}
+    return config.get("configurable", {}).get(PROCESS_CONTEXT_KEY, {})
+
+
+def _short_text(value: Any, max_chars: int) -> str:
+    """Normalize whitespace and truncate text for trace output."""
+    text = " ".join(str(value or "").split())
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 3] + "..."
+
+
+def _format_tools(tools: Optional[list]) -> str:
+    """Format a tool-name list for trace output."""
+    tool_names = []
+    for tool in tools or []:
+        if isinstance(tool, dict):
+            tool_names.append(str(tool.get("name", "unknown")))
+        else:
+            tool_names.append(str(tool))
+    return f"tools={len(tool_names)}: {', '.join(_short_text(name, 80) for name in tool_names)}"
+
+
+def next_process_id(config: RunnableConfig, prefix: str) -> str:
+    """Return the next process trace id for a prefix."""
+    configurable = _get_configurable(config)
+    counters = configurable.setdefault(PROCESS_COUNTERS_KEY, {})
+    current_value = counters.get(prefix, 0)
+    counters[prefix] = current_value + 1
+    if prefix == "#":
+        return f"#{current_value:03d}"
+    return f"{prefix}{current_value}"
+
+
+def with_process_context(config: RunnableConfig, **context) -> RunnableConfig:
+    """Return a child config carrying process trace context and shared counters."""
+    if config is None:
+        config = {}
+    configurable = _get_configurable(config)
+    counters = configurable.setdefault(PROCESS_COUNTERS_KEY, {})
+    existing_context = dict(configurable.get(PROCESS_CONTEXT_KEY, {}))
+    existing_context.update({key: value for key, value in context.items() if value is not None})
+
+    child_config = dict(config)
+    child_configurable = dict(configurable)
+    child_configurable[PROCESS_COUNTERS_KEY] = counters
+    child_configurable[PROCESS_CONTEXT_KEY] = existing_context
+    child_config["configurable"] = child_configurable
+    return child_config
+
+
+def process_print(
+    config: RunnableConfig,
+    event: str,
+    name: str,
+    title: str = None,
+    round_id: str = None,
+    item_id: str = None,
+    concurrency_id: str = None,
+    tools: list = None,
+) -> None:
+    """Print a compact process trace event when tracing is enabled."""
+    if not process_print_enabled(config):
+        return
+
+    context = _get_process_context(config)
+    trace_id = next_process_id(config, "#")
+    active_concurrency_id = concurrency_id or context.get("concurrency_id")
+    parent_id = context.get("parent")
+
+    fields = [f"[TRACE {trace_id}]", f"event={_short_text(event, 80)}"]
+    if round_id:
+        fields.append(f"round={_short_text(round_id, 80)}")
+    fields.append(f"name={_short_text(name, 80)}")
+    if item_id:
+        fields.append(f"id={_short_text(item_id, 80)}")
+    if parent_id:
+        fields.append(f"parent={_short_text(parent_id, 80)}")
+    if active_concurrency_id:
+        fields.append(f"concurrent={_short_text(active_concurrency_id, 80)}")
+
+    lines = [PROCESS_TRACE_SEPARATOR, " ".join(fields)]
+    if title:
+        label = "brief" if event == "research_brief" or name == "research_brief" else "title"
+        max_chars = 240 if label == "brief" else 80
+        lines.append(f"{label}={_short_text(title, max_chars)}")
+    if tools is not None:
+        lines.append(_format_tools(tools))
+    lines.append(PROCESS_TRACE_SEPARATOR)
+    print("\n".join(lines))  # noqa: T201
+
+
+##########################
 # Tavily Search Tool Utils
 ##########################
 TAVILY_SEARCH_DESCRIPTION = (
@@ -43,7 +159,7 @@ TAVILY_SEARCH_DESCRIPTION = (
 @tool(description=TAVILY_SEARCH_DESCRIPTION)
 async def tavily_search(
     queries: List[str],
-    max_results: Annotated[int, InjectedToolArg] = 5,
+    max_results: Annotated[int, InjectedToolArg] = 3,
     topic: Annotated[Literal["general", "news", "finance"], InjectedToolArg] = "general",
     config: RunnableConfig = None
 ) -> str:
@@ -60,6 +176,7 @@ async def tavily_search(
     """
     configurable = Configuration.from_runnable_config(config)
     max_queries = max(1, configurable.max_queries_per_search_call)
+    max_results = max(1, configurable.max_results_per_tavily)
     
     allowed_queries = queries[:max_queries]
     skipped_queries = queries[max_queries:]
@@ -74,6 +191,10 @@ async def tavily_search(
     if not allowed_queries:
         return "No search queries provided. Please provide at least one query."
 
+    search_id = next_process_id(config, "S")
+    process_context = _get_process_context(config)
+    search_concurrency_id = process_context.get("concurrency_id")
+
     # Step 1: Execute search queries asynchronously
     search_results = await tavily_search_async(
         allowed_queries,
@@ -81,6 +202,14 @@ async def tavily_search(
         topic=topic,
         include_raw_content=True,
         config=config
+    )
+    process_print(
+        config,
+        event="search",
+        name="tavily_search",
+        title=allowed_queries[0],
+        item_id=search_id,
+        concurrency_id=search_concurrency_id,
     )
     
     # Step 2: Deduplicate results by URL to avoid processing the same content multiple times
@@ -109,19 +238,33 @@ async def tavily_search(
     # Step 4: Create summarization tasks with bounded concurrency
     summarization_semaphore = asyncio.Semaphore(max_queries)
 
-    async def summarize_with_limit(result):
+    async def summarize_with_limit(summary_index, result):
         """Summarize a result while respecting per-search concurrency limits."""
         if not result.get("raw_content"):
             return None
         async with summarization_semaphore:
+            summary_concurrency_id = f"summary:{summary_index}"
+            if search_concurrency_id:
+                summary_concurrency_id = f"{search_concurrency_id}/summary:{summary_index}"
+            summary_config = with_process_context(
+                config,
+                parent=search_id,
+                concurrency_id=summary_concurrency_id,
+            )
             return await summarize_webpage(
                 summarization_model,
-                result['raw_content'][:max_char_to_include]
+                result['raw_content'][:max_char_to_include],
+                config=summary_config,
+                source_title=result.get("title"),
+                source_url=result.get("url"),
+                search_id=search_id,
+                summary_id=f"{search_id}.{summary_index}",
+                concurrency_id=summary_concurrency_id,
             )
 
     summarization_tasks = [
-        summarize_with_limit(result)
-        for result in unique_results.values()
+        summarize_with_limit(summary_index, result)
+        for summary_index, result in enumerate(unique_results.values())
     ]
     
     # Step 5: Execute all summarization tasks with the semaphore above
@@ -195,7 +338,16 @@ async def tavily_search_async(
     search_results = await asyncio.gather(*search_tasks)
     return search_results
 
-async def summarize_webpage(model: BaseChatModel, webpage_content: str) -> str:
+async def summarize_webpage(
+    model: BaseChatModel,
+    webpage_content: str,
+    config: RunnableConfig = None,
+    source_title: str = None,
+    source_url: str = None,
+    search_id: str = None,
+    summary_id: str = None,
+    concurrency_id: str = None,
+) -> str:
     """Summarize webpage content using AI model with timeout protection.
     
     Args:
@@ -205,6 +357,15 @@ async def summarize_webpage(model: BaseChatModel, webpage_content: str) -> str:
     Returns:
         Formatted summary with key excerpts, or original content if summarization fails
     """
+    process_print(
+        config,
+        event="summary",
+        name="summarize_webpage",
+        title=source_title or source_url,
+        round_id=search_id,
+        item_id=summary_id,
+        concurrency_id=concurrency_id,
+    )
     try:
         # Create prompt with current date context
         prompt_content = summarize_webpage_prompt.format(
@@ -215,20 +376,21 @@ async def summarize_webpage(model: BaseChatModel, webpage_content: str) -> str:
         # Execute summarization with timeout to prevent hanging
         summary = await asyncio.wait_for(
             model.ainvoke([HumanMessage(content=prompt_content)]),
-            timeout=60.0  # 60 second timeout for summarization
+            timeout=180.0  # 180 second timeout for summarization
         )
         
         # Format the summary with structured sections
+        key_excerpts = "\n".join(f"- {excerpt}" for excerpt in summary.key_excerpts)
         formatted_summary = (
             f"<summary>\n{summary.summary}\n</summary>\n\n"
-            f"<key_excerpts>\n{summary.key_excerpts}\n</key_excerpts>"
+            f"<key_excerpts>\n{key_excerpts}\n</key_excerpts>"
         )
         
         return formatted_summary
         
     except asyncio.TimeoutError:
         # Timeout during summarization - return original content
-        logging.warning("Summarization timed out after 60 seconds, returning original content")
+        logging.warning("Summarization timed out after 180 seconds, returning original content")
         return webpage_content
     except Exception as e:
         # Other errors during summarization - log and return original content

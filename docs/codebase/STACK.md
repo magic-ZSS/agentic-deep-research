@@ -60,7 +60,7 @@ python tests/run_evaluate.py
 ## 5) 环境变量与配置
 
 - Config sources: `langgraph.json`, `src/open_deep_research/configuration.py`, `.env`, `RunnableConfig["configurable"]`。
-- Core env vars observed in code: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `TAVILY_API_KEY`, `GET_API_KEYS_FROM_CONFIG`, `SUPABASE_URL`, `SUPABASE_KEY`。
+- Core env vars observed in code: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `TAVILY_API_KEY`, `GET_API_KEYS_FROM_CONFIG`, `PRINT_PROCESS_INFO`, `SUPABASE_URL`, `SUPABASE_KEY`。
 - Evaluation env vars observed in code: `LANGSMITH_API_KEY` and LangSmith client environment variables.
 - Legacy/search env vars observed in code: `AZURE_AI_SEARCH_ENDPOINT`, `AZURE_AI_SEARCH_INDEX_NAME`, `AZURE_AI_SEARCH_API_KEY`, `PERPLEXITY_API_KEY`, `EXA_API_KEY`, `GOOGLE_CX`, `EVAL_MODEL`, `RESEARCH_AGENT`, `SEARCH_API`, `SUPERVISOR_MODEL`, `RESEARCHER_MODEL`, `PLANNER_PROVIDER`, `PLANNER_MODEL`, `WRITER_PROVIDER`, `WRITER_MODEL`, `MAX_SEARCH_DEPTH`。
 - 作者已确认 `.env` 是本项目正式本地环境配置文件；不再要求维护或引用单独的环境模板文件。

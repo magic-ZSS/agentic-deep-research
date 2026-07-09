@@ -18,17 +18,22 @@ class SearchAPI(Enum):
 
 class MCPConfig(BaseModel):
     """Configuration for Model Context Protocol (MCP) servers."""
-    
+
+    # 配置 MCP 服务地址。
     url: Optional[str] = Field(
         default=None,
         optional=True,
     )
     """The URL of the MCP server"""
+
+    # 配置允许使用的 MCP 工具。
     tools: Optional[List[str]] = Field(
         default=None,
         optional=True,
     )
     """The tools to make available to the LLM"""
+
+    # 配置 MCP 服务是否需要鉴权。
     auth_required: Optional[bool] = Field(
         default=False,
         optional=True,
@@ -39,6 +44,8 @@ class Configuration(BaseModel):
     """Main configuration class for the Deep Research agent."""
     
     # General Configuration
+
+    # 配置结构化输出失败后的最大重试次数。
     max_structured_output_retries: int = Field(
         default=1,
         metadata={
@@ -51,6 +58,8 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # 配置是否允许先向用户澄清问题。
     allow_clarification: bool = Field(
         default=False,
         metadata={
@@ -61,6 +70,20 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # 配置是否打印简要运行流程信息。
+    print_process_info: bool = Field(
+        default=True,
+        metadata={
+            "x_oap_ui_config": {
+                "type": "boolean",
+                "default": False,
+                "description": "Whether to print concise process trace information during a research run."
+            }
+        }
+    )
+
+    # 配置同时运行的研究子任务数量。
     max_concurrent_research_units: int = Field(
         default=3,
         metadata={
@@ -75,6 +98,8 @@ class Configuration(BaseModel):
         }
     )
     # Research Configuration
+
+    # 配置单个 researcher 每轮并发工具调用数。
     max_concurrent_researcher_tool_calls: int = Field(
         default=3,
         ge=1,
@@ -90,6 +115,8 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # 配置研究流程使用的搜索后端。
     search_api: SearchAPI = Field(
         default=SearchAPI.TAVILY,
         metadata={
@@ -106,6 +133,8 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # 配置单次 Tavily 搜索调用允许的 query 数。
     max_queries_per_search_call: int = Field(
         default=3,
         ge=1,
@@ -121,6 +150,25 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # 配置 Tavily 每个 query 返回的结果数。
+    max_results_per_tavily: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        metadata={
+            "x_oap_ui_config": {
+                "type": "slider",
+                "default": 3,
+                "min": 1,
+                "max": 10,
+                "step": 1,
+                "description": "Maximum number of results returned by Tavily for each individual search query."
+            }
+        }
+    )
+
+    # 配置 supervisor 最大研究迭代次数。
     max_researcher_iterations: int = Field(
         default=3,
         metadata={
@@ -134,6 +182,8 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # 配置 researcher 最大工具调用轮数。
     max_react_tool_calls: int = Field(
         default=5,
         metadata={
@@ -148,6 +198,8 @@ class Configuration(BaseModel):
         }
     )
     # Model Configuration
+
+    # 配置网页摘要使用的模型。
     summarization_model: str = Field(
         default=os.getenv("SUMMARIZATION_MODEL"),
         metadata={
@@ -158,6 +210,8 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # 配置网页摘要模型的最大输出 token。
     summarization_model_max_tokens: int = Field(
         default=8192,
         metadata={
@@ -168,18 +222,22 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # 配置网页摘要前保留的最大正文长度。
     max_content_length: int = Field(
-        default=50000,
+        default=30000,
         metadata={
             "x_oap_ui_config": {
                 "type": "number",
-                "default": 50000,
+                "default": 30000,
                 "min": 1000,
                 "max": 200000,
                 "description": "Maximum character length for webpage content before summarization"
             }
         }
     )
+
+    # 配置 researcher 使用的模型。
     research_model: str = Field(
         default=os.getenv("RESEARCH_MODEL"),
         metadata={
@@ -190,6 +248,8 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # 配置 researcher 模型的最大输出 token。
     research_model_max_tokens: int = Field(
         default=10000,
         metadata={
@@ -200,6 +260,8 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # 配置研究结果压缩使用的模型。
     compression_model: str = Field(
         default=os.getenv("COMPRESSION_MODEL"),
         metadata={
@@ -210,6 +272,8 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # 配置压缩模型的最大输出 token。
     compression_model_max_tokens: int = Field(
         default=8192,
         metadata={
@@ -220,6 +284,8 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # 配置最终报告生成使用的模型。
     final_report_model: str = Field(
         default=os.getenv("FINAL_REPORT_MODEL"),
         metadata={
@@ -230,6 +296,8 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # 配置最终报告模型的最大输出 token。
     final_report_model_max_tokens: int = Field(
         default=10000,
         metadata={
@@ -241,6 +309,8 @@ class Configuration(BaseModel):
         }
     )
     # MCP server configuration
+
+    # 配置 MCP 服务和工具列表。
     mcp_config: Optional[MCPConfig] = Field(
         default=None,
         optional=True,
@@ -251,6 +321,8 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # 配置传给 MCP 工具的额外提示词。
     mcp_prompt: Optional[str] = Field(
         default=None,
         optional=True,

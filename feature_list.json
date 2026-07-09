@@ -39,6 +39,30 @@
       "dependencies": [],
       "status": "completed",
       "evidence": "已更新 src/open_deep_research/configuration.py、deep_researcher.py、utils.py、prompts.py；新增 tests/test_research_limits.py；局部更新 docs/codebase/ARCHITECTURE.md 和 CONCERNS.md；bash ./init.sh 在 Windows/WSL 链路输出不可靠，已记录；compileall 通过；pytest tests/test_research_limits.py 通过。"
+    },
+    {
+      "id": "summary-key-excerpts-001",
+      "name": "兼容摘要 key_excerpts 列表输出",
+      "description": "将 Summary.key_excerpts 建模为多个摘录列表，并兼容旧字符串输出，避免 Tavily 网页摘要 structured output 因 list/string 不匹配而降级返回原文。",
+      "dependencies": [],
+      "status": "completed",
+      "evidence": "已更新 src/open_deep_research/state.py、utils.py、prompts.py 和 tests/test_research_limits.py；Summary 接受 list[str] 和旧 str 输入；summarize_webpage 将摘录格式化为多行 bullet；prompt 明确 key_excerpts 为 JSON array；compileall 通过；pytest tests/test_research_limits.py 通过（4 passed）。"
+    },
+    {
+      "id": "tavily-max-results-001",
+      "name": "配置 Tavily 单 query 返回结果数",
+      "description": "新增 max_results_per_tavily 配置项，将每个 Tavily query 的内部 max_results 默认值从 5 降为 3。",
+      "dependencies": [],
+      "status": "completed",
+      "evidence": "已更新 src/open_deep_research/configuration.py、utils.py 和 tests/test_research_limits.py；tavily_search 使用 configurable.max_results_per_tavily 传给 tavily_search_async；compileall 通过；pytest tests/test_research_limits.py 通过（4 passed）。"
+    },
+    {
+      "id": "process-trace-001",
+      "name": "新增运行流程 Print Trace 开关",
+      "description": "新增 print_process_info 总开关，默认关闭；开启后用 print() 输出精简研究流程、编号、轮次、工具名、主题短标题和并发上下文，不输出搜索正文、摘要正文、压缩正文或最终报告正文。",
+      "dependencies": [],
+      "status": "completed",
+      "evidence": "已更新 src/open_deep_research/configuration.py、src/open_deep_research/utils.py、src/open_deep_research/deep_researcher.py 和 tests/test_research_limits.py；新增 process_print_enabled/process_print/next_process_id/with_process_context helper；主流程在 brief、supervisor、researcher、Tavily search、source summary、compression、final report 前输出精简 trace；compileall 通过；pytest tests/test_research_limits.py 通过（7 passed）；bash ./init.sh 沙箱内 E_ACCESSDENIED，沙箱外返回 0 但仍混入 CRLF/WSL 与 python: command not found，不能作为干净通过证据。"
     }
   ]
 }
