@@ -175,7 +175,7 @@ def test_tavily_search_limits_queries_and_summary_concurrency(monkeypatch, capsy
     assert "event=search" in trace_output
     assert "name=tavily_search" in trace_output
     assert "id=S0" in trace_output
-    assert "title=q1" in trace_output
+    assert "title=queries=2; first=q1" in trace_output
     assert "event=summary" in trace_output
     assert "id=S0.0" in trace_output
     assert "id=S0.1" in trace_output

@@ -55,7 +55,7 @@ from langchain_core.messages import HumanMessage
 # 默认研究问题。
 # 适合在 IDE 中直接修改此变量，然后点击运行当前文件。
 # 如果命令行传入了参数，则命令行参数优先级更高。
-QUESTION = '''我想快速理解上下文工程（Context Engineering）在 AI Agent 中到底解决什么问题。请结合 DeepResearch 和 Coding Agent 两类场景，说明它和 Prompt Engineering 的区别。'''
+QUESTION = '''请简单介绍一下当前最前沿的deepresearch是哪个，其性能如何。'''
 
 
 # 定位项目根目录。

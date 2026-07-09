@@ -203,11 +203,12 @@ async def tavily_search(
         include_raw_content=True,
         config=config
     )
+    search_trace_title = f"queries={len(allowed_queries)}; first={allowed_queries[0]}"
     process_print(
         config,
         event="search",
         name="tavily_search",
-        title=allowed_queries[0],
+        title=search_trace_title,
         item_id=search_id,
         concurrency_id=search_concurrency_id,
     )

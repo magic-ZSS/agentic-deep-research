@@ -344,7 +344,7 @@ When handling different types of content:
 - For opinion pieces: Maintain the main arguments and supporting points.
 - For product pages: Keep key features, specifications, and unique selling points.
 
-Your summary should be significantly shorter than the original content but comprehensive enough to stand alone as a source of information. Aim for about 25-30 percent of the original length, unless the content is already concise.
+Your summary should be significantly shorter than the original content but comprehensive enough to stand alone as a source of information. Aim for about 10-15 percent of the original length, unless the content is already concise.
 
 Present your summary in the following format:
 
