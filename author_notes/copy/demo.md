@@ -1,100 +1,368 @@
-## 总体评价
-
-这是一个典型的“结论正确，但研究过程和最终输出严重失控”的用例。
-
-官方 GitHub 仓库已经直接给出语言统计：Python 占 99.6%，其他语言占 0.4%，因此标准结论应是“LangGraph 主要由 Python 编写”。官方 README 还把 JavaScript/TypeScript 实现指向独立的 `langgraphjs` 仓库。([GitHub][1])
-
-输出虽然得出了正确结论，但为一个只需查看一次官方仓库页面即可完成的简单事实题，消耗了 375.7K Token 和 883.23 秒，属于非常严重的研究过度扇出和 Token bloat。
-
-## 主要优点
-
-1. 核心结论正确，明确回答了“Python”。
-2. 确实优先引用了官方 GitHub 仓库。
-3. 给出了可访问的来源链接。
-4. 简报完整保留了用户的四项约束，并补充了“若存在多种语言则判断主导语言”的合理规则。
-
-## 主要问题
-
-### 1. 严重违反“不扩展介绍”的约束
-
-用户只要求确认主要编程语言，但输出扩展到了：
-
-* 源代码目录结构；
-* Python 版本要求；
-* CI/CD 工作流；
-* PyPI 下载量；
-* 包管理方式；
-* LangGraph.js 的仓库与分发渠道；
-* 第三方趋势统计。
-
-这些内容大多不影响答案成立。最终回答本应只有一两句话，却被扩展成完整“调查报告”。
-
-### 2. 存在不严谨的绝对化表述
-
-输出称主仓库是“纯粹的 Python 项目”“单一语言属性”，但官方 GitHub 统计实际为 Python 99.6%、Other 0.4%。更准确的表达应是：
-
-> LangGraph 主仓库的主要或主导编程语言是 Python。
-
-“主要由 Python 编写”有官方统计支持，“纯粹由 Python 编写”则属于证据不足的扩大结论。([GitHub][1])
-
-### 3. 部分证据引用不匹配或质量较低
-
-* 来源 `[7]` 使用的是 `langgraph-101-ts`，它是教程类仓库，不是 LangGraph.js 的核心实现仓库；官方 README 实际指向 `langchain-ai/langgraphjs`。([GitHub][1])
-* Trendshift、Crewship 等第三方来源完全没有必要。
-* PyPI 下载量不能证明项目由哪种语言编写，属于弱相关证据。
-* 使用旧 Issue 证明当前 Python 版本要求，不如直接读取当前 `pyproject.toml`，而且该信息本身与问题无关。
-* 仅凭几个 `.py` 文件就断言“所有业务逻辑和底层实现均由 Python 完成”，证据链并不充分。
-
-### 4. 没有采用最直接、最强的官方证据
-
-最佳证据就是官方仓库页面底部的 Languages 统计：
-
-> Python 99.6%，Other 0.4%。
-
-有了这一条，一般不需要再检查源文件、CI、PyPI、第三方统计或其他仓库。
-
-### 5. Token 和耗时完全不可接受
-
-375.7K Token 和 883.23 秒对于这一任务明显失衡。该任务只需要：
-
-1. 打开官方仓库；
-2. 查看 Languages；
-3. 输出 Python 和来源。
-
-正常情况下只需一次网页访问和几十到一百余字的回答。该结果暴露出系统缺少针对简单事实任务的复杂度识别、官方直证优先和早停机制。
-
-## 更合适的输出
-
-> LangGraph 项目的主要编程语言是 Python。其官方 GitHub 仓库的语言统计显示，Python 占 99.6%。([GitHub][1])
-
-## 评分表
-
-| 维度           |     评分 | 判断                                              |
-| ------------ | -----: | ----------------------------------------------- |
-| 任务难度         |   2/10 | 简单事实核查题。关键是定位官方仓库的 Languages 统计，确认主导语言并简洁引用。    |
-| 任务理解         | 6.5/10 | 正确理解了核心问题并给出 Python，但没有真正执行“不扩展”的关键限制。          |
-| 简报质量         | 9.0/10 | 简报完整、边界明确，并正确要求优先使用官方仓库及识别主导语言。                 |
-| 结构完整性        | 6.0/10 | 结论、证据和来源齐全，但结构远超任务所需，完整性转化成了冗余。                 |
-| 真实性与引用忠实度    | 6.0/10 | 核心结论正确，但“纯粹的 Python 项目”等绝对表述过强，且部分来源与具体论断不完全匹配。 |
-| 证据来源质量       | 6.5/10 | 包含官方仓库和官方文档，但混入不必要的第三方网站、旧 Issue 和非核心教程仓库。      |
-| 实用性          | 4.5/10 | 用户能够获得正确答案，但需要从大量无关内容中提取，未满足快速事实核查需求。           |
-| Token / 探索效率 | 0.5/10 | 375.7K Token 对一次官方仓库事实查询属于极严重的 Token 浪费和研究过度扇出。 |
-| 耗时           | 0.5/10 | 883.23 秒远超合理范围，与任务难度严重不匹配。                      |
-| 总体评分         | 4.8/10 | 答案事实核心正确，但约束遵循、证据精确性和研究效率存在严重问题。                |
-
-```markdown
-| 维度 | 评分 | 判断 |
-|---|---:|---|
-| 任务难度 | 2/10 | 简单事实核查题。关键是定位官方仓库的 Languages 统计，确认主导语言并简洁引用。 |
-| 任务理解 | 6.5/10 | 正确理解了核心问题并给出 Python，但没有真正执行“不扩展”的关键限制。 |
-| 简报质量 | 9.0/10 | 简报完整、边界明确，并正确要求优先使用官方仓库及识别主导语言。 |
-| 结构完整性 | 6.0/10 | 结论、证据和来源齐全，但结构远超任务所需，完整性转化成了冗余。 |
-| 真实性与引用忠实度 | 6.0/10 | 核心结论正确，但“纯粹的 Python 项目”等绝对表述过强，且部分来源与具体论断不完全匹配。 |
-| 证据来源质量 | 6.5/10 | 包含官方仓库和官方文档，但混入不必要的第三方网站、旧 Issue 和非核心教程仓库。 |
-| 实用性 | 4.5/10 | 用户能够获得正确答案，但需要从大量无关内容中提取，未满足快速事实核查需求。 |
-| Token / 探索效率 | 0.5/10 | 375.7K Token 对一次官方仓库事实查询属于极严重的 Token 浪费和研究过度扇出。 |
-| 耗时 | 0.5/10 | 883.23 秒远超合理范围，与任务难度严重不匹配。 |
-| 总体评分 | 4.8/10 | 答案事实核心正确，但约束遵循、证据精确性和研究效率存在严重问题。 |
-```
-
-[1]: https://github.com/langchain-ai/langgraph "GitHub - langchain-ai/langgraph: Build resilient agents. · GitHub"
+{
+  "inputs": {
+    "messages": [
+      {
+        "additional_kwargs": {},
+        "content": "请查明 LangGraph 项目主要由哪种编程语言编写，并基于其官方 GitHub 仓库或官方文档提供证据。\n\n要求：\n1. 优先使用官方 GitHub 仓库；\n2. 明确给出编程语言名称；\n3. 提供来源链接；\n4. 不要扩展介绍 LangGraph 的功能、架构或使用方法。",
+        "id": "05628d12-f382-48bf-b1ee-0d5773e0abee",
+        "response_metadata": {},
+        "type": "human"
+      }
+    ]
+  },
+  "outputs": {
+    "messages": [
+      {
+        "content": "请查明 LangGraph 项目主要由哪种编程语言编写，并基于其官方 GitHub 仓库或官方文档提供证据。\n\n要求：\n1. 优先使用官方 GitHub 仓库；\n2. 明确给出编程语言名称；\n3. 提供来源链接；\n4. 不要扩展介绍 LangGraph 的功能、架构或使用方法。",
+        "additional_kwargs": {},
+        "response_metadata": {},
+        "type": "human",
+        "id": "05628d12-f382-48bf-b1ee-0d5773e0abee"
+      },
+      {
+        "content": "# LangGraph 项目编程语言研究报告\n\n## 主要编程语言\n\nLangGraph 项目的核心和主导编程语言是 **Python** [1]。\n\n根据官方 GitHub 仓库的元数据、文件结构以及代码库统计，Python 是构建 LangGraph 核心逻辑的绝对主要语言 [1]。在官方仓库 `langchain-ai/langgraph` 中，代码库的目录结构包含大量以 `.py` 为扩展名的 Python 源文件，例如 `libs/langgraph/langgraph/channels/delta.py`、`libs/langgraph/langgraph/graph/message.py` 以及 `libs/checkpoint/` 等核心模块路径 [1]。\n\n此外，作为 LangChain 生态系统的重要组成部分，其父项目主仓库 `langchain-ai/langchain` 的语言构成也印证了这一点，该仓库中 Python 代码占比高达 99.2% [3]。\n\n## 次要编程语言\n\n虽然 Python 是核心 `langchain-ai/langgraph` 仓库的主要语言，但 LangGraph 生态系统、官方文档及相关衍生仓库中还明确使用了以下次要语言：\n\n*   **TypeScript**：LangChain 团队为 LangGraph 维护了一个官方的 TypeScript 移植版本，即 **LangGraph.js** [6]。在 GitHub 的 \"langgraph\" 主题页面统计中，TypeScript 是整个 LangGraph 生态系统中第二常见的编程语言 [4]。此外，部分 SDK 集成（如 `ag-ui` 协议）也同时维护了 Python 和 TypeScript 的适配器 [8]。\n*   **Jupyter Notebook**：该语言被广泛用于官方教程、示例代码和文档的编写。例如，官方教程仓库 `langchain-ai/langgraph-101` 的语言构成为 80% 的 Jupyter Notebook 和 20% 的 Python [2]。在 GitHub 主题页面中，Jupyter Notebook 也是生态系统中第三常见的语言 [4]。\n*   **Makefile、JavaScript 和 HTML**：在更广泛的 LangGraph 生态系统及相关辅助仓库中，存在少量其他语言的使用。例如，官方仓库 `langchain-ai/langgraph-codeact` 的语言构成为 88.3% 的 Python 和 11.7% 的 Makefile [5]。同时，GitHub 主题页面也记录了生态系统中包含数百个使用 JavaScript 和 HTML 构建的周边项目或 UI 组件 [7]。\n\n### Sources\n\n[1] langchain-ai/langgraph: Build resilient agents: https://github.com/langchain-ai/langgraph\n[2] langchain-ai/langgraph-101: https://github.com/langchain-ai/langgraph-101\n[3] GitHub - langchain-ai/langchain: The agent engineering platform: https://github.com/langchain-ai/langchain\n[4] langgraph · GitHub Topics: https://github.com/topics/langgraph\n[5] GitHub - langchain-ai/langgraph-codeact: https://github.com/langchain-ai/langgraph-codeact\n[6] LangGraph vs LangGraph.js: Python vs TypeScript | Crewship: https://www.crewship.dev/learn/langgraph-vs-langgraphjs\n[7] langgraph · GitHub Topics (sorted by fewest stars): https://github.com/topics/langgraph?o=asc&s=stars\n[8] [Feature] Add support for local/in-process LangGraph graphs (TypeScript) · Issue #952: https://github.com/ag-ui-protocol/ag-ui/issues/952",
+        "additional_kwargs": {
+          "refusal": null
+        },
+        "response_metadata": {
+          "token_usage": {
+            "completion_tokens": 3329,
+            "prompt_tokens": 2795,
+            "total_tokens": 6124,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 2574,
+              "rejected_prediction_tokens": null,
+              "text_tokens": 3329
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 0,
+              "text_tokens": 2795
+            }
+          },
+          "model_provider": "openai",
+          "model_name": "qwen3.7-plus",
+          "system_fingerprint": null,
+          "id": "chatcmpl-ea33ca0c-4d35-4353-b33b-01620d5144fb",
+          "finish_reason": "stop",
+          "logprobs": null
+        },
+        "type": "ai",
+        "id": "lc_run--019f7002-a013-7c81-ba94-ee031f59ff08-0",
+        "tool_calls": [],
+        "invalid_tool_calls": [],
+        "usage_metadata": {
+          "input_tokens": 2795,
+          "output_tokens": 3329,
+          "total_tokens": 6124,
+          "input_token_details": {
+            "cache_read": 0
+          },
+          "output_token_details": {
+            "reasoning": 2574
+          }
+        }
+      }
+    ],
+    "supervisor_messages": [
+      {
+        "content": "You are a research supervisor. Your job is to conduct research by calling the \"ConductResearch\" tool. For context, today's date is Fri Jul 17, 2026.\n\n<Task>\nYour focus is to call the \"ConductResearch\" tool to conduct research against the overall research question passed in by the user. \nWhen you are completely satisfied with the research findings returned from the tool calls, then you should call the \"ResearchComplete\" tool to indicate that you are done with your research.\n</Task>\n\n<Available Tools>\nYou have access to three main tools:\n1. **ConductResearch**: Delegate research tasks to specialized sub-agents\n2. **ResearchComplete**: Indicate that research is complete\n3. **think_tool**: For reflection and strategic planning during research\n\n**CRITICAL: Use think_tool before calling ConductResearch to plan your approach, and after each ConductResearch to assess progress. Do not call think_tool with any other tools in parallel.**\n</Available Tools>\n\n<Instructions>\nThink like a research manager with limited time and resources. Follow these steps:\n\n1. **Read the question carefully** - What specific information does the user need?\n2. **Decide how to delegate the research** - Carefully consider the question and decide how to delegate the research. Are there multiple independent directions that can be explored simultaneously?\n3. **After each call to ConductResearch, pause and assess** - Do I have enough to answer? What's still missing?\n</Instructions>\n\n<Hard Limits>\n**Task Delegation Budgets** (Prevent excessive delegation):\n- **Bias towards single agent** - Use single agent for simplicity unless the user request has clear opportunity for parallelization\n- **Stop when you can answer confidently** - Don't keep delegating research for perfection\n- **Limit tool calls** - Always stop after 3 tool calls to ConductResearch and think_tool if you cannot find the right sources\n\n**Maximum 3 parallel agents per iteration**\n</Hard Limits>\n\n<Show Your Thinking>\nBefore you call ConductResearch tool call, use think_tool to plan your approach:\n- Can the task be broken down into smaller sub-tasks?\n\nAfter each ConductResearch tool call, use think_tool to analyze the results:\n- What key information did I find?\n- What's missing?\n- Do I have enough to answer the question comprehensively?\n- Should I delegate more research or call ResearchComplete?\n</Show Your Thinking>\n\n<Scaling Rules>\n**Simple fact-finding, lists, and rankings** can use a single sub-agent:\n- *Example*: List the top 10 coffee shops in San Francisco → Use 1 sub-agent\n\n**Comparisons presented in the user request** can use a sub-agent for each element of the comparison:\n- *Example*: Compare OpenAI vs. Anthropic vs. DeepMind approaches to AI safety → Use 3 sub-agents\n- Delegate clear, distinct, non-overlapping subtopics\n\n**Important Reminders:**\n- Each ConductResearch call spawns a dedicated research agent for that specific topic\n- A separate agent will write the final report - you just need to gather information\n- When calling ConductResearch, provide complete standalone instructions - sub-agents can't see other agents' work\n- Do NOT use acronyms or abbreviations in your research questions, be very clear and specific\n</Scaling Rules>",
+        "additional_kwargs": {},
+        "response_metadata": {},
+        "type": "system"
+      },
+      {
+        "content": "I need to determine the primary programming language used in the LangGraph project, based on evidence from its official GitHub repository or official documentation. Please prioritize the official GitHub repository (https://github.com/langchain-ai/langgraph) as the primary source. Specifically, I need: (1) the explicit name of the primary programming language used to write the LangGraph project; (2) a direct source link from the official GitHub repository or official documentation that supports this finding; and (3) no additional information about LangGraph's features, architecture, or usage methods — only the programming language identification and its supporting evidence. If there are multiple languages used, identify the dominant or primary one and note any secondary languages if clearly indicated in the repository metadata or documentation.",
+        "additional_kwargs": {},
+        "response_metadata": {},
+        "type": "human"
+      },
+      {
+        "content": "You are a research supervisor. Your job is to conduct research by calling the \"ConductResearch\" tool. For context, today's date is Fri Jul 17, 2026.\n\n<Task>\nYour focus is to call the \"ConductResearch\" tool to conduct research against the overall research question passed in by the user. \nWhen you are completely satisfied with the research findings returned from the tool calls, then you should call the \"ResearchComplete\" tool to indicate that you are done with your research.\n</Task>\n\n<Available Tools>\nYou have access to three main tools:\n1. **ConductResearch**: Delegate research tasks to specialized sub-agents\n2. **ResearchComplete**: Indicate that research is complete\n3. **think_tool**: For reflection and strategic planning during research\n\n**CRITICAL: Use think_tool before calling ConductResearch to plan your approach, and after each ConductResearch to assess progress. Do not call think_tool with any other tools in parallel.**\n</Available Tools>\n\n<Instructions>\nThink like a research manager with limited time and resources. Follow these steps:\n\n1. **Read the question carefully** - What specific information does the user need?\n2. **Decide how to delegate the research** - Carefully consider the question and decide how to delegate the research. Are there multiple independent directions that can be explored simultaneously?\n3. **After each call to ConductResearch, pause and assess** - Do I have enough to answer? What's still missing?\n</Instructions>\n\n<Hard Limits>\n**Task Delegation Budgets** (Prevent excessive delegation):\n- **Bias towards single agent** - Use single agent for simplicity unless the user request has clear opportunity for parallelization\n- **Stop when you can answer confidently** - Don't keep delegating research for perfection\n- **Limit tool calls** - Always stop after 3 tool calls to ConductResearch and think_tool if you cannot find the right sources\n\n**Maximum 3 parallel agents per iteration**\n</Hard Limits>\n\n<Show Your Thinking>\nBefore you call ConductResearch tool call, use think_tool to plan your approach:\n- Can the task be broken down into smaller sub-tasks?\n\nAfter each ConductResearch tool call, use think_tool to analyze the results:\n- What key information did I find?\n- What's missing?\n- Do I have enough to answer the question comprehensively?\n- Should I delegate more research or call ResearchComplete?\n</Show Your Thinking>\n\n<Scaling Rules>\n**Simple fact-finding, lists, and rankings** can use a single sub-agent:\n- *Example*: List the top 10 coffee shops in San Francisco → Use 1 sub-agent\n\n**Comparisons presented in the user request** can use a sub-agent for each element of the comparison:\n- *Example*: Compare OpenAI vs. Anthropic vs. DeepMind approaches to AI safety → Use 3 sub-agents\n- Delegate clear, distinct, non-overlapping subtopics\n\n**Important Reminders:**\n- Each ConductResearch call spawns a dedicated research agent for that specific topic\n- A separate agent will write the final report - you just need to gather information\n- When calling ConductResearch, provide complete standalone instructions - sub-agents can't see other agents' work\n- Do NOT use acronyms or abbreviations in your research questions, be very clear and specific\n</Scaling Rules>",
+        "additional_kwargs": {},
+        "response_metadata": {},
+        "type": "system"
+      },
+      {
+        "content": "I need to determine the primary programming language used in the LangGraph project, based on evidence from its official GitHub repository or official documentation. Please prioritize the official GitHub repository (https://github.com/langchain-ai/langgraph) as the primary source. Specifically, I need: (1) the explicit name of the primary programming language used to write the LangGraph project; (2) a direct source link from the official GitHub repository or official documentation that supports this finding; and (3) no additional information about LangGraph's features, architecture, or usage methods — only the programming language identification and its supporting evidence. If there are multiple languages used, identify the dominant or primary one and note any secondary languages if clearly indicated in the repository metadata or documentation.",
+        "additional_kwargs": {},
+        "response_metadata": {},
+        "type": "human"
+      },
+      {
+        "content": "",
+        "additional_kwargs": {
+          "refusal": null
+        },
+        "response_metadata": {
+          "token_usage": {
+            "completion_tokens": 241,
+            "prompt_tokens": 1275,
+            "total_tokens": 1516,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 117,
+              "rejected_prediction_tokens": null,
+              "text_tokens": 241
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 0,
+              "text_tokens": 1275
+            }
+          },
+          "model_provider": "openai",
+          "model_name": "qwen3.7-plus",
+          "system_fingerprint": null,
+          "id": "chatcmpl-5089f7cf-1b8c-418a-b3a2-14eb0e4f9bf6",
+          "finish_reason": "tool_calls",
+          "logprobs": null
+        },
+        "type": "ai",
+        "id": "lc_run--019f6ff9-2047-7921-9720-839acd89cabf-0",
+        "tool_calls": [
+          {
+            "name": "think_tool",
+            "args": {
+              "reflection": "The user wants a focused answer about the primary programming language of the LangGraph project (https://github.com/langchain-ai/langgraph). This is a straightforward factual question about a specific GitHub repository. I should delegate a single research agent to investigate the repository's language composition, README, and any metadata that indicates the primary language. I don't need multiple agents since this is a single-repository question. Let me dispatch one research agent to examine the GitHub repo directly."
+            },
+            "id": "call_18ef7004d9724a0796a8ebd2",
+            "type": "tool_call"
+          }
+        ],
+        "invalid_tool_calls": [],
+        "usage_metadata": {
+          "input_tokens": 1275,
+          "output_tokens": 241,
+          "total_tokens": 1516,
+          "input_token_details": {
+            "cache_read": 0
+          },
+          "output_token_details": {
+            "reasoning": 117
+          }
+        }
+      },
+      {
+        "content": "Reflection recorded: The user wants a focused answer about the primary programming language of the LangGraph project (https://github.com/langchain-ai/langgraph). This is a straightforward factual question about a specific GitHub repository. I should delegate a single research agent to investigate the repository's language composition, README, and any metadata that indicates the primary language. I don't need multiple agents since this is a single-repository question. Let me dispatch one research agent to examine the GitHub repo directly.",
+        "additional_kwargs": {},
+        "response_metadata": {},
+        "type": "tool",
+        "name": "think_tool",
+        "tool_call_id": "call_18ef7004d9724a0796a8ebd2",
+        "status": "success"
+      },
+      {
+        "content": "",
+        "additional_kwargs": {
+          "refusal": null
+        },
+        "response_metadata": {
+          "token_usage": {
+            "completion_tokens": 357,
+            "prompt_tokens": 1509,
+            "total_tokens": 1866,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 188,
+              "rejected_prediction_tokens": null,
+              "text_tokens": 357
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 0,
+              "text_tokens": 1509
+            }
+          },
+          "model_provider": "openai",
+          "model_name": "qwen3.7-plus",
+          "system_fingerprint": null,
+          "id": "chatcmpl-3c24a29d-f040-40a8-8938-641f631e7fad",
+          "finish_reason": "tool_calls",
+          "logprobs": null
+        },
+        "type": "ai",
+        "id": "lc_run--019f6ff9-3504-7963-afca-53e4ab115ee1-0",
+        "tool_calls": [
+          {
+            "name": "ConductResearch",
+            "args": {
+              "research_topic": "Investigate the primary programming language used in the LangGraph project by examining the official GitHub repository at https://github.com/langchain-ai/langgraph. Specifically: (1) identify the explicit name of the primary/dominant programming language used to write the project, (2) provide a direct source link from the official GitHub repository that supports this finding (such as the repository main page, README, or language statistics), and (3) if multiple languages are used, identify the primary language and note any secondary languages if clearly indicated in the repository metadata. Focus only on programming language identification and supporting evidence - do not gather information about LangGraph's features, architecture, or usage methods."
+            },
+            "id": "call_1b746a9dd75540bab167c616",
+            "type": "tool_call"
+          }
+        ],
+        "invalid_tool_calls": [],
+        "usage_metadata": {
+          "input_tokens": 1509,
+          "output_tokens": 357,
+          "total_tokens": 1866,
+          "input_token_details": {
+            "cache_read": 0
+          },
+          "output_token_details": {
+            "reasoning": 188
+          }
+        }
+      },
+      {
+        "content": "**List of Queries and Tool Calls Made**\n- `langchain-ai langgraph GitHub repository programming language`, `https://github.com/langchain-ai/langgraph language statistics`\n- `site:github.com/langchain-ai/langgraph languages`, `langgraph github repository Python TypeScript language breakdown`\n- `github.com/langchain-ai/langgraph languages page statistics Python percentage`\n- `\"github.com/langchain-ai/langgraph\" \"Python\" \"TypeScript\" language percentage site:github.com`\n- `github.com/langchain-ai/langgraph/languages`, `langgraph repository \"Python\" \"Jupyter Notebook\" language statistics github`\n\n**Fully Comprehensive Findings**\nBased on the research conducted, here are the findings regarding the programming languages used in the LangGraph project. *(Note: Information regarding LangGraph's features, architecture, and usage methods has been excluded to focus strictly on programming language identification and supporting evidence, as requested).*\n\n**1. Primary Programming Language**\nThe explicit name of the primary and dominant programming language used to write the core LangGraph project is **Python**. \n\n**2. Direct Source Link and Supporting Evidence**\n- **Main Repository:** The official GitHub repository is located at `https://github.com/langchain-ai/langgraph` [1]. \n- **Codebase Evidence:** The repository's file structure and commit history confirm Python as the primary language, evidenced by Python file paths such as `libs/langgraph/langgraph/channels/delta.py`, `libs/langgraph/langgraph/graph/message.py`, `libs/checkpoint/`, `libs/checkpoint-postgres/`, and `libs/langgraph/langgraph/pregel/` [1].\n- **Ecosystem Statistics:** The GitHub topic page for \"langgraph\" (`https://github.com/topics/langgraph`) indicates that out of over 9,000 public repositories tagged with the topic, the vast majority are written in Python (between 6,553 and 6,588 repositories) [4, 10].\n- **Parent Project:** The broader LangChain ecosystem, including the main `langchain-ai/langchain` repository, is written primarily in Python (99.2%) [3].\n\n**3. Secondary Languages**\nWhile Python is the primary language for the core `langchain-ai/langgraph` repository, the LangGraph ecosystem and related official repositories utilize several secondary languages:\n- **Jupyter Notebook:** Heavily used for tutorials, examples, and documentation. The official tutorial repository `langchain-ai/langgraph-101` (`https://github.com/langchain-ai/langgraph-101`) explicitly lists its language breakdown as 80% Jupyter Notebook and 20% Python [2]. Another third-party tutorial repository, `snehotosh/langgraph-notebooks`, is written entirely in Jupyter Notebook [14]. The GitHub topic page also lists Jupyter Notebook as the third most common language in the ecosystem (829 to 830 repositories) [4, 10].\n- **TypeScript:** LangGraph exists in two main versions maintained by the LangChain team: the original Python library and a TypeScript port called **LangGraph.js** [7]. The GitHub topic page lists TypeScript as the second most common language in the ecosystem (842 to 847 repositories) [4, 10]. Additionally, SDK integrations (such as the `ag-ui` protocol) maintain both Python and TypeScript adapters for LangGraph [8].\n- **Makefile:** The official `langchain-ai/langgraph-codeact` repository (`https://github.com/langchain-ai/langgraph-codeact`) lists its language breakdown as 88.3% Python and 11.7% Makefile [5].\n- **JavaScript & HTML:** The GitHub topic page also notes minor usage of JavaScript (219 repositories) and HTML (138 repositories) within the broader LangGraph ecosystem [10].\n\n**List of All Relevant Sources (with citations in the report)**\n[1] langchain-ai/langgraph: Build resilient agents: https://github.com/langchain-ai/langgraph\n[2] langchain-ai/langgraph-101: https://github.com/langchain-ai/langgraph-101\n[3] GitHub - langchain-ai/langchain: The agent engineering platform: https://github.com/langchain-ai/langchain\n[4] langgraph · GitHub Topics: https://github.com/topics/langgraph\n[5] GitHub - langchain-ai/langgraph-codeact: https://github.com/langchain-ai/langgraph-codeact\n[6] langgraph/examples/llm-compiler/LLMCompiler.ipynb: https://github.com/langchain-ai/langgraph/blob/main/examples/llm-compiler/LLMCompiler.ipynb?short_path=98f5416\n[7] LangGraph vs LangGraph.js: Python vs TypeScript | Crewship: https://www.crewship.dev/learn/langgraph-vs-langgraphjs\n[8] [Feature] Add support for local/in-process LangGraph graphs (TypeScript) · Issue #952: https://github.com/ag-ui-protocol/ag-ui/issues/952\n[9] 110+ Langchain Statistics: 2026 Verified Report: https://gitnux.org/langchain-statistics\n[10] langgraph · GitHub Topics (sorted by fewest stars): https://github.com/topics/langgraph?o=asc&s=stars\n[11] gpt-researcher/.cursorrules: https://github.com/assafelovic/gpt-researcher/blob/main/.cursorrules\n[12] artificial · GitHub Topics: https://github.com/topics/artificial\n[13] Gemini 2.5-flash-lite stops with UNEXPECTED_TOOL_CALL · Issue #8589: https://github.com/langchain-ai/langchainjs/issues/8589\n[14] GitHub - snehotosh/langgraph-notebooks: https://github.com/snehotosh/langgraph-notebooks",
+        "additional_kwargs": {},
+        "response_metadata": {},
+        "type": "tool",
+        "name": "ConductResearch",
+        "tool_call_id": "call_1b746a9dd75540bab167c616",
+        "status": "success"
+      },
+      {
+        "content": "",
+        "additional_kwargs": {
+          "refusal": null
+        },
+        "response_metadata": {
+          "token_usage": {
+            "completion_tokens": 476,
+            "prompt_tokens": 2974,
+            "total_tokens": 3450,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 262,
+              "rejected_prediction_tokens": null,
+              "text_tokens": 476
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 0,
+              "text_tokens": 2974
+            }
+          },
+          "model_provider": "openai",
+          "model_name": "qwen3.7-plus",
+          "system_fingerprint": null,
+          "id": "chatcmpl-44f4e15f-e729-4d19-be51-54130f2b230c",
+          "finish_reason": "tool_calls",
+          "logprobs": null
+        },
+        "type": "ai",
+        "id": "lc_run--019f7002-7094-7913-a57b-fde53256d7aa-0",
+        "tool_calls": [
+          {
+            "name": "think_tool",
+            "args": {
+              "reflection": "The research has returned strong findings. Let me assess against the user's three requirements:\n\n1. **Primary programming language**: Python — clearly identified as the dominant language in the core `langchain-ai/langgraph` repository.\n\n2. **Direct source link**: The official GitHub repository at `https://github.com/langchain-ai/langgraph` is cited, with evidence from file paths showing Python files (e.g., `libs/langgraph/langgraph/channels/delta.py`, `libs/langgraph/langgraph/graph/message.py`, etc.).\n\n3. **No additional info about features/architecture/usage**: The research correctly excluded this information.\n\n4. **Secondary languages**: TypeScript (LangGraph.js), Jupyter Notebook, Makefile, JavaScript, and HTML are noted as secondary languages.\n\nThe findings are sufficient to answer the user's question comprehensively. I have enough to proceed with ResearchComplete."
+            },
+            "id": "call_21b414c6ba7d4a6696c1a70f",
+            "type": "tool_call"
+          }
+        ],
+        "invalid_tool_calls": [],
+        "usage_metadata": {
+          "input_tokens": 2974,
+          "output_tokens": 476,
+          "total_tokens": 3450,
+          "input_token_details": {
+            "cache_read": 0
+          },
+          "output_token_details": {
+            "reasoning": 262
+          }
+        }
+      },
+      {
+        "content": "Reflection recorded: The research has returned strong findings. Let me assess against the user's three requirements:\n\n1. **Primary programming language**: Python — clearly identified as the dominant language in the core `langchain-ai/langgraph` repository.\n\n2. **Direct source link**: The official GitHub repository at `https://github.com/langchain-ai/langgraph` is cited, with evidence from file paths showing Python files (e.g., `libs/langgraph/langgraph/channels/delta.py`, `libs/langgraph/langgraph/graph/message.py`, etc.).\n\n3. **No additional info about features/architecture/usage**: The research correctly excluded this information.\n\n4. **Secondary languages**: TypeScript (LangGraph.js), Jupyter Notebook, Makefile, JavaScript, and HTML are noted as secondary languages.\n\nThe findings are sufficient to answer the user's question comprehensively. I have enough to proceed with ResearchComplete.",
+        "additional_kwargs": {},
+        "response_metadata": {},
+        "type": "tool",
+        "name": "think_tool",
+        "tool_call_id": "call_21b414c6ba7d4a6696c1a70f",
+        "status": "success"
+      },
+      {
+        "content": "",
+        "additional_kwargs": {
+          "refusal": null
+        },
+        "response_metadata": {
+          "token_usage": {
+            "completion_tokens": 103,
+            "prompt_tokens": 3388,
+            "total_tokens": 3491,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 84,
+              "rejected_prediction_tokens": null,
+              "text_tokens": 103
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cached_tokens": 0,
+              "text_tokens": 3388
+            }
+          },
+          "model_provider": "openai",
+          "model_name": "qwen3.7-plus",
+          "system_fingerprint": null,
+          "id": "chatcmpl-f6a5918a-feb4-4629-a457-5baa8731c150",
+          "finish_reason": "tool_calls",
+          "logprobs": null
+        },
+        "type": "ai",
+        "id": "lc_run--019f7002-950d-7551-97d6-bc9c41858673-0",
+        "tool_calls": [
+          {
+            "name": "ResearchComplete",
+            "args": {},
+            "id": "call_0c424fe4a1d548cd98a1b8d8",
+            "type": "tool_call"
+          }
+        ],
+        "invalid_tool_calls": [],
+        "usage_metadata": {
+          "input_tokens": 3388,
+          "output_tokens": 103,
+          "total_tokens": 3491,
+          "input_token_details": {
+            "cache_read": 0
+          },
+          "output_token_details": {
+            "reasoning": 84
+          }
+        }
+      }
+    ],
+    "research_brief": "I need to determine the primary programming language used in the LangGraph project, based on evidence from its official GitHub repository or official documentation. Please prioritize the official GitHub repository (https://github.com/langchain-ai/langgraph) as the primary source. Specifically, I need: (1) the explicit name of the primary programming language used to write the LangGraph project; (2) a direct source link from the official GitHub repository or official documentation that supports this finding; and (3) no additional information about LangGraph's features, architecture, or usage methods — only the programming language identification and its supporting evidence. If there are multiple languages used, identify the dominant or primary one and note any secondary languages if clearly indicated in the repository metadata or documentation.",
+    "raw_notes": [
+      "\nSearch results: \n\n\n\n--- SOURCE 1: langchain-ai/langgraph: Build resilient agents. ---\nURL: https://github.com/langchain-ai/langgraph\n\nSUMMARY:\n<summary>\nThe webpage is the GitHub repository for `langchain-ai/langgraph`, an open-source library for building stateful, multi-actor applications with LLMs. The repository has 37.1k stars and 6.2k forks, with 6,997 total commits as of July 2026.\n\nRecent notable commits include:\n\n1. **July 10, 2026**: A CLI update (PR #8319) bumped the `langgraph-api` upper bound to version 1.0.0, releasing `langgraph-cli` version 0.4.31.\n\n2. **July 3, 2026**: A dependency update bumped `actions/setup-python` from 6.2.0 to 6.3.0, adding RHEL support and fixing pip cache error handling on Windows.\n\n3. **June 17, 2026**: A new recovery script (`examples/delta-channel-dump`) was added for operators rolling back from langgraph >= 1.2 / deepagents 0.6.x to older runtimes that don't understand `EXT_DELTA_SNAPSHOT` msgpack blobs. The script connects to Postgres, walks checkpoint parent chains, decodes msgpack blobs, and emits JSON for manual state reduction.\n\n4. **February 18, 2026**: Documentation redirects were added to migrate old LangGraph docs URLs to docs.langchain.com.\n\n5. **Major Feature - DeltaChannel (PR #7586)**: A new `DeltaChannel` fold-reducer was introduced that stores only a zero-byte sentinel in checkpoint blobs instead of full accumulated values. On restore, the runtime replays ancestor writes through the reducer to reconstruct state. Benchmarks show dramatic storage savings (up to 73,063x for message blobs at 500 turns) while maintaining comparable read latency. The feature includes configurable `snapshot_frequency` to bound replay depth, a batch reducer interface, and backward compatibility with existing `BinaryOperatorAggregate` threads. It is supported by InMemory, Postgres, and AsyncPostgres checkpoint savers.\n</summary>\n\n<key_excerpts>\n- `DeltaChannel` is a new fold-reducer channel that stores only a zero-byte sentinel in checkpoint blobs instead of the full accumulated value. On restore, the runtime replays ancestor writes through the reducer to reconstruct state.\n- For long-running threads with large accumulating state (e.g. message histories), this delivers dramatically smaller checkpoint blobs with configurable read-depth bounds.\n- `snapshot_frequency=N` writes a full `_DeltaSnapshot` blob every N pregel steps, bounding replay depth regardless of thread length.\n- Pre-existing threads written under `BinaryOperatorAggregate` work transparently after swapping the annotation — the saver detects a plain-value ancestor blob and uses it as the reconstruction seed.\n- Takeaway: `snapshot_frequency=10` matches full-list read latency while still saving 5x on blob storage and ~4x on total storage.\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 2: langchain-ai/langgraph-101 ---\nURL: https://github.com/langchain-ai/langgraph-101\n\nSUMMARY:\n<summary>\nThe `langchain-ai/langgraph-101` GitHub repository is a hands-on tutorial collection for learning LangChain, LangGraph, and Deep Agents, organized into two tracks: **101 (Fundamentals)** covering basic agent building with models, tools, memory, streaming, middleware, and human-in-the-loop patterns; and **201 (Production Patterns)** covering stateful email triage agents, multi-agent systems with supervisors, deep research agents with parallel sub-researchers, and DeepAgents with AGENTS.md, skills, long-term memory, and HITL. The repo includes standalone agent implementations runnable via `langgraph dev` in LangGraph Studio, with hot-reloading and a local API server. Project structure includes `notebooks/` (101 and 201 tutorials), `agents/` (standalone implementations like weather, email, music store, researcher, and deep agent), and `utils/` (centralized model configuration supporting OpenAI default `o3-mini`, Azure OpenAI, AWS Bedrock, and Google Vertex AI). LangGraph is described as a framework for building agent and multi-agent applications with precision and control, while Deep Agents is an agent harness on top of LangGraph providing built-in tools, context management, and skills for complex multi-step tasks. Setup requires cloning the repo, creating a `.env` from `.env.example`, installing `uv`, running `uv sync`, and activating the virtual environment. The repo has 518 stars, 123 forks, uses MIT license, and is composed of 80% Jupyter Notebook and 20% Python. Recommended learning path: start with 101 notebooks, progress to 201, then run agents in LangGraph Studio.\n</summary>\n\n<key_excerpts>\n- LangGraph's core design philosophy is to help developers add better precision and control into agent workflows, suitable for the complexity of real-world systems.\n- For complex, multi-step tasks that require planning, filesystem access, and delegation, we've built Deep Agents — an agent harness on top of LangGraph that provides built-in tools, context management, and skills out of the box.\n- This repository contains hands-on tutorials for learning LangChain, LangGraph, and Deep Agents, organized into two learning tracks: 101 (Fundamentals) and 201 (Advanced patterns including multi-agent systems, deep agents, and production workflows).\n- All notebooks use the latest LangChain, LangGraph, and DeepAgents primitives, including create_agent(), create_deep_agent(), middleware, and interrupt patterns.\n- This is a condensed version of LangChain Academy, intended to be run in a session with a LangChain engineer.\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 3: GitHub - langchain-ai/langchain: The agent engineering platform. · GitHub ---\nURL: https://github.com/langchain-ai/langchain\n\nSUMMARY:\n<summary>\nLangChain is an open-source framework (MIT license) for building AI agents and LLM-powered applications, written primarily in Python (99.2%). The repository, hosted at github.com/langchain-ai/langchain, has amassed 142k stars, 23.6k forks, and over 16,400 commits across 1,302 releases, with the latest release (langchain-core==1.4.9) dated July 8, 2026.\n\nLangChain's core value proposition is providing a modular, component-based architecture that chains together interoperable components and third-party integrations to simplify AI application development. Key features include real-time data augmentation (connecting LLMs to diverse data sources), model interoperability (swapping models as needs evolve), rapid prototyping, production-ready monitoring and debugging, and flexible abstraction layers from high-level chains to low-level components.\n\nThe LangChain ecosystem includes several complementary products:\n- Deep Agents: A higher-level package for agents with built-in planning, subagent, and file system capabilities.\n- LangGraph: A low-level framework for building controllable, stateful agent workflows.\n- LangSmith: A platform for agent evaluation, observability, debugging, and deployment of long-running workflows.\n- Integrations: A vast library of connectors for chat/embedding models, tools, toolkits, and vector stores.\n\nThe project is actively maintained with a vibrant open-source community, comprehensive documentation, free courses via LangChain Academy, and a community forum for technical discussions.\n</summary>\n\n<key_excerpts>\n- :\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 4: langgraph · GitHub Topics ---\nURL: https://github.com/topics/langgraph\n\nSUMMARY:\n<summary>\nThe webpage is a GitHub topic page for \"langgraph,\" which lists 9,086 public repositories tagged with this topic. LangGraph is a framework by LangChain AI for building resilient, multi-agent AI systems. The majority of repositories are written in Python (6,553), followed by TypeScript (842), and Jupyter Notebook (829). The top repositories by stars include:\n\n- **langchain-ai/langchain** (142k stars): The agent engineering platform, supporting multi-agent systems, RAG, and LLMs.\n- **bytedance/deer-flow** (77.2k stars): An open-source long-horizon SuperAgent harness for research, coding, and creation tasks.\n- **langchain-ai/langgraph** (37.4k stars): The core LangGraph framework for building resilient agents.\n- **langchain-ai/deepagents** (26.3k stars): A batteries-included agent harness.\n- **NirDiamant/GenAI_Agents** (23.2k stars): 50+ tutorials for generative AI agent techniques.\n- **NirDiamant/agents-towards-production** (21k stars): End-to-end tutorials for production-grade GenAI agents.\n- **mayooear/ai-pdf-chatbot-langchain** (16.6k stars): AI PDF chatbot built with LangChain & LangGraph.\n- **MODSetter/SurfSense** (15.3k stars): NotebookLM-style tool for competitive intelligence research with live internet data.\n- **PurpleAILAB/Decepticon** (4.7k stars): Autonomous hacking agent for red team cybersecurity.\n- **JoshuaC215/agent-service-toolkit** (4.4k stars): Full toolkit for running AI agent services with LangGraph, FastAPI, and Streamlit.\n- **FareedKhan-dev/all-agentic-architectures** (3.9k stars): 35 production-grade agentic AI architectures with benchmark leaderboard.\n- **GiovanniPasq/agentic-rag-for-dummies** (3.7k stars): Modular Agentic RAG tutorial built with LangGraph.\n- **langchain-ai/langchain-mcp-adapters** (3.6k stars): LangChain MCP integration adapters.\n- **pipeshub-ai/pipeshub-ai** (3k stars): Extensible AI context layer for enterprise search and agentic workflow automation.\n- **langchain-ai/agent-chat-ui** (3k stars): Web app for interacting with LangGraph agents via chat.\n- **didilili/ai-agents-from-zero** (2.8k stars): Comprehensive AI Agent tutorial guide covering LangChain, LangGraph, Coze, Dify, MCP, and more.\n- **OpenDCAI/Paper2Any** (2.7k stars): Converts papers/text into editable research figures and slides.\n- **minitap-ai/mobile-use** (2.7k stars): AI agents that can use real Android and iOS apps.\n- **genieincodebottle/generative-ai** (2.5k stars): Comprehensive GenAI resources, roadmap, and interview prep.\n- **wassim249/fastapi-langgraph-agent-production-ready-template** (2.5k stars): Production-ready FastAPI template for LangGraph AI agent applications.\n\nMost repositories were recently updated in June–July 2026. Common themes include multi-agent systems, RAG, agentic workflows, MCP integration, and production deployment of AI agents.\n</summary>\n\n<key_excerpts>\n- There are 9,086 public repositories matching the langgraph topic on GitHub.\n- The agent engineering platform. — langchain-ai/langchain (142k stars)\n- Build resilient agents. — langchain-ai/langgraph (37.4k stars)\n- An open-source long-horizon SuperAgent harness that researches, codes, and creates. — bytedance/deer-flow (77.2k stars)\n- The batteries-included agent harness. — langchain-ai/deepagents (26.3k stars)\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\nSearch results: \n\n\n\n--- SOURCE 1: langchain-ai/langgraph: Build resilient agents. ---\nURL: https://github.com/langchain-ai/langgraph\n\nSUMMARY:\n<summary>\nThe webpage is the GitHub repository for **LangGraph** (langchain-ai/langgraph), a highly popular open-source project (37.1k stars, 6.2k forks) maintained by LangChain AI. The repository contains 6,997 commits across 309 branches and 564 tags.\n\nKey recent activity includes:\n\n- **July 10, 2026**: A commit by Josh Rogers bumped the `langgraph-api` upper bound in the CLI to `1.0.0` and released `langgraph-cli` version `0.4.31`.\n- **July 3, 2026**: A Dependabot PR bumped `actions/setup-python` from 6.2.0 to 6.3.0, adding RHEL support, fixing pip cache error handling on Windows, and upgrading dependencies.\n- **June 17, 2026**: A new recovery script (`examples/delta-channel-dump/`) was added for operators rolling back from LangGraph >= 1.2 / deepagents 0.6.x. It connects directly to Postgres, decodes `EXT_DELTA_SNAPSHOT` msgpack blobs, and emits JSON for manual state re-application.\n- **February 18, 2026**: Documentation redirects were added to migrate old LangGraph doc URLs to `docs.langchain.com`.\n\nThe most significant technical change is the introduction of **`DeltaChannel`**, a new fold-reducer channel that stores only a zero-byte sentinel in checkpoint blobs instead of the full accumulated value. On restore, the runtime replays ancestor writes through a batch reducer to reconstruct state. This dramatically reduces checkpoint blob sizes for long-running threads with large accumulating state (e.g., message histories). Benchmarks show up to **73,000x reduction** in message blob storage (from 219 MB to 3 KB for 500 turns) while maintaining comparable read latency when using `snapshot_frequency=10`. The implementation includes async write-ordering safety, transparent migration from `BinaryOperatorAggregate`, and support for InMemory and Postgres savers.\n</summary>\n\n<key_excerpts>\n- `DeltaChannel` is a new fold-reducer channel that stores only a zero-byte sentinel in checkpoint blobs instead of the full accumulated value. On restore, the runtime replays ancestor writes through the reducer to reconstruct state.\n- `snapshot_frequency=10` matches full-list read latency while still saving 5x on blob storage and ~4x on total storage.\n- For 500 turns, message blob storage drops from 219.19 MB (add_messages) to 3.0 KB (delta infinite) — a 73,063x reduction.\n- Bumps the langgraph-api upper bound in the cli to `1.0.0` and releases langgraph-cli version 0.4.31.\n- Add a standalone recovery tool at `examples/delta-channel-dump/` for operators rolling back from langgraph >= 1.2 / deepagents 0.6.x to an older runtime that does not understand `EXT_DELTA_SNAPSHOT` msgpack blobs.\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 2: GitHub - langchain-ai/langgraph-codeact · GitHub ---\nURL: https://github.com/langchain-ai/langgraph-codeact\n\nSUMMARY:\n<summary>\n**Overview:**\nThe `langgraph-codeact` repository by LangChain AI implements the CodeAct architecture in LangGraph, an alternative to JSON function-calling that leverages the full power of a Turing-complete programming language (Python) to combine and transform outputs of multiple tools, enabling more complex tasks to be solved in fewer steps. The architecture is notably used by Manus.im. The repository was archived by the owner on Feb 25, 2026, and is now read-only. It has 733 stars, 75 forks, and 14 watchers. The latest release is version 0.1.3 (Apr 25, 2025). The project is licensed under MIT.\n\n**Key Features:**\n- Message history is saved between turns to support follow-up questions.\n- Python variables are saved between turns, enabling more advanced follow-up questions.\n- Supports `.invoke()` for final results or `.stream()` for token-by-token output.\n- Compatible with custom tools, LangChain tools, and MCP tools.\n- Works with any model supported by LangChain (tested with Claude 3.7).\n- Allows users to bring their own code sandbox via a simple functional API.\n- The system message is customizable.\n\n**Installation:**\n`pip install langgraph-codeact` (with optional `langchain` and `langchain-anthropic` for examples).\n\n**Usage Steps:**\n1. **Define tools:** Users can define any tools (custom, LangChain, or MCP). The example demonstrates simple math functions (add, multiply, divide, subtract, sin, cos, etc.).\n2. **Bring-your-own code sandbox:** Pass a function that accepts a code string and a dictionary of locals. The example uses `exec()` for demonstration but warns to use a sandboxed environment (e.g., LangChain Sandbox) in production.\n3. **Create the CodeAct graph:** Use `create_codeact` from `langgraph_codeact` with a model, tools, and sandbox function. The prompt is customizable.\n4. **Run it:** Use `.invoke()` for final results or `.stream()` for streaming output. The example demonstrates a physics-based baseball trajectory calculation.\n\n**Languages:** Python (88.3%), Makefile (11.7%).\n</summary>\n\n<key_excerpts>\n- This library implements the CodeAct architecture in LangGraph. This is the architecture is used by Manus.im. It implements an alternative to JSON function-calling, which enables solving more complex tasks in less steps.\n- This is achieved by making use of the full power of a Turing complete programming language (such as Python used here) to combine and transform the outputs of multiple tools.\n- This repository was archived by the owner on Feb 25, 2026. It is now read-only.\n- Warning: Use a sandboxed environment in production! The eval function below is just for demonstration purposes, not safe!\n- You can use any custom tools you wrote, any LangChain tools, or any MCP tools.\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 3: langgraph/examples/llm-compiler/LLMCompiler.ipynb at main · langchain-ai/langgraph · GitHub ---\nURL: https://github.com/langchain-ai/langgraph/blob/main/examples/llm-compiler/LLMCompiler.ipynb?short_path=98f5416\n\nSUMMARY:\n<summary>\nThe webpage is a GitHub-hosted Jupyter notebook file (LLMCompiler.ipynb) from the langchain-ai/langgraph repository. The file is no longer actively maintained at this location. It has been moved to the consolidated LangChain documentation. The directory is retained purely for archival purposes. The notebook previously contained examples related to the LLM Compiler pattern within LangGraph, and has been relocated to a new path within the LangGraph documentation repository. The consolidated documentation can be found at the official LangChain docs site.\n</summary>\n\n<key_excerpts>\n- This file has been moved\n- This directory is retained purely for archival purposes and is no longer updated.\n- The examples previously found here have been moved to the newly consolidated LangChain documentation.\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 4: LangGraph vs LangGraph.js: Python vs TypeScript | Crewship ---\nURL: https://www.crewship.dev/learn/langgraph-vs-langgraphjs\n\nSUMMARY:\n<summary>\nLangGraph exists in two versions maintained by the LangChain team: the original Python library (launched August 2023) and a TypeScript port called LangGraph.js (launched January 2024). Both reached 1.0 GA in October 2025. They share the same core API — StateGraph, nodes, edges, checkpointers, human-in-the-loop, streaming modes, subgraphs, conditional edges, Store API, and multi-agent swarms — but differ in language-level implementation details.\n\nKey API differences include: state definition (Python uses TypedDict + Annotated; TypeScript uses Annotation.Root() with explicit reducers), tool schemas (Python infers from type hints/docstrings via @tool decorator; TypeScript requires explicit Zod objects), node functions (Python supports sync and async; TypeScript is always async), and naming conventions (snake_case vs camelCase). As of early 2026, Python has ~25,500 GitHub stars and ~37M monthly PyPI downloads, while TypeScript has ~2,600 stars and ~6M npm downloads.\n\nPython leads in documentation breadth, community size, LLM provider integrations (~98 vs ~33 for JS), LangChain Academy courses, and stable LangGraph Studio support. TypeScript leads in runtime versatility (Node.js, Deno, Bun, Cloudflare Workers, Vercel Edge, browsers), native non-blocking I/O without GIL limitations, faster cold starts for serverless, runtime type validation via Zod, and fully type-safe streaming with generics.\n\nPerformance-wise, JavaScript shows ~20-25% better end-to-end latency for I/O-heavy agent workflows due to native event loop concurrency, and faster cold starts. Python retains advantages for local ML/data processing (NumPy, PyTorch, etc.).\n\nBoth versions are supported by LangGraph Platform (LangSmith Deployment) across Cloud SaaS, self-hosted Lite, BYOC, and Enterprise options. Crewship supports both via framework configuration in crewship.toml.\n\nThe choice primarily depends on the team's primary language and deployment targets: Python for data science/ML teams and traditional server deployments; TypeScript for full-stack JS teams, edge/browser deployment, and serverless environments.\n</summary>\n\n<key_excerpts>\n- The core API is the same — StateGraph, nodes, edges, checkpointers — but the language-level details differ.\n- The Python version has roughly 10x the GitHub stars and 6x the downloads. This reflects Python's dominance in the AI/ML space and the 5-month head start, not a quality gap.\n- If you need to run agent logic on the edge (low latency, close to users) or in the browser (demos, offline-capable apps), LangGraph.js is the only option.\n- Agent workflows spend most of their time waiting on LLM API calls, so framework overhead rarely matters. The bottleneck is the LLM provider's response time, not your local code.\n- The choice usually comes down to your team's primary language. If you write Python, choose Python. If you write TypeScript, choose TypeScript. The capabilities are the same.\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 5: langgraph · GitHub Topics ---\nURL: https://github.com/topics/langgraph\n\nSUMMARY:\n<summary>\nThe webpage is a GitHub topic page for 'langgraph', listing 9,086 public repositories tagged with the topic. LangGraph is a framework by LangChain AI for building resilient, stateful AI agents, primarily used in Python (6,553 repos), TypeScript (842 repos), and Jupyter Notebooks (829 repos). The top repositories by stars include:\n\n- **langchain-ai/langchain** (142k stars): The agent engineering platform, supporting multi-agent systems, RAG, and LLMs.\n- **bytedance/deer-flow** (77.2k stars): An open-source long-horizon SuperAgent harness for research, coding, and content creation using sandboxes, memories, and subagents.\n- **langchain-ai/langgraph** (37.4k stars): The core LangGraph repository for building resilient agents.\n- **langchain-ai/deepagents** (26.3k stars): A batteries-included agent harness.\n- **NirDiamant/GenAI_Agents** (23.2k stars): 50+ tutorials on Generative AI Agent techniques.\n- **NirDiamant/agents-towards-production** (21k stars): End-to-end tutorials for production-grade GenAI agents.\n- **mayooear/ai-pdf-chatbot-langchain** (16.6k stars): AI PDF chatbot built with LangChain & LangGraph.\n- **MODSetter/SurfSense** (15.3k stars): NotebookLM-like tool for competitive intelligence research.\n- **PurpleAILAB/Decepticon** (4.7k stars): Autonomous hacking agent for red teaming.\n- **JoshuaC215/agent-service-toolkit** (4.4k stars): Full toolkit for running AI agent services with LangGraph, FastAPI, and Streamlit.\n\nOther notable repos include FareedKhan-dev/all-agentic-architectures (3.9k stars, 35 production-grade architectures), GiovanniPasq/agentic-rag-for-dummies (3.7k stars), langchain-ai/langchain-mcp-adapters (3.6k stars), and pipeshub-ai/pipeshub-ai (3k stars). The page also highlights tutorials, production templates, and specialized agents for mobile use, PDF chatbots, cybersecurity, and research automation. Most repositories were updated in June-July 2026.\n</summary>\n\n<key_excerpts>\n- LangGraph: Build resilient agents. (langchain-ai/langgraph, 37.4k stars)\n- bytedance/deer-flow: An open-source long-horizon SuperAgent harness that researches, codes, and creates. With the help of sandboxes, memories, tools, skill, subagents and message gateway, it handles different levels of tasks that could take minutes to hours.\n- NirDiamant/GenAI_Agents: 50+ tutorials and implementations for Generative AI Agent techniques, from basic conversational bots to complex multi-agent systems.\n- FareedKhan-dev/all-agentic-architectures: 35 production-grade agentic AI architectures (Reflexion, LATS, GraphRAG, MemGPT, Voyager, BrowserAgent, ...) — a Python library and runnable textbook with multi-provider LLM support and a 17-task benchmark leaderboard.\n- There are 9,086 public repositories matching the langgraph topic, with Python (6,553), TypeScript (842), and Jupyter Notebook (829) being the top languages.\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 6: [Feature] Add support for local/in-process LangGraph graphs (TypeScript) · Issue #952 · ag-ui-protocol/ag-ui · GitHub ---\nURL: https://github.com/ag-ui-protocol/ag-ui/issues/952\n\nSUMMARY:\n<summary>\nGitHub issue #952 in the `ag-ui-protocol/ag-ui` repository, opened by WilliamPeralta on Jan 17, 2026, requests adding support for local/in-process LangGraph graphs in the TypeScript SDK. Currently, the existing `LangGraphAgent` class requires a LangGraph Platform deployment (via `deploymentUrl` and `langsmithApiKey`), but the feature request proposes a new `LangGraphLocalAgent` class that works directly with compiled LangGraph graphs in-process, without needing a cloud server. The motivation includes enabling local development, self-hosting without LangGraph Platform, reducing latency by skipping HTTP round-trips, and simplifying architecture for smaller apps. The Python `ag-ui-langgraph` package already supports both modes, and this request aims to bring parity to TypeScript. The proposed implementation includes a new `local-agent.ts` file, shared event transformation logic, and message conversion utilities. Key features of the working implementation include core streaming (text messages, tool calls), extended thinking support, interrupt handling for human-in-the-loop workflows, custom events, state schema filtering, PredictStateTool for optimistic UI updates, time-travel with checkpoints, and multimodal support. The author provides usage examples for basic integration, Express, and Next.js App Router. The author asks maintainers about naming conventions, package structure, and acceptable refactoring scope, and offers to submit a PR. Compatible environments include `@langchain/langgraph` 0.2.x and 1.x, `@ag-ui/client` 0.0.42+, and Node.js/Bun/Deno.\n</summary>\n\n<key_excerpts>\n- Add a `LangGraphLocalAgent` class that works with compiled LangGraph graphs directly in-process, without requiring a LangGraph Platform deployment.\n- The current `LangGraphAgent` requires a LangGraph Platform server (`deploymentUrl` + `langsmithApiKey`). However, many developers want to: Run locally during development, Self-host without Platform, Reduce latency, Simplify architecture.\n- The Python `ag-ui-langgraph` package already supports both modes. This would bring parity to the TypeScript SDK.\n- I have a working implementation with full feature parity to the Python adapter.\n- I have a complete working implementation and would be happy to submit a PR once we align on the approach.\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\nSearch results: \n\n\n\n--- SOURCE 1: langchain-ai/langgraph: Build resilient agents. ---\nURL: https://github.com/langchain-ai/langgraph\n\nSUMMARY:\n<summary>\nThe webpage is the GitHub repository page for `langchain-ai/langgraph`, a public repository with 37.1k stars and 6.2k forks. The most recent commit (July 10, 2026, by Josh Rogers) bumps the `langgraph-api` upper bound in the CLI to `1.0.0` and releases `langgraph-cli` version 0.4.31. A major feature commit (June 17, 2026) introduces `DeltaChannel`, a new fold-reducer channel that stores only a zero-byte sentinel in checkpoint blobs instead of the full accumulated value, dramatically reducing storage for long-running threads with large accumulating state (e.g., message histories). Benchmarks show up to 73,000x reduction in message blob storage and ~5x savings in total checkpoint storage with `snapshot_frequency=10`, while matching full-list read latency. The feature includes a batch reducer interface, configurable snapshot frequency to bound replay depth, and backward compatibility with existing `BinaryOperatorAggregate` threads. A recovery script (`delta-channel-dump`) was added for operators rolling back from `langgraph >= 1.2` to older runtimes. Other recent activity includes documentation redirects (Feb 2026) and dependency updates (July 2026).\n</summary>\n\n<key_excerpts>\n- `DeltaChannel` is a new fold-reducer channel that stores only a zero-byte sentinel in checkpoint blobs instead of the full accumulated value. On restore, the runtime replays ancestor writes through the reducer to reconstruct state.\n- `snapshot_frequency=10` matches full-list read latency while still saving 5x on blob storage and ~4x on total storage.\n- `DeltaChannel` takes a batch reducer `(state, list[writes]) -> state` — all writes for a step arrive in one call, enabling single-pass implementations.\n- Bumps the langgraph-api upper bound in the cli to `1.0.0` and releases langgraph-cli version 0.4.31.\n- For long-running threads with large accumulating state (e.g. message histories), this delivers dramatically smaller checkpoint blobs with configurable read-depth bounds.\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 2: 110+ Langchain Statistics: 2026 Verified Report ---\nURL: https://gitnux.org/langchain-statistics\n\nSUMMARY:\n<summary>\nThis page is an overview/index for Gitnux's 2026 report on LangChain statistics, authored by Elif Demirci. The report aggregates data from peer-reviewed journals, government agencies, and professional bodies, with each statistic independently verified via reproduction analysis and cross-referencing against independent databases. Statistics failing independent corroboration are excluded. The report covers five main categories: Community Engagement (23 stats), Download Stats (24 stats), GitHub Metrics (24 stats), Integrations (23 stats), and Performance Benchmarks (25 stats), totaling 119 statistics across 21 cited datasets. Sources include GitHub, PyPI, SimilarWeb, Discord, Stack Overflow, Hugging Face, Reddit, YouTube, LinkedIn, and others. The key takeaway highlighted is that LangChain's ecosystem reaches millions of users monthly, with over 600 contributors and 50,000 active users driving innovation. The report is designed to be citable with stable URLs and versioned verification dates. Gitnux is described as an independent market research platform that generates revenue through client research projects and external banner advertising.\n</summary>\n\n<key_excerpts>\n- ]\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 3: langgraph · GitHub Topics ---\nURL: https://github.com/topics/langgraph?o=asc&s=stars\n\nSUMMARY:\n<summary>\nThe webpage is a GitHub topic listing for 'langgraph', displaying 9,130 public repositories sorted by fewest stars. The repositories span multiple programming languages, predominantly Python (6,588 repos), followed by TypeScript (847), Jupyter Notebook (830), JavaScript (219), and HTML (138). The listed repositories showcase a wide variety of AI agent and LLM-powered applications built using LangGraph, often in combination with LangChain. Notable projects include: RAG-Orchestrator (RAG workflows with LangChain, LangGraph, and Transformers), aitrader (AI stock analysis with multi-agent architecture), Interview-Bot (AI-powered resume analysis and interview question generation), an email automation bot using Groq LLaMA, TailorTalk (conversational AI for Google Drive file discovery), AgenticResearch (multi-agent system automating research workflows with RAG and memory), Research-AgenticTeam (academic search automation), a form-filling conversational agent, a text-to-SQL chatbot for Netflix movie queries, an observability dashboard for monitoring fleets of LangGraph agents, an expert EDA chatbot for data analysis, and Automaton Auditor (a 7-agent digital courtroom for autonomous code auditing). Common technologies and frameworks used across these projects include FastAPI, Streamlit, Groq, Ollama, Docker, Redis, AWS, DuckDB, FAISS, and various LLMs (LLaMA, Mistral, OpenAI). The page also includes instructions for curating the topic and associating repositories with the langgraph topic.\n</summary>\n\n<key_excerpts>\n\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\nSearch results: \n\n\n\n--- SOURCE 1: gpt-researcher/.cursorrules at main · assafelovic/gpt-researcher · GitHub ---\nURL: https://github.com/assafelovic/gpt-researcher/blob/main/.cursorrules\n\nSUMMARY:\n<summary>\nThis webpage contains the `.cursorrules` file for the **GPT-Researcher** project (github.com/assafelovic/gpt-researcher), an LLM-based autonomous agent that conducts local and web research on any topic and generates comprehensive reports with citations. The project is built with Next.js, TypeScript, Tailwind CSS (frontend) and Python/FastAPI (backend), and has garnered 28.2k stars and 3.8k forks on GitHub.\n\n**Project Structure:**\n- `/frontend`: Next.js + TypeScript + Tailwind CSS UI (static FastAPI version also available for lightweight deployments)\n- `/backend/multi_agents`: Multi-agent research system using LangChain and LangGraph, with agents including Browser, Editor, Researcher, Reviewer, Revisor, Writer, and Publisher\n- `/backend/document_processing`: PDF, DOCX, and web content parsing via Unstructured and PyMuPDF\n- `/backend/report_generation`: Template-based report structuring using LangChain and Jinja2\n- `/backend/output_formats`: PDF (md2pdf), Markdown (mistune), DOCX (python-docx)\n- `/gpt_researcher`: Core functionality — web scraping, research planning, source validation, query processing\n- `/tests`: Unit, integration, and end-to-end tests\n\n**Key Technical Details:**\n- Default LLM: gpt-4-turbo; alternatives include gpt-3.5-turbo and claude-3-opus\n- Emphasis on TypeScript strict mode, ESLint/Prettier compliance, responsive/accessible components, and self-documenting code\n- Development commands include `npm run dev`, `npm run build`, `npm run test`, `python -m pytest`, `docker-compose up`, and `python main.py`\n- AI integration guidelines stress type safety, context window management, rate limiting, and output validation\n\n**Key URLs:**\n- Project Home: https://gptr.dev/\n- GitHub: https://github.com/assafelovic/gpt-researcher\n- Documentation: https://docs.gptr.dev/\n</summary>\n\n<key_excerpts>\n- GPT-Researcher, LLM based autonomous agent that conducts local and web research on any topic and generates a comprehensive report with citations, is built using Next.js and TypeScript.\n- Multi-agent research system using LangChain and LangGraph in /backend/multi_agents — Browser, Editor, Researcher, Reviewer, Revisor, Writer, and Publisher agents.\n- Default model: gpt-4-turbo; Alternative models: gpt-3.5-turbo, claude-3-opus.\n- Use TypeScript with strict mode enabled. Follow ESLint and Prettier configurations. Ensure components are responsive and accessible. Use Tailwind CSS for styling, following the project's design system.\n- End all your comments with a :-) symbol.\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 2: artificial · GitHub Topics · GitHub ---\nURL: https://github.com/topics/artificial\n\nSUMMARY:\n<summary>\nThis webpage is a GitHub topic search results page for the topic 'artificial', displaying 273 public repositories. The listed repositories span a wide range of AI and machine learning-related projects, including:\n\n- **AGiXT** (Josh-XT/AGiXT): A dynamic AI Agent Automation Platform for orchestrating instruction management and complex task execution across diverse AI providers, featuring adaptive memory and a plugin system.\n- **dalle-playground** (saharmor/dalle-playground): A text-to-image generation playground using Stable Diffusion.\n- **ReMind** (DonTizi/ReMind): A local artificial memory system for devices.\n- **practical-ml-for-cybersecurity** (shramos): Over 20 practical cases applying Machine Learning to cybersecurity with real datasets.\n- **Deep-Learning-Machine-Learning-AI-TensorFlow-Python** (IDouble): A collection of notes for learning deep learning, ML, and AI with TensorFlow.\n- **Deep-LearningAI** (GSimas): Notes on Andrew Ng's Deep Learning AI course on Coursera.\n- **GPT2-Telegram-Chatbot** and **GPT3-Telegram-Chatbot** (xluxeq): Telegram chatbots powered by GPT-2 and GPT-3 respectively.\n- **HSOM** (CarsonScott): Hierarchical self-organizing maps for unsupervised pattern recognition.\n- **langserve-assistant-ui** (hminle): A developer-friendly template combining LangServe, LangGraph, and assistant-ui for building AI assistants.\n- **worm-gpt** (0x6b6679): A CLI chaos engine for testing LLM workflows.\n- **AgentPay-AI** (mirzayasirabdullahbaig07): A lightweight pay-per-use GenAI agent platform simulating token-based billing for AI tasks.\n- **artificial-data-generator** (NHSDigital): Pipelines for generating anonymous artificial data mimicking NHS data characteristics.\n- **machine-learning-collection** (exajobs): A curated collection of ML software, libraries, tutorials, and resources.\n- **chinese_identity_ocr** (ctkqiang): An OCR system for Chinese ID cards using OpenCV and Tesseract with deep learning algorithms.\n- **gaai** (Percona-QA): Genetic Algorithm-based AI for database performance tuning.\n- **cocoafrica** (victordibia): A curation tool and dataset of common objects in the context of Africa.\n\nThe page also includes instructions for developers on how to curate the topic page and associate the 'artificial' topic with their own repositories.\n</summary>\n\n<key_excerpts>\n- AGiXT is a dynamic AI Agent Automation Platform that seamlessly orchestrates instruction management and complex task execution across diverse AI providers.\n- AgentPay-AI is a lightweight pay-per-use GenAI agent platform that simulates token-based billing (USDC-style) for AI tasks.\n- Pipelines for generating large volumes of anonymous artificial data that share some of the characteristics of real NHS data.\n- WormGPT CLI: Chaos engine for testing LLM workflows.\n- Here are 273 public repositories matching this topic.\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 3: Gemini 2.5-flash-lite stops with UNEXPECTED_TOOL_CALL, even if no tools were actually passed · Issue #8589 · langchain-ai/langchainjs · GitHub ---\nURL: https://github.com/langchain-ai/langchainjs/issues/8589\n\nSUMMARY:\n<summary>\nA bug report (Issue #8589) was opened on July 30, 2025, by Andrei Dorobantu on the langchain-ai/langchainjs GitHub repository. The issue describes that the Gemini 2.5-flash-lite model intermittently stops execution with a finish reason of UNEXPECTED_TOOL_CALL, even when no tools are passed to the LLM. This occurs randomly when the user message has an intent related to web searching. The reporter includes a system prompt section titled 'Anara Tools & Tool Usage' that provides context to a LangGraph Agent about its capabilities, which may be causing Gemini to attempt tool calls. The bug is observed using langchain@0.3.30 on Node.js v23.11.0 and Mac OS X. The reporter has provided example code showing the ChatGoogle configuration (including safety settings, stop sequences, and model parameters), the error message/stack trace showing the UNEXPECTED_TOOL_CALL finish reason with 7848 input tokens and 0 output tokens, and a LangSmith trace link for further investigation. The issue is labeled as a bug and remains open with no assignee.\n</summary>\n\n<key_excerpts>\n- Gemini sometimes stops execution with finish reason UNEXPECTED_TOOL_CALL, even if no calls were passed to the llm.\n- Seeing this randomly for calls where the user message has an intent for searching on web.\n- We have this in the system prompt, to give more context to what our langgraph Agent can do, but I don't understand why it makes gemini try to a call a tool.\n- \"finish_reason\": \"UNEXPECTED_TOOL_CALL\"\n- Search Web find tedtalks content about adhd symptoms in adult women\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\nSearch results: \n\n\n\n--- SOURCE 1: langchain-ai/langgraph: Build resilient agents. ---\nURL: https://github.com/langchain-ai/langgraph\n\nSUMMARY:\n<summary>\nThe webpage is the GitHub repository for **langchain-ai/langgraph**, a public repository with 37.1k stars and 6.2k forks, containing 6,997 commits as of July 2026. The most recent activity includes:\n\n- **Jul 10, 2026**: A commit by Josh Rogers (jdrogers940) bumped the `langgraph-api` upper bound in the CLI to `1.0.0` and released `langgraph-cli` version 0.4.31.\n- **Jul 3, 2026**: A Dependabot commit bumped `actions/setup-python` from 6.2.0 to 6.3.0, adding RHEL support, fixing pip cache error handling on Windows, and upgrading dependencies.\n- **Jun 17, 2026**: A new recovery script (`delta-channel-dump`) was added under `examples/` to help operators roll back from langgraph >= 1.2 / deepagents 0.6.x. It connects directly to Postgres, walks the checkpoint parent chain, decodes msgpack blobs, and emits JSON for manual state re-application.\n- **Feb 18, 2026**: Documentation redirects were added to point old LangGraph doc URLs to docs.langchain.com.\n\nA major feature commit introduces **`DeltaChannel`**, a new fold-reducer channel that stores only a zero-byte sentinel in checkpoint blobs instead of the full accumulated value. On restore, the runtime replays ancestor writes through the reducer to reconstruct state. Key details:\n\n- **Storage savings**: For a 500-turn message history, blob storage drops from 219.19 MB (full list) to 3.0 KB with `delta(inf)` — a 73,063x reduction. With `snapshot_frequency=10`, blob storage is 43.67 MB (5x savings) while matching full-list read latency.\n- **Mechanism**: `DeltaChannel` takes a batch reducer `(state, list[writes]) -> state`. A built-in `_messages_delta_reducer` handles deduplication by ID and `RemoveMessage` support.\n- **`snapshot_frequency=N`**: Writes a full `_DeltaSnapshot` blob every N steps, bounding replay depth regardless of thread length.\n- **Migration**: Pre-existing threads written under `BinaryOperatorAggregate` work transparently — the saver detects a plain-value ancestor blob and uses it as the reconstruction seed.\n- **Async safety**: In `durability=\"async\"` mode, `AsyncPregelLoop` tracks in-flight `aput_writes` futures and drains them before committing the sentinel blob.\n- **Scope**: Implementation spans `libs/langgraph/langgraph/channels/delta.py`, `libs/langgraph/langgraph/graph/message.py`, `libs/checkpoint/`, `libs/checkpoint-postgres/`, and `libs/langgraph/langgraph/pregel/`.\n- **Follow-ups noted**: Batch reconstruction to reduce roundtrips, sync write ordering via two-phase commit, `ShallowPostgresSaver` compatibility (currently incompatible), and delta epoch IDs for more efficient reads.\n</summary>\n\n<key_excerpts>\n- DeltaChannel is a new fold-reducer channel that stores only a zero-byte sentinel in checkpoint blobs instead of the full accumulated value. On restore, the runtime replays ancestor writes through the reducer to reconstruct state.\n- snapshot_frequency=N writes a full _DeltaSnapshot blob every N pregel steps, bounding replay depth regardless of thread length.\n- Pre-existing threads written under BinaryOperatorAggregate work transparently after swapping the annotation — the saver detects a plain-value ancestor blob and uses it as the reconstruction seed.\n- Add a standalone recovery tool at examples/delta-channel-dump/ for operators rolling back from langgraph >= 1.2 / deepagents 0.6.x to an older runtime that does not understand EXT_DELTA_SNAPSHOT msgpack blobs.\n- Bumps the langgraph-api upper bound in the cli to 1.0.0 and releases langgraph-cli version 0.4.31.\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 2: GitHub - langchain-ai/langchain: The agent engineering platform. · GitHub ---\nURL: https://github.com/langchain-ai/langchain\n\nSUMMARY:\n<summary>\nLangChain is an open-source framework (MIT license) for building AI agents and LLM-powered applications, written primarily in Python (99.2%). It provides a modular, component-based architecture that chains together interoperable components and third-party integrations, simplifying AI application development while future-proofing decisions as underlying technology evolves. The repository, hosted at langchain-ai/langchain on GitHub, has 142k stars, 23.6k forks, and over 16,400 commits. Key features include real-time data augmentation, model interoperability, rapid prototyping, production-ready features, and flexible abstraction layers. The LangChain ecosystem includes: Deep Agents (higher-level package for planning, subagents, and file system usage), LangGraph (low-level agent orchestration framework for controllable workflows), LangSmith (evals, observability, and debugging for LLM apps), and LangSmith Deployment (scaling platform for long-running, stateful workflows). A JS/TS equivalent exists as LangChain.js. The latest release is langchain-core==1.4.9 (Jul 8, 2026), with 1,302 total releases. The project is actively maintained with a vibrant open-source community and comprehensive resources including documentation, API references, LangChain Academy courses, and a community forum.\n</summary>\n\n<key_excerpts>\n\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 3: langchain-ai/langgraph-101 ---\nURL: https://github.com/langchain-ai/langgraph-101\n\nSUMMARY:\n<summary>\nThe `langchain-ai/langgraph-101` GitHub repository is a hands-on tutorial collection for learning LangChain, LangGraph, and Deep Agents. It is organized into two tracks: **101** (fundamentals of building agents with models, tools, memory, streaming, middleware, and human-in-the-loop patterns) and **201** (advanced production patterns including stateful email triage agents, multi-agent systems with supervisors, deep research agents with parallel sub-researchers, and DeepAgents built from scratch with AGENTS.md, skills, backends, long-term memory, and HITL).\n\nThe repository includes standalone agent implementations runnable via `langgraph dev` in LangGraph Studio, with hot-reloading and a local API server. A centralized `utils/` module handles model configuration for OpenAI (default: `o3-mini`), Azure OpenAI, AWS Bedrock, and Google Vertex AI.\n\nLangGraph is described as a framework for building agent and multi-agent applications with precision and control, separate from the LangChain package. Deep Agents is an agent harness on top of LangGraph providing built-in tools, context management, and skills for complex multi-step tasks requiring planning, filesystem access, and delegation.\n\nThe repo has 518 stars, 123 forks, 209 commits, is written in Jupyter Notebook (80%) and Python (20%), and is licensed under MIT. It is a condensed version of LangChain Academy, intended for live sessions with LangChain engineers.\n</summary>\n\n<key_excerpts>\n\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n\n\n--- SOURCE 4: GitHub - snehotosh/langgraph-notebooks · GitHub ---\nURL: https://github.com/snehotosh/langgraph-notebooks\n\nSUMMARY:\n<summary>\nThe GitHub repository `snehotosh/langgraph-notebooks` (142 stars, 62 forks) is a curated, sequentially ordered collection of Jupyter notebooks designed as a hands-on learning roadmap for LangGraph, an advanced framework for building agentic systems and control flows around language models.\n\nThe 23 notebooks progress through three tiers:\n\n• **Basic (Notebooks 1–4):** Foundations of LangGraph — introduction, simple graphs, chat tool graphs, and a basic agent.\n• **Intermediate (Notebooks 5–11):** Adding memory/checkpointing, deeper message and state handling, chatbot summarization with streaming, controllability (breakpoints, time-travel, parallelization, subgraphs), and building a research assistant.\n• **Advanced (Notebooks 12–15.7):** Memory architectures with profiles and collections, a full chatbot agent, and seven agentic design patterns — prompt chaining, routing, parallelization, reflection, tool calling, planning, and multi-agent collaboration.\n\nPrerequisites include Python 3.10+, `langgraph`, `langchain-core`, an LLM backend (e.g., OpenAI), `python-dotenv`, and a Jupyter/VS Code environment. The repository is written entirely in Jupyter Notebook.\n</summary>\n\n<key_excerpts>\n- This repository is a curated, ordered collection of Jupyter notebooks created while learning LangGraph — an advanced framework for building agentic systems and control flows around language models.\n- The notebooks progress from basic graph concepts to intermediate agent design and culminate in advanced agentic patterns such as planning, routing, reflection, and multi-agent collaboration.\n- Each notebook builds on the previous one, gradually introducing new capabilities: Basic (1–4) → Foundations of LangGraph and simple agents; Intermediate (5–11) → Adding memory, control, and real-world use cases; Advanced (12–15.7) → Patterns for scalable, multi-agent design.\n- By following this notebook series, you will learn to: Understand the core concepts of LangGraph — nodes, edges, states, and messages; Build memory-aware agents capable of reasoning over context; Apply controllability tools (breakpoints, time-travel, subgraphs); Design advanced agentic behaviors using patterns such as reflection, routing, planning, and collaboration; Construct multi-agent systems with context isolation and shared memory.\n</key_excerpts>\n\n\n\n--------------------------------------------------------------------------------\n"
+    ],
+    "notes": [],
+    "final_report": "# LangGraph 项目编程语言研究报告\n\n## 主要编程语言\n\nLangGraph 项目的核心和主导编程语言是 **Python** [1]。\n\n根据官方 GitHub 仓库的元数据、文件结构以及代码库统计，Python 是构建 LangGraph 核心逻辑的绝对主要语言 [1]。在官方仓库 `langchain-ai/langgraph` 中，代码库的目录结构包含大量以 `.py` 为扩展名的 Python 源文件，例如 `libs/langgraph/langgraph/channels/delta.py`、`libs/langgraph/langgraph/graph/message.py` 以及 `libs/checkpoint/` 等核心模块路径 [1]。\n\n此外，作为 LangChain 生态系统的重要组成部分，其父项目主仓库 `langchain-ai/langchain` 的语言构成也印证了这一点，该仓库中 Python 代码占比高达 99.2% [3]。\n\n## 次要编程语言\n\n虽然 Python 是核心 `langchain-ai/langgraph` 仓库的主要语言，但 LangGraph 生态系统、官方文档及相关衍生仓库中还明确使用了以下次要语言：\n\n*   **TypeScript**：LangChain 团队为 LangGraph 维护了一个官方的 TypeScript 移植版本，即 **LangGraph.js** [6]。在 GitHub 的 \"langgraph\" 主题页面统计中，TypeScript 是整个 LangGraph 生态系统中第二常见的编程语言 [4]。此外，部分 SDK 集成（如 `ag-ui` 协议）也同时维护了 Python 和 TypeScript 的适配器 [8]。\n*   **Jupyter Notebook**：该语言被广泛用于官方教程、示例代码和文档的编写。例如，官方教程仓库 `langchain-ai/langgraph-101` 的语言构成为 80% 的 Jupyter Notebook 和 20% 的 Python [2]。在 GitHub 主题页面中，Jupyter Notebook 也是生态系统中第三常见的语言 [4]。\n*   **Makefile、JavaScript 和 HTML**：在更广泛的 LangGraph 生态系统及相关辅助仓库中，存在少量其他语言的使用。例如，官方仓库 `langchain-ai/langgraph-codeact` 的语言构成为 88.3% 的 Python 和 11.7% 的 Makefile [5]。同时，GitHub 主题页面也记录了生态系统中包含数百个使用 JavaScript 和 HTML 构建的周边项目或 UI 组件 [7]。\n\n### Sources\n\n[1] langchain-ai/langgraph: Build resilient agents: https://github.com/langchain-ai/langgraph\n[2] langchain-ai/langgraph-101: https://github.com/langchain-ai/langgraph-101\n[3] GitHub - langchain-ai/langchain: The agent engineering platform: https://github.com/langchain-ai/langchain\n[4] langgraph · GitHub Topics: https://github.com/topics/langgraph\n[5] GitHub - langchain-ai/langgraph-codeact: https://github.com/langchain-ai/langgraph-codeact\n[6] LangGraph vs LangGraph.js: Python vs TypeScript | Crewship: https://www.crewship.dev/learn/langgraph-vs-langgraphjs\n[7] langgraph · GitHub Topics (sorted by fewest stars): https://github.com/topics/langgraph?o=asc&s=stars\n[8] [Feature] Add support for local/in-process LangGraph graphs (TypeScript) · Issue #952: https://github.com/ag-ui-protocol/ag-ui/issues/952"
+  },
+  "metadata": {
+    "LANGSMITH_PROJECT": "open_deep_research",
+    "LANGSMITH_TRACING": "true",
+    "ls_integration": "langgraph",
+    "ls_run_depth": 0,
+    "revision_id": "a880ff1-dirty"
+  },
+  "langsmith": {
+    "organization": {
+      "name": "Personal",
+      "id": "c8bb4708-2242-4d76-82e9-7e3b36f097bd"
+    },
+    "workspace": {
+      "name": "Workspace 1",
+      "id": "e0bef2fb-b16b-4b52-920f-71af2bc21191"
+    },
+    "tracing_project": {
+      "id": "f9268bc7-f460-4edb-a389-0e3129a277ea",
+      "name": "open_deep_research"
+    }
+  }
+}
