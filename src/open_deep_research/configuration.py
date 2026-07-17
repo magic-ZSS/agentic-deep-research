@@ -185,7 +185,7 @@ class Configuration(BaseModel):
 
     # 配置 researcher 最大工具调用轮数。
     max_react_tool_calls: int = Field(
-        default=5,
+        default=4,
         metadata={
             "x_oap_ui_config": {
                 "type": "slider",
@@ -213,11 +213,11 @@ class Configuration(BaseModel):
 
     # 配置网页摘要模型的最大输出 token。
     summarization_model_max_tokens: int = Field(
-        default=8192,
+        default=4096,
         metadata={
             "x_oap_ui_config": {
                 "type": "number",
-                "default": 8192,
+                "default": 4096,
                 "description": "Maximum output tokens for summarization model"
             }
         }
@@ -225,11 +225,11 @@ class Configuration(BaseModel):
 
     # 配置网页摘要前保留的最大正文长度。
     max_content_length: int = Field(
-        default=30000,
+        default=20000,
         metadata={
             "x_oap_ui_config": {
                 "type": "number",
-                "default": 30000,
+                "default": 20000,
                 "min": 1000,
                 "max": 200000,
                 "description": "Maximum character length for webpage content before summarization"
