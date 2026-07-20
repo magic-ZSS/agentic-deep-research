@@ -2,71 +2,68 @@
 
 ## 当前目标（Current Objective）
 
-- 目标：新增 `print_process_info` 总开关，开启后用 `print()` 输出精简运行流程 trace。
-- 当前状态：completed。
-- 分支 / 提交：当前工作树，未创建提交。
+- 规划任务 `development-plan-001` 已完成。
+- 功能实施阶段 0–7 均未开始，状态均为 `not-started`。
+- 下一次建议目标：仅执行阶段 0，指令位于 `doc/development_plan/phase_0_baseline_and_references.md` 第 16 节。
 
-## 本次已完成
+## 已完成
 
-- 在 `Configuration` 中新增 `print_process_info`：
-  - 默认值：`False`
-  - OAP UI metadata：boolean
-  - 支持环境变量 `PRINT_PROCESS_INFO=true` 或 runnable config 开启
-- 在 `utils.py` 中集中封装 trace helper：
-  - `process_print_enabled`
-  - `process_print`
-  - `next_process_id`
-  - `with_process_context`
-- 在 `deep_researcher.py` 的关键流程点加入 helper 调用：
-  - research brief
-  - supervisor tool calls
-  - researcher tool calls
-  - researcher/tool 并发 context 传递
-  - compression
-  - final report generation
-- 在 `utils.py` 的 Tavily 路径加入 trace：
-  - search id：`S0`, `S1`
-  - summary id：`S0.0`, `S0.1`
-  - 父 search id 和 summary 并发 context
-- 扩展 `tests/test_research_limits.py` 到 `7` 个不触网测试，覆盖 trace helper、Tavily search/summary trace、researcher tool call trace。
-- 局部更新 `docs/codebase/` 中配置、架构、约定和测试相关文档。
+- 完整恢复并核对当前项目源码、测试、配置、状态和 `docs/codebase/`。
+- 浅克隆并定点分析五个参考仓库，记录固定 commit、重点 API、不可复用边界与许可证。
+- 创建 `doc/development_plan/` 下 12 份规划文档：
+  - `README.md`
+  - `architecture_target.md`
+  - `reference_repositories.md`
+  - `execution_protocol.md`
+  - `phase_0_baseline_and_references.md`
+  - `phase_1_knowledge_evidence_models.md`
+  - `phase_2_document_ingestion_and_paperqa.md`
+  - `phase_3_agentic_rag_lifecycle.md`
+  - `phase_4_mcp_integration.md`
+  - `phase_5_memory_system.md`
+  - `phase_6_citation_validation.md`
+  - `phase_7_evaluation_and_showcase.md`
+- 校验每个 phase 均有 16 个固定章节、连续验收编号和明确停止门禁；相对 Markdown文件链接均可解析。
+- 未安装依赖、未修改功能源码/主图/`pyproject.toml`、未启动阶段 0、未运行外部模型/搜索/LangSmith/DeepEval Judge。
 
-## 验证证据
+## 下一会话必读
 
-| 检查 | 命令 | 结果 | 备注 |
-|---|---|---|---|
-| 编译 | `conda run --no-capture-output -n open-deep-research python -m compileall -q src tests/test_research_limits.py` | 通过 | 未调用外部服务 |
-| 针对性测试 | `conda run --no-capture-output -n open-deep-research python -m pytest -q tests/test_research_limits.py` | 通过 | `7 passed`；仅有既有 deprecation warnings 和 `.pytest_cache` 权限 warning |
-| 初始化脚本 | `bash ./init.sh` | 失败 | 沙箱内 WSL `E_ACCESSDENIED` |
-| 初始化脚本（批准沙箱外） | `bash ./init.sh` | 输出不可靠 | 返回 0，但仍有 CRLF/WSL、mojibake 和 `python: command not found`，不能作为干净通过证据 |
-| JSON 格式 | `Get-Content -Raw -Encoding UTF8 feature_list.json | ConvertFrom-Json | Out-Null` | 通过 | 验证状态索引 JSON 可解析 |
-| 空白检查 | `git diff --check` | 失败 | 仅报告会话开始前已有的 `author_notes/context budgeting.md` 和 `src/open_deep_research/prompts.py` 空白问题；本次未清理无关改动 |
+1. `AGENTS.md`
+2. `feature_list.json`
+3. `progress.md`
+4. `session-handoff.md`
+5. `doc/development_plan/README.md`
+6. `doc/development_plan/architecture_target.md`
+7. `doc/development_plan/reference_repositories.md`
+8. `doc/development_plan/execution_protocol.md`
+9. `doc/development_plan/phase_0_baseline_and_references.md`
+10. 阶段 0 第 5、6 节列出的当前源码、测试和参考文件
 
-## 修改文件（Files Changed）
+## 关键边界
 
-- `src/open_deep_research/configuration.py`
-- `src/open_deep_research/utils.py`
-- `src/open_deep_research/deep_researcher.py`
-- `tests/test_research_limits.py`
-- `docs/codebase/STACK.md`
-- `docs/codebase/ARCHITECTURE.md`
-- `docs/codebase/CONVENTIONS.md`
-- `docs/codebase/TESTING.md`
-- `feature_list.json`
-- `progress.md`
-- `session-handoff.md`
+- 当前请求指定的执行目录是 `doc/development_plan/`。用户原有总体计划实际位于 `doc/overview.md`，未修改。
+- `doc/reference/` 下有五个浅克隆嵌套仓库；阶段 0 决定 lock/ignore/下载策略前不要修改、格式化或提交其源码。
+- 所有新能力默认关闭，必须保留 Supervisor—Researcher 与 `notes/raw_notes/compressed_research` 兼容。
+- PaperQA2只能在 Adapter 后提供解析/索引/evidence retrieval，禁止嵌入完整 Agent或调用 `aquery` 生成回答。
+- Agent/MCP不能 hard delete、force promote或绕过 Memory Write Gate。
+- 阶段 4 不实现虚假 `memory_search`；阶段 5有真实 MemoryRepository和 Namespace授权后才注册。
+- 每次只执行一个阶段，完成后必须停止。
 
-## 注意事项与风险（Notes / Risks）
+## 已知未决事项
 
-- `author_notes/context budgeting.md` 是会话开始前已有改动，本次未触碰。
-- 工作树在本次开始前已有未提交改动：`feature_list.json`、`progress.md`、`session-handoff.md`、`src/open_deep_research/configuration.py`、`prompts.py`、`state.py`、`utils.py`、`tests/test_research_limits.py` 等；本次在相关文件上做增量修改，没有回退已有内容。
-- trace 默认关闭；开启后仍不打印搜索正文、summary 正文、compression 正文或 final report 正文。
-- pytest 运行后仍有 `.pytest_cache` / `pytest-cache-files-*` 权限 warning；不要为了清理它而误删用户文件。
-- `git status --short` 已执行；仍包含会话开始前已有改动，并继续提示 `pytest-cache-files-*` 权限 warning。
-- 未运行真实 Tavily/OpenAI/Anthropic/MCP/LangSmith 调用或任何可能产生成本的 E2E。
+- 当前代码的 `print_process_info`、`allow_clarification` 和模型默认值与 UI/旧状态文档有漂移；阶段 0只固定事实并请求决策，不要静默修复。
+- Python/LangGraph/PaperQA2/DeepEval/LangMem兼容版本需阶段 0记录、阶段 2/5再安装验证。
+- PaperQA2 embedding/provider、领域 authority/freshness阈值、可信 tenant/user/project identity和敏感数据保留政策需在对应阶段确认。
+- Windows Filesystem MCP需要固定 Node package、真实 stdio smoke与 ACL evidence。
+- 阶段0 live baseline是可选发布证据，阶段7 full eval是完成门禁；任何真实调用都需要明确费用授权。
 
-## 下次会话启动（Next Session）
+## 工作树注意
 
-1. 阅读 `AGENTS.md`、`feature_list.json`、`progress.md`、`session-handoff.md` 和相关 `docs/codebase/` 文档。
-2. 执行 `git status --short`，保留已有改动。
-3. 如果用户继续优化流程可观测性，优先看 `src/open_deep_research/utils.py` 的 `process_print` / `with_process_context` 和 `src/open_deep_research/deep_researcher.py` 的 trace 调用点。
+- 用户原有未跟踪文件：`doc/overview.md`，不要移动或覆盖。
+- 本次规划新增：`doc/development_plan/`；参考浅克隆新增于 `doc/reference/`。
+- 会话扫描产生的临时 `.codebase-plan-scan.txt` 已删除，不是项目产物。
+- `git status` 仍可能提示既有 `pytest-cache-files-*` 权限 warning；不要为清理 warning 删除未知目录。
+
+## 建议下一条指令
+
+打开 `doc/development_plan/phase_0_baseline_and_references.md`，复制第 16 节“本阶段 Codex 执行指令”的完整代码块发送给 Codex。阶段 0完成并通过 T0-1 至 T0-12 前，不得开始阶段 1。

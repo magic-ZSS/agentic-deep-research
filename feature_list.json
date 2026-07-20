@@ -63,6 +63,14 @@
       "dependencies": [],
       "status": "completed",
       "evidence": "已更新 src/open_deep_research/configuration.py、src/open_deep_research/utils.py、src/open_deep_research/deep_researcher.py 和 tests/test_research_limits.py；新增 process_print_enabled/process_print/next_process_id/with_process_context helper；主流程在 brief、supervisor、researcher、Tavily search、source summary、compression、final report 前输出精简 trace；compileall 通过；pytest tests/test_research_limits.py 通过（7 passed）；bash ./init.sh 沙箱内 E_ACCESSDENIED，沙箱外返回 0 但仍混入 CRLF/WSL 与 python: command not found，不能作为干净通过证据。"
+    },
+    {
+      "id": "development-plan-001",
+      "name": "规划 Evidence-Governed Agentic RAG 分阶段改造",
+      "description": "基于当前源码、测试、状态文件和五个固定提交的参考仓库，在 doc/development_plan 下生成目标架构、参考映射、执行协议及阶段 0–7 的可独立执行与验收方案；本功能仅代表规划完成，不代表任何实施阶段已开始。",
+      "dependencies": ["codebase-onboarding-001", "author-decisions-001"],
+      "status": "completed",
+      "evidence": "已创建 doc/development_plan/README.md、architecture_target.md、reference_repositories.md、execution_protocol.md 和 phase_0 至 phase_7 共 12 份文档；8 份阶段文档均含连续 1–16 节、连续 Tn-* 验收编号和停止门禁；相对 Markdown 文件链接校验通过；参考仓库提交 SHA 与许可证已记录；未修改功能源码或执行阶段 0。"
     }
   ]
 }
