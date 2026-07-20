@@ -2,6 +2,8 @@ from langchain_anthropic import ChatAnthropic
 from langsmith.evaluation import evaluate_comparative
 from pydantic import BaseModel, Field
 
+from open_deep_research.evaluation.gates import require_full_eval_authorization
+
 HEAD_TO_HEAD_PROMPT = """
 We are testing out two different implementations of a deep research agent. This research agent is designed to conduct deep research on a given question.
 
@@ -33,6 +35,7 @@ class HeadToHeadRanking(BaseModel):
 
 
 def head_to_head_evaluator(inputs: dict, outputs: list[dict]) -> list:
+    require_full_eval_authorization()
     grader_llm = ChatAnthropic(
         model="claude-opus-4-20250514",
         max_tokens=20000,
@@ -90,6 +93,7 @@ class Rankings(BaseModel):
     worst_answer: int = Field(description="The worst answer between 1 and 3, where 1 is the first response, 2 is the second response, and 3 is the third response.")
 
 def free_for_all_evaluator(inputs: dict, outputs: list[dict]) -> list:
+    require_full_eval_authorization()
     grader_llm = ChatAnthropic(
         model="claude-opus-4-20250514",
         max_tokens=20000,
@@ -121,8 +125,15 @@ multi_agent_workflow = "DR MAW - Tavily #-c6818a83"
 #     randomize_order=True,
 # )
 
-evaluate_comparative(
-    (single_agent, multi_agent_supervisor_v2),  # Replace with the names/IDs of your experiments
-    evaluators=[head_to_head_evaluator],
-    randomize_order=True,
-)
+def main():
+    """Run the paid LangSmith comparison only after explicit authorization."""
+    require_full_eval_authorization()
+    return evaluate_comparative(
+        (single_agent, multi_agent_supervisor_v2),
+        evaluators=[head_to_head_evaluator],
+        randomize_order=True,
+    )
+
+
+if __name__ == "__main__":
+    main()

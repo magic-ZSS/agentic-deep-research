@@ -13,6 +13,7 @@
 | MCP server | Tool/API | 将外部工具加入 researcher 工具集，支持 streamable HTTP。 | 可无 auth；或通过 Supabase token exchange 获取 MCP access token。 | high | `src/open_deep_research/configuration.py`, `src/open_deep_research/utils.py` |
 | Supabase | Auth service | 验证 LangGraph request 的 Bearer token，并提供用户 identity。 | `SUPABASE_URL`, `SUPABASE_KEY`。 | high for hosted auth | `src/security/auth.py`, `langgraph.json` |
 | LangSmith | Evaluation/observability | Deep Research Bench 评估、experiment tracking、结果导出。 | SDK env vars 或 `LANGSMITH_API_KEY`。 | medium | `tests/run_evaluate.py`, `tests/evaluators.py`, `tests/extract_langsmith_data.py` |
+| DeepEval | Optional evaluation adapter | 可选转换 `BaselineRunRecord` 为 `LLMTestCase`；Phase 0 的确定性 metric 不依赖 DeepEval，也不默认上传。 | 无默认平台鉴权；安全懒导入会隐藏 Confident key 并禁用 dotenv/telemetry/tracing。 | low in Phase 0 | `pyproject.toml`, `src/open_deep_research/evaluation/deepeval_adapter.py` |
 | Legacy search providers | Search APIs | Perplexity、Exa、ArXiv、PubMed、Linkup、DuckDuckGo、Google Search、Azure AI Search。 | 各 provider env vars 或 API wrappers。 | low for current main graph, medium for legacy | `src/legacy/utils.py`, `src/legacy/legacy.md` |
 | GitHub Actions / Claude Code | CI/automation | issue/PR/comment 触发 Claude Code 或 review。 | GitHub secrets `ANTHROPIC_API_KEY`。 | medium | `.github/workflows/claude.yml`, `.github/workflows/claude-code-review.yml` |
 
@@ -24,6 +25,7 @@
 | LangGraph `MemorySaver` | 评估时的内存 checkpointer。 | `tests/run_evaluate.py`, `tests/supervisor_parallel_evaluation.py` | 仅内存态，不适合作为持久生产存储。 | `tests/run_evaluate.py` |
 | Supabase Auth | 用户 token 校验。 | `src/security/auth.py` | `SUPABASE_URL`/`SUPABASE_KEY` 缺失会让 auth 初始化失败。 | `src/security/auth.py` |
 | `tests/expt_results/*.jsonl` | Deep Research Bench 提交格式结果。 | `tests/extract_langsmith_data.py` | 生成报告可能包含外部内容和成本敏感实验结果；AGENTS 禁止提交敏感报告。 | `tests/extract_langsmith_data.py`, `AGENTS.md` |
+| `tests/baseline/*.json*`, `artifacts/baseline/*.jsonl` | 已提交的去敏 case/fixture/manifest 与本地忽略的 run record。 | `evaluation/storage.py`, `scripts/run_baseline.py` | JSONL writer 当前约定单进程写；live 输出可能敏感，artifact 默认不提交。 | `tests/baseline/`, `.gitignore`, `src/open_deep_research/evaluation/storage.py` |
 | 数据库/队列/缓存 | 未发现生产数据库、queue 或 cache 客户端。 | [TODO] | 如果部署依赖外部 LangGraph 平台存储，需要从部署配置补证据。 | `pyproject.toml`, `src/open_deep_research/` |
 
 ## 3) Secret 与凭证处理
@@ -50,7 +52,7 @@
 ## 5) 集成可观测性
 
 - Logging around external calls: MCP token exchange 和网页摘要失败会写 `logging.error`/`logging.warning`。
-- Metrics/tracing coverage: 评估脚本使用 LangSmith；模型配置中多处使用 `tags=["langsmith:nostream"]`。
+- Metrics/tracing coverage: 评估脚本使用 LangSmith；Phase 0 另有默认关闭的本地 callback，保存 token 覆盖、耗时、工具执行和失败状态，不修改图 state。
 - Missing visibility gaps:
   - 未发现统一 request id、结构化日志、metrics 或 tracing 配置。[TODO]
   - MCP 连接失败直接返回空列表，缺少日志。

@@ -2,7 +2,7 @@
 
 import os
 from enum import Enum
-from typing import Any, List, Optional
+from typing import Any, List, Literal, Optional
 
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
@@ -82,6 +82,16 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    # Structured evidence storage remains disconnected from the research graph
+    # until a later phase explicitly enables that integration.
+    enable_structured_evidence: bool = False
+    knowledge_repository_backend: Literal["memory", "sqlite"] = "sqlite"
+    knowledge_tenant_id: Optional[str] = None
+    knowledge_project_id: Optional[str] = None
+    knowledge_db_path: str = "data/knowledge/knowledge.db"
+    knowledge_blob_dir: str = "data/knowledge/blobs"
+    sqlite_busy_timeout_ms: int = Field(default=5000, ge=1, le=120000)
 
     # 配置同时运行的研究子任务数量。
     max_concurrent_research_units: int = Field(

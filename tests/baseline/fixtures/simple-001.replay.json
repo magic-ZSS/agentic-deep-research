@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "fixture_version": "1.0",
+  "case_id": "simple-001",
+  "output": "项目的最低 Python 版本由 pyproject.toml 固定为 3.11，langgraph.json 也声明 3.11。Windows 原生环境按 AGENTS.md 使用 conda，并可通过 `python src/open_deep_research/run.py \"问题\"` 启动；图入口是 `src/open_deep_research/deep_researcher.py:deep_researcher`。日常验证应运行离线 smoke；`tests/run_evaluate.py` 等完整评测可能调用外部服务，不能在未授权时运行。\n\n来源：\n[1] pyproject.toml\n[2] langgraph.json\n[3] AGENTS.md",
+  "telemetry": {
+    "started_at": "2026-07-20T08:00:00Z",
+    "finished_at": "2026-07-20T08:00:00.128500Z",
+    "wall_time_ms": 128.5,
+    "input_tokens": 180,
+    "output_tokens": 96,
+    "total_tokens": 276,
+    "estimated_cost": null,
+    "model_calls": 2,
+    "model_calls_with_usage": 2,
+    "tool_requests_by_name": {"local_fixture_lookup": 1},
+    "tool_calls_by_name": {"local_fixture_lookup": 1},
+    "search_calls": 0,
+    "search_calls_complete": true,
+    "researcher_runs": 1,
+    "status": "completed",
+    "error_type": null,
+    "spans": []
+  },
+  "source": "synthetic_fake",
+  "notes": "De-identified deterministic fixture created from project-local facts; it is not presented as a historical live run."
+}

@@ -76,3 +76,13 @@ messages
 - `src/open_deep_research/utils.py`
 - `src/security/auth.py`
 - `tests/run_evaluate.py`
+
+## 7) 阶段 1：结构化知识与证据边界
+
+- 新增的 `knowledge/`、`evidence/`、`storage/` 是独立领域/持久化层，不在当前 Supervisor—Researcher 主路径中实例化。
+- 权威链为 `KnowledgeScope -> Source -> Document -> DocumentVersion -> Chunk -> Evidence`，原始 bytes 由 scope-local `ContentBlob` 保存，`Requirement` 可与 Evidence 关联。
+- InMemory 与 SQLite metadata 实现同一 async Protocol；InMemory 与 Local Blob 实现同一不可变 blob Protocol。
+- `state.py` 仅增加由确定性 reducer 合并的 ID 引用；`notes/raw_notes/compressed_research` 和 Writer 输入语义未改变。
+- 完整 schema、回退和限制见 `docs/codebase/KNOWLEDGE_EVIDENCE.md`。
+
+证据：`src/open_deep_research/knowledge/`、`src/open_deep_research/evidence/`、`src/open_deep_research/storage/`、`tests/integration/storage/`。

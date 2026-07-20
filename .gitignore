@@ -68,4 +68,11 @@ temp/
 
 .langgraph_api
 
+# Local evaluation artifacts and isolated optional-tool caches
+/artifacts/baseline/
+/.deepeval/
+/pytest-cache-files-*/
+/.pytest-tmp/
+/.phase-validation-tmp/
+
 

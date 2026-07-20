@@ -3,11 +3,19 @@ from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from open_deep_research.utils import get_today_str
+from open_deep_research.evaluation.gates import require_full_eval_authorization
 from tests.prompts import RELEVANCE_PROMPT, STRUCTURE_PROMPT, GROUNDEDNESS_PROMPT, OVERALL_QUALITY_PROMPT, CORRECTNESS_PROMPT, COMPLETENESS_PROMPT
 
-eval_model = ChatOpenAI(
-    model="gpt-4.1",
-)
+_eval_model = None
+
+
+def _get_eval_model():
+    """Construct the paid judge only after the full-eval gates are open."""
+    global _eval_model
+    require_full_eval_authorization()
+    if _eval_model is None:
+        _eval_model = ChatOpenAI(model="gpt-4.1")
+    return _eval_model
 
 def _format_input_query(inputs: dict) -> str:
     messages = inputs["messages"]
@@ -32,6 +40,7 @@ class OverallQualityScore(BaseModel):
     writing_quality: int = Field(description="Integer score 1-5 showing whether the report meets the provided criteria (1 = doesn't meet at all, 5 = meets all criteria).")
 
 def eval_overall_quality(inputs: dict, outputs: dict):
+    eval_model = _get_eval_model()
     query = _format_input_query(inputs)
     final_report = outputs["final_report"]
     user_input_content = f"""User input: {query}\n\nReport: \n\n{final_report}\n\nEvaluate whether the report meets the criteria and provide detailed justification for your evaluation."""
@@ -61,6 +70,7 @@ class RelevanceScore(BaseModel):
     score: int = Field(description="Integer score 1-5 showing whether the report meets the provided criteria for relevance (1 = doesn't meet at all, 5 = meets all criteria).")
 
 def eval_relevance(inputs: dict, outputs: dict):
+    eval_model = _get_eval_model()
     query = _format_input_query(inputs)
     final_report = outputs["final_report"]
     user_input_content = f"""User input: {query}\n\nReport: \n\n{final_report}\n\nEvaluate whether the report meets the criteria and provide detailed justification for your evaluation."""
@@ -84,6 +94,7 @@ class StructureScore(BaseModel):
     score: int = Field(description="Integer score 1-5 showing whether the report meets the provided criteria for structure and flow (1 = doesn't meet at all, 5 = meets all criteria).")
 
 def eval_structure(inputs: dict, outputs: dict):
+    eval_model = _get_eval_model()
     query = _format_input_query(inputs)
     final_report = outputs["final_report"]
     user_input_content = STRUCTURE_PROMPT.format(user_question=query, report=final_report, today=get_today_str())
@@ -106,6 +117,7 @@ class CorrectnessScore(BaseModel):
     score: int = Field(description="Integer score 1-5 showing whether the report meets the provided criteria for correctness (1 = doesn't meet at all, 5 = meets all criteria).")
 
 def eval_correctness(inputs: dict, outputs: dict, reference_outputs: dict):
+    eval_model = _get_eval_model()
     query = _format_input_query(inputs)
     final_report = outputs["final_report"]
     answer = reference_outputs["answer"]
@@ -132,6 +144,7 @@ class GroundednessScore(BaseModel):
     claims: list[GroundednessClaim] = Field(description="All claims extracted from the report, and whether or not they are grounded in the context.")
 
 def eval_groundedness(inputs: dict, outputs: dict):
+    eval_model = _get_eval_model()
     final_report = outputs["final_report"]
     context = str(outputs["raw_notes"])
 
@@ -157,6 +170,7 @@ class CompletenessScore(BaseModel):
     score: int = Field(description="Integer score 1-5 showing whether the report meets the provided criteria for completeness (1 = doesn't meet at all, 5 = meets all criteria).")
 
 def eval_completeness(inputs: dict, outputs: dict):
+    eval_model = _get_eval_model()
     query = _format_input_query(inputs)
     final_report = outputs["final_report"]
     research_brief = outputs["research_brief"]

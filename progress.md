@@ -3,82 +3,65 @@
 ## 当前状态（Current State）
 
 **最后更新（Last Updated）：** 2026-07-20
-**当前功能：** `development-plan-001`
-**状态：** completed（仅规划完成；阶段 0–7 均为 `not-started`）
+
+**当前功能：** `phase-1-knowledge-evidence-models-001`
+
+**状态：** in-progress（只执行阶段 1；阶段 2 尚未开始）
+
+## 阶段 1 启动门禁
+
+- 启动前工作树仅包含未提交的阶段 0 交付；本轮将保留并在最终状态中区分。
+- `feature_list.json` 中阶段 0 为 `completed`。
+- `conda run --no-capture-output -n open-deep-research python scripts/validate_phase.py --phase 0` 退出码 0，T0-1 至 T0-12 全部 PASS。
+- 当前范围仅为领域模型、Repository、SQLite migration v1、Local Blob、审计、reducer、additive state/config、测试和文档；阶段 2 保持 `not-started`。
 
 ## 已完成（What's Done）
 
-- 按 `AGENTS.md` 恢复仓库上下文，读取 README、pyproject、LangGraph 主实现、运行入口、全部当前测试、三个动态状态文件和 `docs/codebase/`。
-- 以当前项目提交 `8c2b26ea1e582590d9653188a286c4fc14f6480d` 为规划基线，确认主图、Supervisor/Researcher 子图、`notes/raw_notes/ToolMessage` 传递、搜索/MCP配置、并发/token限制、错误恢复与现有评测边界。
-- 在用户授权范围内，将五个参考仓库浅克隆到 `doc/reference/` 并定点读取实际代码：PaperQA2、DeepEval、LangMem、LangGraph、MCP Servers Filesystem。
-- 在 `doc/development_plan/` 创建 12 份规划文档：总入口、目标架构、参考仓库映射、执行协议，以及阶段 0–7。
-- 每个阶段严格包含 16 个固定章节、稳定 `Tn-*` 验收项、实际文件修改范围、配置回退、测试/命令和可直接复制的 Codex 指令。
-- 明确所有新能力默认关闭；保留 Supervisor—Researcher、旧自由文本字段和 legacy Writer 路径；禁止 PaperQA2 第二套 Agent、Agent hard delete、Memory bypass 和 MCP 路径旁路。
-- 明确 `memory_search` 的阶段顺序：阶段 4 只预留真实扩展点，阶段 5 在 MemoryRepository 与 Namespace/Gate 完成后才注册，不提供虚假 stub。
+- 以阶段开始提交 `a86b588dcd011493651c24208b446872cb4d1228` 固定当前行为、环境、依赖、配置漂移和受保护核心文件 SHA-256。
+- 用 `doc/reference/refs.lock.json` 固定 PaperQA2、DeepEval、LangMem、LangGraph、MCP Servers 五个浅克隆的 URL、commit、版本证据和许可证；使用 `.gitmodules` 明确获取方式，并新增 `THIRD_PARTY_NOTICES.md`。
+- 建立 `src/open_deep_research/evaluation/`：严格版本化 schema、原子 JSONL 存储、确定性指标、默认关闭 telemetry、可选 DeepEval adapter、live/full-eval 费用门禁、baseline manifest。
+- 建立 9 个 baseline case（3 simple、3 medium、3 complex）和一个明确标记为 `synthetic_fake` 的 replay fixture；fixture 不是 live 结果。
+- 建立 `scripts/run_baseline.py`、`scripts/capture_baseline_manifest.py` 和 `scripts/validate_phase.py`；replay 默认离线，live 必须同时满足显式模式、环境变量和 `--confirm-cost`。
+- 将现有外部评测脚本置于显式成本门禁之后；普通 pytest 收集不会调用外部模型、搜索、LangSmith、DeepEval 服务或浏览器。
+- 新增 Phase 0 单元/集成测试，并将 `pyproject.toml` 的 Python 下限统一为 3.11、增加可选 `eval` extra、显式登记 evaluation 子包和安全 pytest 默认参数。
+- 局部更新 `docs/codebase/` 与 `doc/development_plan/README.md`；未修改 `deep_researcher.py`、`prompts.py`、`utils.py`、`configuration.py` 或 `state.py` 的研究行为。
 
 ## 关键设计决定（Decisions）
 
-- 使用当前请求指定的 `doc/development_plan/` 与 `doc/reference/`。实际总体计划文件为用户已有的 `doc/overview.md`，与请求文字中的 `docs/development_plan/overview.md` 不一致；本次保留原文件并在新 README 中说明。
-- 阶段顺序保持 0–7，不合并或新增阶段：Baseline → 领域模型 → 导入/PaperQA2 → Agentic RAG → MCP → Memory → Citation → Evaluation。
-- PaperQA2 仅作为 parser/index/evidence retrieval adapter；本项目 SHA-256、DocumentVersion、Repository、生命周期和审计为权威。
-- 阶段 1 只定义状态枚举与存储不变量；自动 promotion/stale/quarantine policy 留阶段 3，避免跨阶段实现。
-- LangGraph Checkpoint 只负责 Working Memory；知识、长期 Memory、Checkpoint 使用独立 SQLite 文件并经各自 Repository/factory。
-- DeepEval smoke 默认确定性、无网络；full Judge、真实搜索和 live baseline必须有明确费用授权。
-- Filesystem MCP 的只读源与可写 staging 采用分 server/最小工具白名单 + realpath policy + Windows ACL，不把 annotations 当授权。
+- 所有新能力默认关闭。`EvaluationTelemetry(enabled=False)` 直接委托原调用，保留同一输入、配置、返回值和异常对象。
+- telemetry 只记录可证明的数据：token 覆盖不完整时总 token 为 `null`；无法可靠从回调识别 Researcher 次数时为 `null`；callback 无法保证覆盖原生搜索时标记 `search_calls_complete=false`；不伪造成本。
+- replay 记录使用 `mode=replay`、`telemetry_source=fixture` 和 fixture 引用；live 未授权只输出 `not_run_no_authorization` 拒绝事件，不写运行结果。
+- DeepEval 只通过惰性 adapter 接入，生产导入路径不依赖 DeepEval；真实 DeepEval metric 属于 `full_eval`，本阶段未安装也未运行。
+- JSONL 写入使用临时文件、`fsync` 和原子替换，并提供进程内锁；跨进程并发仍遵循单 writer 约定。
+- 保留已发现的运行默认值/UI metadata 漂移，仅写入 manifest，不在阶段 0 静默修改业务配置。
 
-## 规划证据（Planning Evidence）
+## 验收证据（T0-1 至 T0-12）
 
-- 12 份文档文件和大小已列出，8 份 phase 文档均检测到恰好 16 个连续章节。
-- 验收编号连续无缺号：T0 12项、T1 16项、T2 15项、T3 20项、T4 16项、T5 16项、T6 18项、T7 17项。
-- 所有相对 Markdown 文件链接目标存在。
-- 参考提交：PaperQA `d7675d7...`、DeepEval `58c9ef7...`、LangMem `a2d5809...`、LangGraph `49ae27c...`、MCP Servers `d31124c...`；许可证边界写入 `reference_repositories.md`。
-- 未安装 PaperQA2/DeepEval/LangMem，未修改 `pyproject.toml`、LangGraph 主图或功能源码，未运行真实模型、搜索、LangSmith或高成本评测。
+- `conda run --no-capture-output -n open-deep-research python scripts/validate_phase.py --phase 0`：退出码 0，T0-1 至 T0-12 全部 `PASS`。
+- `conda run --no-capture-output -n open-deep-research python -m pytest -q`：退出码 0，`51 passed, 1 skipped, 30 warnings`；跳过项需要可选 DeepEval/full-eval 环境。
+- `conda run --no-capture-output -n open-deep-research python -m pytest tests/evaluation tests/baseline -m "not live and not full_eval" -q`：退出码 0，`44 passed, 1 deselected`。
+- `conda run --no-capture-output -n open-deep-research python -m pytest tests/test_research_limits.py -q`：退出码 0，`7 passed`，证明已有离线行为回归通过。
+- `conda run --no-capture-output -n open-deep-research python -m pytest --collect-only -q`：退出码 0，收集 52 项，未收集参考仓库或外部评测脚本。
+- `conda run --no-capture-output -n open-deep-research python -m compileall -q src scripts tests/evaluation tests/baseline tests/test_research_limits.py`：退出码 0。
+- replay 命令退出码 0，生成可加载的 `artifacts/baseline/smoke.jsonl`。
+- 未授权 live 命令捕获退出码 3，返回 `not_run_no_authorization`；`artifacts/baseline/live-refused.jsonl` 不存在。
 
-## 已发现但未在本轮修复的事实（Baseline Risks）
+## 未运行与环境缺口（Not Run / Gaps）
 
-- `Configuration.print_process_info` 当前 Python default 为 `True`，而 UI metadata和旧状态文档写 `False`；`allow_clarification` 的 Python default 为 `False`，UI metadata写 `True`。
-- 模型字段的 Python default来自 `os.getenv(...)`，UI metadata中的模型名不是运行时 fallback。
-- Supervisor Researcher batch异常分支存在 `or True`，compression token裁剪后没有真实第二次尝试，同轮 `ResearchComplete` 与研究工具调用存在任务丢失风险；阶段 0 只固定 baseline，阶段 3 负责修复与回归。未知工具路径可能抛出 `KeyError`，由阶段 4 在 MCP 路由边界修复。
-- `pyproject.toml` 要求 Python >=3.10、`langgraph.json` 使用3.11，而 PaperQA2/目标架构要求3.11+；阶段 0/1需固定兼容矩阵。
-- 当前 `pyproject.toml` 显式列包，新子包需在实施阶段调整 package discovery。
-- `init.sh` 和 `.pytest_cache` 在 Windows/WSL/conda 链路仍有既有可靠性/权限问题。
+- 真实 simple live baseline：`not_run_no_authorization`；用户未授权费用，未调用外部模型或搜索。
+- 完整 Deep Research Bench、LangSmith、DeepEval LLM Judge：按范围禁止，未运行。
+- `ruff`：目标 conda 环境没有该模块，命令退出码 1；未安装依赖。
+- `mypy`：目标 conda 环境没有该模块，命令退出码 1；未安装依赖。
+- `./init.sh`：未运行，因为脚本内含 `ruff check .`，会扫描用户明确禁止 lint/格式化的 `doc/reference/`；已运行等价范围内的 compile、pytest 和 `git diff --check` 子检查。
 
-## 验证证据（Verification Evidence）
+## 已知风险（Risks）
 
-- PowerShell 结构检查：8 份 `phase_*.md` 均为连续 `## 1.` 至 `## 16.`，退出码 0。
-- PowerShell验收编号检查：所有阶段 `Tn-1` 至最大编号连续，退出码 0。
-- Markdown相对文件链接检查：`All relative Markdown file links resolve.`，退出码 0。
-- 本轮未运行功能测试：没有修改 Python/配置/依赖，且用户明确禁止开始阶段 0 或运行高成本 DeepResearch测试。
+- 真实供应商 token/费用字段和 DeepEval 4.1.1 适配仍需未来获得费用授权并安装 `eval` extra 后验证；这不影响确定性 Phase 0 smoke。
+- LangChain callback 不能对所有原生搜索调用给出完备计数，因此 schema 明确暴露完整性状态，不把未知数据写成 0。
+- `configuration.py` 与 LangGraph 现有 Pydantic/LangGraph 弃用警告仍存在；阶段 0 不改核心行为。
+- `uv.lock` 未更新；项目约束要求 conda/pip 为默认路径，阶段 0 只修改 `pyproject.toml` 的包/可选评测配置。
 
-## 本次修改文件（Files Modified This Session）
+## 回退与下一步
 
-- `doc/development_plan/README.md`
-- `doc/development_plan/architecture_target.md`
-- `doc/development_plan/reference_repositories.md`
-- `doc/development_plan/execution_protocol.md`
-- `doc/development_plan/phase_0_baseline_and_references.md`
-- `doc/development_plan/phase_1_knowledge_evidence_models.md`
-- `doc/development_plan/phase_2_document_ingestion_and_paperqa.md`
-- `doc/development_plan/phase_3_agentic_rag_lifecycle.md`
-- `doc/development_plan/phase_4_mcp_integration.md`
-- `doc/development_plan/phase_5_memory_system.md`
-- `doc/development_plan/phase_6_citation_validation.md`
-- `doc/development_plan/phase_7_evaluation_and_showcase.md`
-- `feature_list.json`
-- `progress.md`
-- `session-handoff.md`
-
-参考浅克隆位于 `doc/reference/`，属于用户本轮授权的只读研究材料；是否提交这些嵌套仓库本体留待阶段 0 决定。用户原有 `doc/overview.md` 未修改。
-
-## 阻塞项与风险（Blockers / Risks）
-
-- 当前规划无阻塞；所有实施阶段尚未开始。
-- 阶段0的真实simple live baseline是可选发布证据；阶段7 full eval是完成门禁，两者都需用户明确费用授权。
-- PaperQA2发布版本/embedding策略、领域时效与权威阈值、可信 identity来源、Windows Node/ACL和敏感数据保留政策仍需在对应阶段确认。
-
-## 下次会话说明
-
-1. 先按 `AGENTS.md` 恢复上下文并确认工作树。
-2. 从 `doc/development_plan/phase_0_baseline_and_references.md` 第 16 节复制完整 Codex执行指令。
-3. 本次只执行阶段 0；未通过 T0 全部验收前不得进入阶段 1。
-4. 不要默认运行live/付费测试；阶段0可用replay/smoke完成，若要追加live证据先报告预算并获取授权。
+- 回退时禁用或不使用 evaluation runner 即可保持旧运行路径；删除 Phase 0 新增模块/脚本并还原 `pyproject.toml`、pytest 门禁与外部评测保护即可完整回滚，核心图无需迁移。
+- 下一阶段仍为 `not-started`。只有用户明确要求执行阶段 1 时，才读取 `doc/development_plan/phase_1_knowledge_evidence_models.md` 并开始；当前会话到阶段 0 汇报后停止。

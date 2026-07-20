@@ -8,6 +8,8 @@ from langgraph.graph import MessagesState
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import TypedDict
 
+from open_deep_research.evidence.reducers import stable_id_reducer
+
 
 ###################
 # Structured Outputs
@@ -89,6 +91,9 @@ class AgentState(MessagesState):
     research_brief: Optional[str]
     raw_notes: Annotated[list[str], override_reducer] = []
     notes: Annotated[list[str], override_reducer] = []
+    source_ids: Annotated[list[str], stable_id_reducer] = []
+    evidence_ids: Annotated[list[str], stable_id_reducer] = []
+    requirement_ids: Annotated[list[str], stable_id_reducer] = []
     final_report: str
 
 class SupervisorState(TypedDict):
@@ -99,6 +104,9 @@ class SupervisorState(TypedDict):
     notes: Annotated[list[str], override_reducer] = []
     research_iterations: int = 0
     raw_notes: Annotated[list[str], override_reducer] = []
+    source_ids: Annotated[list[str], stable_id_reducer] = []
+    evidence_ids: Annotated[list[str], stable_id_reducer] = []
+    requirement_ids: Annotated[list[str], stable_id_reducer] = []
 
 class ResearcherState(TypedDict):
     """State for individual researchers conducting research."""
@@ -108,9 +116,15 @@ class ResearcherState(TypedDict):
     research_topic: str
     compressed_research: str
     raw_notes: Annotated[list[str], override_reducer] = []
+    source_ids: Annotated[list[str], stable_id_reducer] = []
+    evidence_ids: Annotated[list[str], stable_id_reducer] = []
+    requirement_ids: Annotated[list[str], stable_id_reducer] = []
 
 class ResearcherOutputState(BaseModel):
     """Output state from individual researchers."""
     
     compressed_research: str
     raw_notes: Annotated[list[str], override_reducer] = []
+    source_ids: Annotated[list[str], stable_id_reducer] = []
+    evidence_ids: Annotated[list[str], stable_id_reducer] = []
+    requirement_ids: Annotated[list[str], stable_id_reducer] = []

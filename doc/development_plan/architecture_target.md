@@ -265,7 +265,7 @@ src/open_deep_research/
     └── adapters.py
 ```
 
-当前 `pyproject.toml` 使用显式 package 列表；阶段 1 开始增加子包时必须调整包发现并验证 editable install。该修改属于实施阶段，本轮不执行。
+`pyproject.toml` 继续使用显式 package 列表；阶段 1 已登记 `knowledge`、`evidence`、`storage` 及 migrations 子包，并由 editable-install/out-of-tree import smoke 验证。后续阶段新增子包时仍须同步登记和验收。
 
 ## 8. 关键运行数据流
 

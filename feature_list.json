@@ -71,6 +71,22 @@
       "dependencies": ["codebase-onboarding-001", "author-decisions-001"],
       "status": "completed",
       "evidence": "已创建 doc/development_plan/README.md、architecture_target.md、reference_repositories.md、execution_protocol.md 和 phase_0 至 phase_7 共 12 份文档；8 份阶段文档均含连续 1–16 节、连续 Tn-* 验收编号和停止门禁；相对 Markdown 文件链接校验通过；参考仓库提交 SHA 与许可证已记录；未修改功能源码或执行阶段 0。"
+    },
+    {
+      "id": "phase-0-baseline-references-001",
+      "name": "固定参考仓库与离线 Baseline 评测骨架",
+      "description": "执行开发计划阶段 0：固定参考仓库提交与许可证，建立版本化 baseline schema、确定性 replay/smoke、默认关闭的 telemetry、付费调用门禁、可选 DeepEval 适配和 T0 阶段验证，不改变 Supervisor、Researcher、搜索或 Writer 核心行为。",
+      "dependencies": ["development-plan-001"],
+      "status": "completed",
+      "evidence": "doc/reference/refs.lock.json 固定 5 个参考仓库；tests/baseline/cases.jsonl 含 3 simple、3 medium、3 complex；evaluation 子包、replay/live runner、DeepEval adapter、pytest 成本门禁与 scripts/validate_phase.py 已实现。离线全套测试 51 passed、1 skipped；validate_phase --phase 0 对 T0-1 至 T0-12 全部 PASS；replay 记录可加载；未授权 live 在外部调用前返回 not_run_no_authorization/退出码 3 且不写伪结果；真实 live、LangSmith、LLM Judge 均未运行；ruff/mypy 因环境未安装而未执行成功。"
+    },
+    {
+      "id": "phase-1-knowledge-evidence-models-001",
+      "name": "建立知识、来源、证据与本地存储契约",
+      "description": "执行开发计划阶段 1：建立 scope-aware 领域模型、稳定 ID、InMemory/SQLite metadata Repository、InMemory/Local Blob Repository、迁移 v1、软删除、审计、确定性 reducer 和 additive graph state 引用；不接入主图或 PaperQA2。",
+      "dependencies": ["phase-0-baseline-references-001"],
+      "status": "in-progress",
+      "evidence": "阶段 0 状态为 completed；2026-07-20 重新运行 scripts/validate_phase.py --phase 0，T0-1 至 T0-12 全部 PASS。阶段 1 当前正在实现，尚未验收。"
     }
   ]
 }

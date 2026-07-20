@@ -1,0 +1,25 @@
+[submodule "doc/reference/deepeval"]
+	path = doc/reference/deepeval
+	url = https://github.com/confident-ai/deepeval.git
+	update = checkout
+	shallow = true
+[submodule "doc/reference/langgraph"]
+	path = doc/reference/langgraph
+	url = https://github.com/langchain-ai/langgraph.git
+	update = checkout
+	shallow = true
+[submodule "doc/reference/langmem"]
+	path = doc/reference/langmem
+	url = https://github.com/langchain-ai/langmem.git
+	update = checkout
+	shallow = true
+[submodule "doc/reference/mcp-servers"]
+	path = doc/reference/mcp-servers
+	url = https://github.com/modelcontextprotocol/servers.git
+	update = checkout
+	shallow = true
+[submodule "doc/reference/paper-qa"]
+	path = doc/reference/paper-qa
+	url = https://github.com/Future-House/paper-qa.git
+	update = checkout
+	shallow = true

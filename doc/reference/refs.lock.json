@@ -1,0 +1,106 @@
+{
+  "schema_version": "1.0",
+  "captured_at": "2026-07-20T18:00:00+08:00",
+  "repositories": [
+    {
+      "id": "deepeval",
+      "url": "https://github.com/confident-ai/deepeval.git",
+      "local_path": "doc/reference/deepeval",
+      "commit": "58c9ef78a4634ba119c7d2cc145f5cf9aeb24524",
+      "upstream_branch_at_capture": "main",
+      "tag_at_head": ["python-v4.1.1", "v4.1.1"],
+      "version_evidence": {"package": "deepeval", "version": "4.1.1", "source": "pyproject.toml"},
+      "acquired_at": "2026-07-20T16:32:00+08:00",
+      "license": {
+        "spdx": "Apache-2.0",
+        "status": "declared",
+        "file": "LICENSE.md",
+        "sha256": "b78080d3066b4759f3ea6d75d8063b71572b846090130aeebcdcdd55e083aaba"
+      },
+      "acquisition": {"strategy": "git-submodule", "shallow": true}
+    },
+    {
+      "id": "langgraph",
+      "url": "https://github.com/langchain-ai/langgraph.git",
+      "local_path": "doc/reference/langgraph",
+      "commit": "49ae27c2ae983cfb92091b0dea9f7bc37a716479",
+      "upstream_branch_at_capture": "main",
+      "tag_at_head": [],
+      "version_evidence": {
+        "components": {
+          "langgraph": "1.2.9",
+          "langgraph-checkpoint": "4.1.1",
+          "langgraph-checkpoint-sqlite": "3.1.0"
+        },
+        "source": "libs/*/pyproject.toml"
+      },
+      "acquired_at": "2026-07-20T16:31:48+08:00",
+      "license": {
+        "spdx": "MIT",
+        "status": "declared",
+        "file": "LICENSE",
+        "sha256": "ab08cf7f0b8d47e474d2e66e0212f18f6c70f5097f404de8a35c665012c9b199"
+      },
+      "acquisition": {"strategy": "git-submodule", "shallow": true}
+    },
+    {
+      "id": "langmem",
+      "url": "https://github.com/langchain-ai/langmem.git",
+      "local_path": "doc/reference/langmem",
+      "commit": "a2d580946465137c89162e67dc0b18108bd4850c",
+      "upstream_branch_at_capture": "main",
+      "tag_at_head": [],
+      "version_evidence": {"package": "langmem", "version": "0.0.30", "source": "pyproject.toml"},
+      "acquired_at": "2026-07-20T16:31:47+08:00",
+      "license": {
+        "spdx": "MIT",
+        "status": "declared",
+        "file": "LICENSE",
+        "sha256": "9bc75ced0dc6df655c7ac6a3787012fe364e8fa7b499fda048543102f5cbdee3"
+      },
+      "acquisition": {"strategy": "git-submodule", "shallow": true}
+    },
+    {
+      "id": "mcp-servers",
+      "url": "https://github.com/modelcontextprotocol/servers.git",
+      "local_path": "doc/reference/mcp-servers",
+      "commit": "d31124c982401739917fd817c2a59db344529c16",
+      "upstream_branch_at_capture": "main",
+      "tag_at_head": [],
+      "version_evidence": {
+        "components": {"workspace": "0.6.2", "filesystem": "0.6.3"},
+        "source": "package.json and src/filesystem/package.json"
+      },
+      "acquired_at": "2026-07-20T16:31:47+08:00",
+      "license": {
+        "spdx": "NOASSERTION",
+        "status": "mixed-transition",
+        "file": "LICENSE",
+        "sha256": "fe5d1e818af2a1038f2805f7fdccdca778a61b42fb182786d2a3f4c8c7c7e9b2",
+        "notes": "Contribution-level MIT to Apache-2.0 transition; non-specification documentation is CC-BY-4.0. Audit each file before reuse."
+      },
+      "acquisition": {"strategy": "git-submodule", "shallow": true}
+    },
+    {
+      "id": "paper-qa",
+      "url": "https://github.com/Future-House/paper-qa.git",
+      "local_path": "doc/reference/paper-qa",
+      "commit": "d7675d7b7eddeb3535e8c260399c5bbeeb818c50",
+      "upstream_branch_at_capture": "main",
+      "tag_at_head": [],
+      "version_evidence": {
+        "package": "paper-qa",
+        "version": null,
+        "source": "pyproject.toml dynamic version via setuptools_scm; shallow HEAD has no tag"
+      },
+      "acquired_at": "2026-07-20T16:31:23+08:00",
+      "license": {
+        "spdx": "Apache-2.0",
+        "status": "declared",
+        "file": "LICENSE",
+        "sha256": "1bda56753d95ce9c4391a53c73b33a9da0487fcfdecec0563fca3d4694c22a23"
+      },
+      "acquisition": {"strategy": "git-submodule", "shallow": true}
+    }
+  ]
+}

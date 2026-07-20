@@ -2,9 +2,9 @@
 
 ## 1. 文档定位
 
-本目录是当前仓库向 **Evidence-Governed Agentic RAG Deep Research System** 演进的执行入口。规划基于仓库 `main` 分支提交 `8c2b26ea1e582590d9653188a286c4fc14f6480d` 的实际代码，以及 `doc/reference/` 下五个浅克隆参考仓库的固定提交完成。
+本目录是当前仓库向 **Evidence-Governed Agentic RAG Deep Research System** 演进的执行入口。原规划基于提交 `8c2b26ea1e582590d9653188a286c4fc14f6480d`；阶段 0 的实际执行起点为 `a86b588dcd011493651c24208b446872cb4d1228`，以 `tests/baseline/baseline_manifest.json` 为机器可读证据。五个参考仓库由 `doc/reference/refs.lock.json` 固定。
 
-本轮只产出规划，不代表任何阶段已经实现。`doc/overview.md` 是用户提供的总体研究计划；实际文件与需求文字中的 `docs/development_plan/overview.md` 路径不一致，本套文档不移动或改写该文件，并以本轮明确指定的 `doc/development_plan/` 作为执行目录。
+本目录最初由规划轮次创建；实际实施状态以本页阶段表、`feature_list.json` 和 `progress.md` 为准。`doc/overview.md` 是用户提供的总体研究计划；实际文件与需求文字中的 `docs/development_plan/overview.md` 路径不一致，本套文档不移动或改写该文件，并以 `doc/development_plan/` 作为执行目录。
 
 ## 2. 改造目标
 
@@ -26,9 +26,9 @@
 
 - 主图为 `clarify_with_user → write_research_brief → research_supervisor → final_report_generation`；Supervisor 和 Researcher 均为循环子图。
 - Researcher 将 Web/MCP 工具结果压缩成自由文本 `compressed_research`；Supervisor 再把这些文本聚合为 `notes`。Writer 还接收 brief/messages，但 `notes` 是唯一研究 findings 通道，`raw_notes` 不进入 Writer。
-- `Source`、`DocumentVersion`、`Chunk`、`Evidence`、`Claim` 尚无结构化身份；来源编号由模型在文本中生成，跨 Researcher 可能冲突。
+- 阶段 1 已提供 `Source`、`DocumentVersion`、`Chunk`、`Evidence` 的结构化身份和本地 Repository，但尚未接入主图；`Claim` 与程序化来源编号仍待阶段 6。
 - 当前主实现只接入 Tavily、OpenAI/Anthropic 原生搜索和单个 HTTP MCP 配置；尚无本地知识库、Filesystem MCP、Knowledge MCP 或长期记忆。
-- 低成本自动测试主要是 `tests/test_research_limits.py` 的 7 个测试；现有 LangSmith Deep Research Bench 会调用外部服务，不属于日常 smoke。
+- 低成本自动测试现包括阶段 0 的 baseline/evaluation smoke、阶段 1 的 knowledge/evidence/storage contract suite，以及 `tests/test_research_limits.py`；LangSmith Deep Research Bench 仍会调用外部服务，不属于日常 smoke。
 - 现有 `feature_list.json` 条目均为 `completed`，但代码仍存在配置文档漂移和恢复边界等已知风险，必须先在阶段 0 固定而不能在规划阶段静默修复。
 
 ## 4. 阶段导航与状态
@@ -37,8 +37,8 @@
 
 | 阶段 | 文档 | 核心交付 | 当前状态 |
 |---|---|---|---|
-| 0 | [Baseline 与参考仓库](phase_0_baseline_and_references.md) | 固定行为、数据集、遥测、最小 DeepEval 骨架、参考版本锁 | `not-started` |
-| 1 | [知识与证据模型](phase_1_knowledge_evidence_models.md) | 领域模型、InMemory/SQLite Repository、版本/去重/Reducer | `not-started` |
+| 0 | [Baseline 与参考仓库](phase_0_baseline_and_references.md) | 固定行为、数据集、遥测、最小 DeepEval 骨架、参考版本锁 | `completed` |
+| 1 | [知识与证据模型](phase_1_knowledge_evidence_models.md) | 领域模型、InMemory/SQLite Repository、版本/去重/Reducer | `completed` |
 | 2 | [文档导入与 PaperQA2](phase_2_document_ingestion_and_paperqa.md) | 四类导入、PaperQA2 Adapter、可定位检索工具 | `not-started` |
 | 3 | [Agentic RAG 生命周期](phase_3_agentic_rag_lifecycle.md) | 本地优先、覆盖判断、候选验证、状态转换和审计 | `not-started` |
 | 4 | [MCP 集成](phase_4_mcp_integration.md) | 受限 Filesystem MCP、proposal-only Knowledge MCP、Windows 安全 | `not-started` |
@@ -70,7 +70,7 @@ flowchart LR
 
 ## 6. 全局兼容与开关原则
 
-以下名称是各阶段应落实的目标配置，当前代码中尚不存在：
+以下名称是各阶段目标配置；阶段 1 的 `enable_structured_evidence` 已实现但仍默认关闭，其余按对应阶段状态为准：
 
 | 阶段 | 默认关闭的目标开关 | 关闭时行为 |
 |---|---|---|
@@ -92,7 +92,7 @@ flowchart LR
 3. 将该代码块原样发送给 Codex；如需改变范围，明确写在同一条消息中。
 4. Codex 只能执行该阶段，必须完成测试、状态更新和工作树复核后停止。
 
-例如，下一步应复制 [phase_0_baseline_and_references.md](phase_0_baseline_and_references.md#16-本阶段-codex-执行指令) 第 16 节，而不是发送“开始整个改造”。
+阶段 1 已完成；只有在用户明确下达下一阶段指令后，才可复制 [phase_2_document_ingestion_and_paperqa.md](phase_2_document_ingestion_and_paperqa.md#16-本阶段-codex-执行指令) 第 16 节，不得自动进入阶段 2。
 
 ## 8. 如何验收一个阶段
 

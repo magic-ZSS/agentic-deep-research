@@ -1,0 +1,123 @@
+{
+  "capture_process": {
+    "command": "conda run --no-capture-output -n open-deep-research python scripts/capture_baseline_manifest.py --phase-start-commit a86b588dcd011493651c24208b446872cb4d1228 --phase-start-clean",
+    "python_executable_recorded": false,
+    "secret_policy": "No environment values, API keys, or full pip freeze stored."
+  },
+  "captured_at": "2026-07-20T13:31:47.352385+00:00",
+  "configuration_defaults": {
+    "allow_clarification": {"environment_override": "ALLOW_CLARIFICATION", "runtime_default": false, "ui_default": true},
+    "compression_model": {"environment_override": "COMPRESSION_MODEL", "environment_override_present": false, "runtime_default": null, "runtime_default_source": "environment_at_import", "ui_default": "openai:gpt-4.1"},
+    "compression_model_max_tokens": {"environment_override": "COMPRESSION_MODEL_MAX_TOKENS", "runtime_default": 8192, "ui_default": 8192},
+    "final_report_model": {"environment_override": "FINAL_REPORT_MODEL", "environment_override_present": false, "runtime_default": null, "runtime_default_source": "environment_at_import", "ui_default": "openai:gpt-4.1"},
+    "final_report_model_max_tokens": {"environment_override": "FINAL_REPORT_MODEL_MAX_TOKENS", "runtime_default": 10000, "ui_default": 10000},
+    "max_concurrent_research_units": {"environment_override": "MAX_CONCURRENT_RESEARCH_UNITS", "runtime_default": 3, "ui_default": 3},
+    "max_concurrent_researcher_tool_calls": {"environment_override": "MAX_CONCURRENT_RESEARCHER_TOOL_CALLS", "runtime_default": 3, "ui_default": 3},
+    "max_content_length": {"environment_override": "MAX_CONTENT_LENGTH", "runtime_default": 20000, "ui_default": 20000},
+    "max_queries_per_search_call": {"environment_override": "MAX_QUERIES_PER_SEARCH_CALL", "runtime_default": 3, "ui_default": 3},
+    "max_react_tool_calls": {"environment_override": "MAX_REACT_TOOL_CALLS", "runtime_default": 5, "ui_default": 5},
+    "max_researcher_iterations": {"environment_override": "MAX_RESEARCHER_ITERATIONS", "runtime_default": 5, "ui_default": 5},
+    "max_results_per_tavily": {"environment_override": "MAX_RESULTS_PER_TAVILY", "runtime_default": 3, "ui_default": 3},
+    "max_structured_output_retries": {"environment_override": "MAX_STRUCTURED_OUTPUT_RETRIES", "runtime_default": 1, "ui_default": 1},
+    "mcp_config": {"environment_override": "MCP_CONFIG", "runtime_default": null, "ui_default": null},
+    "mcp_prompt": {"environment_override": "MCP_PROMPT", "runtime_default": null, "ui_default": null},
+    "print_process_info": {"environment_override": "PRINT_PROCESS_INFO", "runtime_default": true, "ui_default": false},
+    "research_model": {"environment_override": "RESEARCH_MODEL", "environment_override_present": false, "runtime_default": null, "runtime_default_source": "environment_at_import", "ui_default": "openai:gpt-4.1"},
+    "research_model_max_tokens": {"environment_override": "RESEARCH_MODEL_MAX_TOKENS", "runtime_default": 10000, "ui_default": 10000},
+    "search_api": {"environment_override": "SEARCH_API", "runtime_default": "tavily", "ui_default": "tavily"},
+    "summarization_model": {"environment_override": "SUMMARIZATION_MODEL", "environment_override_present": false, "runtime_default": null, "runtime_default_source": "environment_at_import", "ui_default": "openai:gpt-4.1-mini"},
+    "summarization_model_max_tokens": {"environment_override": "SUMMARIZATION_MODEL_MAX_TOKENS", "runtime_default": 4096, "ui_default": 4096}
+  },
+  "configuration_drift": [
+    {"decision": "[ASK USER] keep unchanged during Phase 0", "field": "allow_clarification", "runtime_default": false, "ui_default": true},
+    {"decision": "[ASK USER] keep unchanged during Phase 0", "field": "print_process_info", "runtime_default": true, "ui_default": false},
+    {
+      "decision": "[ASK USER] keep unchanged during Phase 0",
+      "field": "model_defaults",
+      "observation": "Runtime model defaults come from environment at module import; the manifest records only presence/redaction while UI metadata declares OpenAI model fallbacks.",
+      "runtime_fields": ["summarization_model", "research_model", "compression_model", "final_report_model"]
+    }
+  ],
+  "known_baseline_behavior": {
+    "evaluation_default": "offline replay; evaluation telemetry disabled",
+    "graph": "Supervisor-Researcher with final report generation",
+    "known_core_defects_not_fixed": [
+      "Supervisor completion guard contains `or True`",
+      "compression retry does not re-invoke the model",
+      "unknown researcher tool names can raise KeyError"
+    ],
+    "live_requires": ["ODR_EVAL_MODE=live", "RUN_LIVE_RESEARCH=1", "--confirm-cost"]
+  },
+  "phase_start_commit": "a86b588dcd011493651c24208b446872cb4d1228",
+  "project_commit_at_capture": "a86b588dcd011493651c24208b446872cb4d1228",
+  "phase_start_worktree_clean": true,
+  "project_contract": {
+    "declared_dependencies": [
+      "langgraph>=0.5.4",
+      "langchain-community>=0.3.9",
+      "langchain-openai>=0.3.28",
+      "langchain-anthropic>=0.3.15",
+      "langchain-mcp-adapters>=0.1.6",
+      "langchain-deepseek>=0.1.2",
+      "langchain-tavily",
+      "langchain-groq>=0.2.4",
+      "openai>=1.99.2",
+      "tavily-python>=0.5.0",
+      "arxiv>=2.1.3",
+      "pymupdf>=1.25.3",
+      "xmltodict>=0.14.2",
+      "linkup-sdk>=0.2.3",
+      "duckduckgo-search>=3.0.0",
+      "exa-py>=1.8.8",
+      "requests>=2.32.3",
+      "beautifulsoup4==4.14.3",
+      "python-dotenv>=1.0.1",
+      "pytest",
+      "httpx>=0.24.0",
+      "markdownify>=0.11.6",
+      "azure-identity>=1.21.0",
+      "azure-search>=1.0.0b2",
+      "azure-search-documents>=11.5.2",
+      "rich>=13.0.0",
+      "langgraph-cli[inmem]>=0.3.1",
+      "langsmith>=0.3.37",
+      "langchain-google-vertexai>=2.0.25",
+      "langchain-google-genai>=2.1.5",
+      "ipykernel>=6.29.5",
+      "supabase>=2.15.3",
+      "mcp>=1.9.4",
+      "langchain-aws>=0.2.28",
+      "pandas>=2.3.1"
+    ],
+    "langgraph_python_version": "3.11",
+    "optional_eval_dependencies": ["deepeval==4.1.1"],
+    "requires_python_at_phase_start": ">=3.10",
+    "requires_python": ">=3.11",
+    "setuptools_packages": ["open_deep_research", "open_deep_research.evaluation", "legacy", "tests"]
+  },
+  "protected_core_sha256": {
+    "src/open_deep_research/configuration.py": "8c3f68489b4500801f1b2915d331e23fb7b8ca9203956dba569d185129411b2c",
+    "src/open_deep_research/deep_researcher.py": "9260cf1fb2e893a852679cffb2fc0690ca40a3d330dbbc6fe30ee51b5e23a276",
+    "src/open_deep_research/prompts.py": "b7bd086e43243d897fac1bfdd7f0bdea5da0fa23a591bcac5d2ff2d0ff6fbdbf",
+    "src/open_deep_research/state.py": "7f9c1845b78d88f7fad6cc8daa4558f0f7cfc0c65275922cd00252e29828638e",
+    "src/open_deep_research/utils.py": "9fc04ba3949757e72a58e2781e4ea44d2a31d133f1ac681345899f3a5114c150"
+  },
+  "resolved_packages": {
+    "deepeval": null,
+    "langchain": "1.3.10",
+    "langchain-core": "1.4.8",
+    "langgraph": "1.2.6",
+    "langsmith": "0.8.18",
+    "open_deep_research": "0.0.16",
+    "pydantic": "2.13.4",
+    "pytest": "9.1.1"
+  },
+  "runtime": {
+    "conda_environment": "open-deep-research",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "python_implementation": "CPython",
+    "python_version": "3.11.15"
+  },
+  "schema_version": "1.0",
+  "worktree_clean_at_capture": false
+}

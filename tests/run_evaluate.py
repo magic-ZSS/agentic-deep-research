@@ -1,18 +1,12 @@
-from langsmith import Client
-from tests.evaluators import eval_overall_quality, eval_relevance, eval_structure, eval_correctness, eval_groundedness, eval_completeness
-from dotenv import load_dotenv
 import asyncio
 from open_deep_research.deep_researcher import deep_researcher_builder
 from langgraph.checkpoint.memory import MemorySaver
 import uuid
 
-load_dotenv("../.env")
-
-client = Client()
+from open_deep_research.evaluation.gates import require_full_eval_authorization
 
 # NOTE: Configure the right dataset and evaluators
 dataset_name = "Deep Research Bench"
-evaluators = [eval_overall_quality, eval_relevance, eval_structure, eval_correctness, eval_groundedness, eval_completeness]
 # NOTE: Configure the right parameters for the experiment, these will be logged in the metadata
 max_structured_output_retries = 3
 allow_clarification = False
@@ -32,6 +26,7 @@ final_report_model_max_tokens = 10000
 async def target(
     inputs: dict,
 ):
+    require_full_eval_authorization()
     graph = deep_researcher_builder.compile(checkpointer=MemorySaver())
     config = {
         "configurable": {
@@ -61,6 +56,28 @@ async def target(
     return final_state
 
 async def main():
+    require_full_eval_authorization()
+    from dotenv import load_dotenv
+    from langsmith import Client
+    from tests.evaluators import (
+        eval_completeness,
+        eval_correctness,
+        eval_groundedness,
+        eval_overall_quality,
+        eval_relevance,
+        eval_structure,
+    )
+
+    load_dotenv("../.env")
+    client = Client()
+    evaluators = [
+        eval_overall_quality,
+        eval_relevance,
+        eval_structure,
+        eval_correctness,
+        eval_groundedness,
+        eval_completeness,
+    ]
     return await client.aevaluate(
         target,
         data=dataset_name,

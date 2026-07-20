@@ -5,9 +5,9 @@
 | 领域 | 值 | 证据 |
 |------|-------|----------|
 | Primary language | Python | `pyproject.toml`, `src/open_deep_research/deep_researcher.py` |
-| Runtime + version | 包元数据要求 `>=3.10`；LangGraph 配置指定 `3.11`；README 的本地 conda 示例也创建 Python 3.11 环境。 | `pyproject.toml`, `langgraph.json`, `README.md` |
+| Runtime + version | 包元数据与 LangGraph 配置现已统一为 Python `>=3.11` / `3.11`；README 的本地 conda 示例也创建 Python 3.11 环境。 | `pyproject.toml`, `langgraph.json`, `README.md`, `tests/baseline/baseline_manifest.json` |
 | Package manager | 项目使用 `pyproject.toml` + pip editable install；作者已确认后续文档和操作路径统一使用 conda/pip 与 LangGraph 原生命令，不再推荐 uv 命令。 | `pyproject.toml`, `README.md`, `AGENTS.md` |
-| Module/build system | `setuptools.build_meta`，包从 `src/` 映射到 `open_deep_research`、`legacy`、`tests`。 | `pyproject.toml` |
+| Module/build system | `setuptools.build_meta`，显式打包 `open_deep_research`、`open_deep_research.evaluation`、`legacy`、`tests`。 | `pyproject.toml` |
 
 ## 2) 生产依赖与框架
 
@@ -37,6 +37,7 @@
 | `ruff` | lint/import order/pydocstyle；配置选择 `E`, `F`, `I`, `D`, `D401`, `T201`, `UP`。 | `pyproject.toml` |
 | `mypy` | 类型检查；声明在 `dev` optional dependencies，`init.sh` 会调用。 | `pyproject.toml`, `init.sh` |
 | `pytest` | legacy 测试收集与测试执行。 | `pyproject.toml`, `init.sh`, `src/legacy/tests/conftest.py` |
+| `deepeval` | 仅在 `eval` optional extra 中固定为 `4.1.1`；默认 smoke 不导入、不注册其 callback，也不调用 Judge。 | `pyproject.toml`, `src/open_deep_research/evaluation/deepeval_adapter.py` |
 | `compileall` | 源码语法/编译检查。 | `init.sh` |
 | `langgraph-cli[inmem]` | 本地 LangGraph server / Studio 启动。 | `pyproject.toml`, `README.md` |
 | GitHub Actions Claude workflows | PR/issue/comment 触发 Claude Code 与 Claude Code Review。 | `.github/workflows/claude.yml`, `.github/workflows/claude-code-review.yml` |
@@ -52,16 +53,18 @@ python src/open_deep_research/run.py "你的研究问题"
 bash ./init.sh
 conda run --no-capture-output -n open-deep-research python -m compileall -q src
 conda run --no-capture-output -n open-deep-research python -m pytest --collect-only -q src/legacy/tests
+conda run --no-capture-output -n open-deep-research python scripts/run_baseline.py --mode replay --case simple-001 --output artifacts/baseline/smoke.jsonl
+conda run --no-capture-output -n open-deep-research python scripts/validate_phase.py --phase 0
 python tests/run_evaluate.py
 ```
 
-注意：`python tests/run_evaluate.py` 会调用 LangSmith、模型和搜索服务；README 明确提示完整评估可能产生成本。
+注意：`python tests/run_evaluate.py` 会调用 LangSmith、模型和搜索服务，且现在要求 `ODR_EVAL_MODE=full` 与 `RUN_FULL_EVAL=1`；日常验证使用默认离线 replay/smoke。
 
 ## 5) 环境变量与配置
 
 - Config sources: `langgraph.json`, `src/open_deep_research/configuration.py`, `.env`, `RunnableConfig["configurable"]`。
 - Core env vars observed in code: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `TAVILY_API_KEY`, `GET_API_KEYS_FROM_CONFIG`, `PRINT_PROCESS_INFO`, `SUPABASE_URL`, `SUPABASE_KEY`。
-- Evaluation env vars observed in code: `LANGSMITH_API_KEY` and LangSmith client environment variables.
+- Evaluation env vars observed in code: `ODR_EVAL_MODE`、`RUN_LIVE_RESEARCH`、`RUN_FULL_EVAL`、`LANGSMITH_API_KEY`；live 还要求 CLI `--confirm-cost`。
 - Legacy/search env vars observed in code: `AZURE_AI_SEARCH_ENDPOINT`, `AZURE_AI_SEARCH_INDEX_NAME`, `AZURE_AI_SEARCH_API_KEY`, `PERPLEXITY_API_KEY`, `EXA_API_KEY`, `GOOGLE_CX`, `EVAL_MODEL`, `RESEARCH_AGENT`, `SEARCH_API`, `SUPERVISOR_MODEL`, `RESEARCHER_MODEL`, `PLANNER_PROVIDER`, `PLANNER_MODEL`, `WRITER_PROVIDER`, `WRITER_MODEL`, `MAX_SEARCH_DEPTH`。
 - 作者已确认 `.env` 是本项目正式本地环境配置文件；不再要求维护或引用单独的环境模板文件。
 - Runtime constraints: 默认搜索 API 为 Tavily；默认模型为 OpenAI `gpt-4.1*`；本地规范要求优先 conda/LangGraph 命令。
@@ -78,3 +81,10 @@ python tests/run_evaluate.py
 - `src/security/auth.py`
 - `tests/run_evaluate.py`
 - `.github/dependabot.yml`
+
+## 7) 阶段 1 本地存储栈
+
+- metadata 使用 Python 标准库 `sqlite3`，未新增 ORM、向量数据库或生产依赖。
+- 原始内容使用本地 content-addressed 文件；hash 为完整 SHA-256。
+- setuptools 显式包含 `open_deep_research.knowledge`、`open_deep_research.evidence`、`open_deep_research.storage` 和 migrations 子包。
+- 默认配置不实例化存储；详细证据见 `pyproject.toml`、`src/open_deep_research/storage/` 和 `docs/codebase/KNOWLEDGE_EVIDENCE.md`。

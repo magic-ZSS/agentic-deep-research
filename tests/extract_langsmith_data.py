@@ -7,11 +7,12 @@ import argparse
 from langsmith import Client
 from dotenv import load_dotenv
 
-load_dotenv()
+from open_deep_research.evaluation.gates import require_full_eval_authorization
 
 
 def extract_langsmith_data(project_name, model_name, dataset_name, api_key):
     """Extract data from LangSmith and save to JSONL file."""
+    require_full_eval_authorization()
     print(f"Extracting data from LangSmith project: {project_name}")
     print(f"Using dataset: {dataset_name}")
     
@@ -59,6 +60,8 @@ def extract_langsmith_data(project_name, model_name, dataset_name, api_key):
 
 
 def main():
+    require_full_eval_authorization()
+    load_dotenv()
     parser = argparse.ArgumentParser(description='Extract data from LangSmith project')
     parser.add_argument('--project-name', required=True, help='LangSmith project name')
     parser.add_argument('--model-name', required=True, help='Model name for output filename')
