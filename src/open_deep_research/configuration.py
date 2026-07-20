@@ -170,11 +170,11 @@ class Configuration(BaseModel):
 
     # 配置 supervisor 最大研究迭代次数。
     max_researcher_iterations: int = Field(
-        default=3,
+        default=5,
         metadata={
             "x_oap_ui_config": {
                 "type": "slider",
-                "default": 3,
+                "default": 5,
                 "min": 1,
                 "max": 10,
                 "step": 1,
@@ -185,7 +185,7 @@ class Configuration(BaseModel):
 
     # 配置 researcher 最大工具调用轮数。
     max_react_tool_calls: int = Field(
-        default=4,
+        default=5,
         metadata={
             "x_oap_ui_config": {
                 "type": "slider",
