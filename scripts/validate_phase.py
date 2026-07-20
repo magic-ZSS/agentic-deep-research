@@ -873,10 +873,626 @@ def validate_phase1(root: Path) -> list[CheckResult]:
     return [_run_check(acceptance_id, check) for acceptance_id, check in checks]
 
 
+PHASE2_TEST_TARGETS = (
+    "tests/unit/knowledge",
+    "tests/unit/tools/test_knowledge_tools.py",
+    "tests/integration/knowledge",
+    "tests/integration/storage/test_phase2_repository_contract.py",
+)
+
+
+def _check_phase2_test_suite(root: Path) -> str:
+    """Run the complete deterministic Phase 2 suite in the current interpreter."""
+    missing = [
+        relative
+        for relative in PHASE2_TEST_TARGETS
+        if not (root / relative).exists()
+    ]
+    if missing:
+        raise ValueError(f"Phase 2 test targets are missing: {missing}")
+
+    temporary_root = root / ".phase-validation-tmp"
+    temporary_root.mkdir(parents=True, exist_ok=True)
+    basetemp = temporary_root / f"phase2-pytest-{uuid4().hex}"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            *PHASE2_TEST_TARGETS,
+            "-m",
+            "not live",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            str(basetemp),
+            "-q",
+            "-rs",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+    combined_output = "\n".join(
+        part.strip() for part in (completed.stdout, completed.stderr) if part.strip()
+    )
+    if completed.returncode != 0:
+        tail = "\n".join(combined_output.splitlines()[-30:])
+        raise ValueError(
+            f"Phase 2 pytest suite exited {completed.returncode}:\n{tail}"
+        )
+    if re.search(r"\b\d+\s+skipped\b", combined_output):
+        raise ValueError(
+            "Phase 2 pytest suite skipped coverage despite the compatible "
+            "dependency gate"
+        )
+    passed_match = re.search(r"\b(\d+) passed\b", completed.stdout)
+    if passed_match is None:
+        raise ValueError("Phase 2 pytest suite did not report a passing test count")
+    return (
+        f"{passed_match.group(1)} tests passed with zero skips using a unique "
+        ".phase-validation-tmp basetemp"
+    )
+
+
+def _phase2_test_inventory(root: Path) -> dict[str, set[str]]:
+    inventory: dict[str, set[str]] = {}
+    paths: list[Path] = []
+    for relative in PHASE2_TEST_TARGETS:
+        target = root / relative
+        paths.extend(sorted(target.rglob("test_*.py")) if target.is_dir() else [target])
+    for path in paths:
+        relative = path.relative_to(root).as_posix()
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        inventory[relative] = {
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name.startswith("test_")
+        }
+    return inventory
+
+
+def _require_phase2_tests(
+    inventory: dict[str, set[str]], requirements: dict[str, tuple[str, ...]]
+) -> str:
+    missing: list[str] = []
+    for relative, names in requirements.items():
+        available = inventory.get(relative, set())
+        missing.extend(f"{relative}::{name}" for name in names if name not in available)
+    if missing:
+        raise ValueError(f"Phase 2 acceptance evidence tests are missing: {missing}")
+    count = sum(len(names) for names in requirements.values())
+    return f"{count} mapped acceptance test(s) are present"
+
+
+def _run_phase2_dependency_gate(root: Path) -> tuple[dict, str]:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(root / "scripts" / "check_phase2_dependencies.py"),
+            "--json",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    if completed.returncode != 0:
+        output = completed.stdout.strip() or completed.stderr.strip()
+        raise ValueError(
+            "Phase 2 dependency gate exited "
+            f"{completed.returncode}: {output}"
+        )
+    try:
+        report = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        raise ValueError("Phase 2 dependency gate did not emit valid JSON") from exc
+    if not isinstance(report, dict):
+        raise ValueError("Phase 2 dependency report must be a JSON object")
+    expected = report.get("expected_versions")
+    installed = report.get("installed")
+    environment = report.get("environment", {})
+    offline = report.get("offline_settings", {})
+    adapter = report.get("adapter_static_check", {})
+    if (
+        report.get("status") != "compatible"
+        or report.get("exit_code") != 0
+        or report.get("errors") != []
+        or report.get("missing_distributions") != []
+        or report.get("network_used") is not False
+        or report.get("installation_attempted") is not False
+        or environment.get("windows_ok") is not True
+        or environment.get("python_ok") is not True
+        or offline.get("ok") is not True
+        or adapter.get("ok") is not True
+        or adapter.get("findings") != []
+        or not isinstance(expected, dict)
+        or not isinstance(installed, dict)
+        or any(
+            installed.get(name, {}).get("actual") != version
+            or installed.get(name, {}).get("ok") is not True
+            for name, version in expected.items()
+        )
+    ):
+        raise ValueError(f"Phase 2 dependency report is not compatible: {report}")
+    versions = ", ".join(
+        f"{name}={version}" for name, version in sorted(expected.items())
+    )
+    return report, (
+        f"compatible on {environment.get('system')} Python {environment.get('python')}; "
+        f"offline/no-install/no-network; {versions}"
+    )
+
+
+def _check_phase2_adapter_boundary(report: dict) -> str:
+    adapter = report.get("adapter_static_check", {})
+    if adapter.get("ok") is not True or adapter.get("findings") != []:
+        raise ValueError("PaperQA adapter references forbidden answer/Agent APIs")
+    offline = report.get("offline_settings", {})
+    required_offline = {
+        "use_doc_details": False,
+        "defer_embedding": True,
+        "parse_media": False,
+        "enrich_media": False,
+        "evidence_skip_summary": True,
+    }
+    if any(offline.get(key) is not value for key, value in required_offline.items()):
+        raise ValueError(f"PaperQA offline settings drifted: {offline}")
+    return "adapter AST excludes ask/aquery/agents and offline enrichment is disabled"
+
+
+def _check_phase2_packaging(root: Path) -> str:
+    with (root / "pyproject.toml").open("rb") as source:
+        pyproject = tomllib.load(source)
+    required_packages = {
+        "open_deep_research.knowledge",
+        "open_deep_research.knowledge.ingestion",
+        "open_deep_research.knowledge.ingestion.parsers",
+        "open_deep_research.knowledge.retrieval",
+        "open_deep_research.evidence",
+        "open_deep_research.storage",
+        "open_deep_research.storage.migrations",
+        "open_deep_research.tools",
+    }
+    configured_packages = set(pyproject["tool"]["setuptools"]["packages"])
+    missing = required_packages - configured_packages
+    if missing:
+        raise ValueError(f"Phase 2 packages are absent from setuptools: {sorted(missing)}")
+
+    temporary_root = root / ".phase-validation-tmp"
+    temporary_root.mkdir(parents=True, exist_ok=True)
+    directory = temporary_root / f"phase2-package-import-{uuid4().hex}"
+    directory.mkdir()
+    probe = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import pathlib, sys; "
+                "import open_deep_research.knowledge.ingestion.service; "
+                "import open_deep_research.knowledge.ingestion.parsers; "
+                "import open_deep_research.knowledge.retrieval; "
+                "import open_deep_research.knowledge.paperqa_adapter; "
+                "import open_deep_research.tools.knowledge; "
+                "raise SystemExit(1 if 'paperqa' in sys.modules "
+                "or pathlib.Path('data').exists() else 0)"
+            ),
+        ],
+        cwd=directory,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+    if probe.returncode != 0:
+        raise ValueError(
+            "Phase 2 package import failed outside the repository cwd: "
+            f"{probe.stderr.strip() or probe.stdout.strip()}"
+        )
+    return "Phase 2 package set is complete and imports inertly outside repository cwd"
+
+
+def _check_phase2_default_off(root: Path) -> str:
+    from open_deep_research.configuration import Configuration
+
+    temporary_root = root / ".phase-validation-tmp"
+    temporary_root.mkdir(parents=True, exist_ok=True)
+    directory = temporary_root / f"phase2-default-off-{uuid4().hex}"
+    directory.mkdir()
+    paperqa_before = {
+        name
+        for name in sys.modules
+        if name == "paperqa" or name.startswith("paperqa.")
+    }
+    previous = Path.cwd()
+    os.chdir(directory)
+    try:
+        configuration = Configuration()
+        expected_false = (
+            "enable_knowledge_base",
+            "enable_paperqa_retrieval",
+            "paperqa_contextual_summarization",
+        )
+        enabled = [
+            name
+            for name in expected_false
+            if getattr(configuration, name) is not False
+        ]
+        if enabled:
+            raise ValueError(f"Phase 2 configuration defaults are enabled: {enabled}")
+        if Path("data").exists():
+            raise ValueError("default-off Configuration created a data directory")
+    finally:
+        os.chdir(previous)
+    paperqa_after = {
+        name
+        for name in sys.modules
+        if name == "paperqa" or name.startswith("paperqa.")
+    }
+    if paperqa_after - paperqa_before:
+        raise ValueError("default-off Configuration imported PaperQA")
+    return "knowledge/PaperQA/contextual flags default off and create no data or import"
+
+
+def _check_phase2_production_isolation(root: Path) -> str:
+    protected = (
+        "src/open_deep_research/deep_researcher.py",
+        "src/open_deep_research/utils.py",
+    )
+    manifest = _read_json(root / "tests" / "baseline" / "baseline_manifest.json")
+    expected_hashes = manifest.get("protected_core_sha256", {})
+    forbidden_imports: list[str] = []
+    for relative in protected:
+        path = root / relative
+        if expected_hashes.get(relative) != sha256_file(path):
+            raise ValueError(
+                f"production core differs from the Phase 0 baseline: {relative}"
+            )
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            imported: list[str] = []
+            if isinstance(node, ast.Import):
+                imported = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                imported = [node.module]
+            for name in imported:
+                if name == "paperqa" or name.startswith("paperqa.") or name == (
+                    "open_deep_research.knowledge"
+                ) or name.startswith("open_deep_research.knowledge."):
+                    forbidden_imports.append(f"{relative}:{name}")
+    if forbidden_imports:
+        raise ValueError(
+            f"production core imports Phase 2 internals: {forbidden_imports}"
+        )
+
+    utils_tree = ast.parse(
+        (root / "src/open_deep_research/utils.py").read_text(encoding="utf-8")
+    )
+    get_all_tools = next(
+        (
+            node
+            for node in utils_tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name == "get_all_tools"
+        ),
+        None,
+    )
+    if get_all_tools is None:
+        raise ValueError("get_all_tools is missing")
+    identifiers = {
+        node.id
+        for node in ast.walk(get_all_tools)
+        if isinstance(node, ast.Name)
+    } | {
+        node.attr
+        for node in ast.walk(get_all_tools)
+        if isinstance(node, ast.Attribute)
+    }
+    bound = identifiers & {"knowledge_search", "knowledge_read"}
+    if bound:
+        raise ValueError(
+            f"production get_all_tools binds Phase 2 tools: {sorted(bound)}"
+        )
+    return "deep_researcher/utils match baseline and bind no knowledge/PaperQA API"
+
+
+def validate_phase2(root: Path) -> list[CheckResult]:
+    """Evaluate every T2 criterion using deterministic, offline local evidence."""
+    try:
+        suite_detail = _check_phase2_test_suite(root)
+        suite_error: BaseException | None = None
+    except BaseException as exc:
+        suite_detail = ""
+        suite_error = exc
+    try:
+        inventory = _phase2_test_inventory(root)
+        inventory_error: BaseException | None = None
+    except BaseException as exc:
+        inventory = {}
+        inventory_error = exc
+    try:
+        dependency_report, dependency_detail = _run_phase2_dependency_gate(root)
+        dependency_error: BaseException | None = None
+    except BaseException as exc:
+        dependency_report = {}
+        dependency_detail = ""
+        dependency_error = exc
+
+    def evidence(
+        focus: str,
+        requirements: dict[str, tuple[str, ...]],
+        extra: Callable[[], str] | None = None,
+    ) -> str:
+        if suite_error is not None:
+            raise suite_error
+        if inventory_error is not None:
+            raise inventory_error
+        mapped = _require_phase2_tests(inventory, requirements)
+        details = [focus, mapped, suite_detail]
+        if extra is not None:
+            details.append(extra())
+        return "; ".join(details)
+
+    def dependency_evidence() -> str:
+        if dependency_error is not None:
+            raise dependency_error
+        return dependency_detail
+
+    ingestion = "tests/integration/knowledge/test_ingestion_service.py"
+    parsers = "tests/unit/knowledge/test_ingestion_parsers.py"
+    retrieval = "tests/unit/knowledge/test_retrieval_and_paperqa_adapter.py"
+    tools = "tests/unit/tools/test_knowledge_tools.py"
+    cli = "tests/integration/knowledge/test_cli_workflow.py"
+    native = "tests/integration/knowledge/test_native_paperqa_offline.py"
+    dependency = "tests/unit/knowledge/test_phase2_dependency_smoke.py"
+    configuration = "tests/unit/knowledge/test_configuration_and_state.py"
+    checks: list[tuple[str, Callable[[], str]]] = [
+        (
+            "T2-1",
+            lambda: evidence(
+                "four byte-backed formats import and persist as candidates",
+                {
+                    ingestion: (
+                        "test_four_formats_persist_candidate_chunks_and_pending_context_evidence",
+                        "test_reopened_repository_retrieves_pdf_markdown_and_html_locators",
+                    ),
+                    cli: ("test_cli_import_reopen_and_candidate_inspection",),
+                },
+            ),
+        ),
+        (
+            "T2-2",
+            lambda: evidence(
+                "PDF page ranges retain the Version/Source chain",
+                {
+                    parsers: (
+                        "test_pdf_parser_preserves_one_indexed_and_cross_page_locators",
+                    ),
+                    ingestion: (
+                        "test_four_formats_persist_candidate_chunks_and_pending_context_evidence",
+                        "test_reopened_repository_retrieves_pdf_markdown_and_html_locators",
+                    ),
+                },
+            ),
+        ),
+        (
+            "T2-3",
+            lambda: evidence(
+                "Markdown chunks retain deterministic heading paths",
+                {
+                    parsers: (
+                        "test_markdown_parser_preserves_hierarchy_repeats_fences_and_crlf",
+                        "test_markdown_chunking_is_deterministic_and_phase1_compatible",
+                    ),
+                    ingestion: (
+                        "test_reopened_repository_retrieves_pdf_markdown_and_html_locators",
+                    ),
+                },
+            ),
+        ),
+        (
+            "T2-4",
+            lambda: evidence(
+                "HTML chunks bind canonical snapshot identity and anchors",
+                {
+                    parsers: (
+                        "test_html_parser_removes_executable_content_and_preserves_snapshot_identity",
+                        "test_html_input_canonical_uri_overrides_snapshot_hint_without_fetching",
+                    ),
+                    ingestion: (
+                        "test_source_rewrite_and_deletion_keep_original_blob_and_locator",
+                        "test_reopened_repository_retrieves_pdf_markdown_and_html_locators",
+                    ),
+                },
+            ),
+        ),
+        (
+            "T2-5",
+            lambda: evidence(
+                "empty repository, no-match, and zero-similarity paths return explicit empty hits",
+                {
+                    retrieval: (
+                        "test_repository_retriever_empty_and_deterministic_tie_break",
+                        "test_native_paperqa_zero_similarity_is_an_explicit_empty_result",
+                    ),
+                    tools: (
+                        "test_knowledge_search_returns_typed_artifact_and_explicit_empty",
+                    ),
+                },
+            ),
+        ),
+        (
+            "T2-6",
+            lambda: evidence(
+                "raw retrieval trace and AST exclude a second answer/Agent loop",
+                {
+                    native: (
+                        "test_native_paperqa_rehydrates_repository_with_local_embedding_only",
+                    ),
+                    retrieval: (
+                        "test_native_paperqa_seam_only_manual_loads_and_retrieves",
+                        "test_contextual_backend_is_opt_in_bounded_and_order_preserving",
+                    ),
+                    dependency: ("test_adapter_static_check_rejects_answer_and_agent_apis",),
+                },
+                lambda: _check_phase2_adapter_boundary(dependency_report)
+                if dependency_error is None
+                else dependency_evidence(),
+            ),
+        ),
+        (
+            "T2-7",
+            lambda: evidence(
+                "same bytes are idempotent; changed bytes version; derived indexing retries",
+                {
+                    ingestion: (
+                        "test_duplicate_content_is_idempotent_and_changed_content_creates_new_version",
+                        "test_index_failure_retries_without_promoting_or_duplicating_version",
+                    )
+                },
+            ),
+        ),
+        (
+            "T2-8",
+            lambda: evidence(
+                "PaperQA results preserve project IDs and deterministic score/ID order",
+                {
+                    retrieval: (
+                        "test_repository_retriever_empty_and_deterministic_tie_break",
+                        "test_paperqa_adapter_prefilters_postfilters_and_uses_project_ids",
+                        "test_paperqa_adapter_deduplicates_and_sorts_by_score_then_chunk_id",
+                        "test_native_paperqa_seam_only_manual_loads_and_retrieves",
+                    )
+                },
+            ),
+        ),
+        (
+            "T2-9",
+            lambda: evidence(
+                "Phase 2 remains default-off and production tools/Web flow remain baseline",
+                {
+                    configuration: (
+                        "test_structured_evidence_defaults_off_without_creating_storage",
+                    ),
+                    retrieval: (
+                        "test_disabled_paperqa_uses_repository_without_loading_module",
+                    ),
+                    tools: ("test_phase2_contract_is_not_registered_with_production_tools",),
+                },
+                lambda: (
+                    f"{_check_phase2_default_off(root)}; "
+                    f"{_check_phase2_production_isolation(root)}"
+                ),
+            ),
+        ),
+        (
+            "T2-10",
+            lambda: evidence(
+                "parse/index failures are structured, retryable, and never activate a Version",
+                {
+                    ingestion: (
+                        "test_structured_failed_job_retries_under_same_job_id",
+                        "test_index_failure_retries_without_promoting_or_duplicating_version",
+                    ),
+                    parsers: (
+                        "test_pdf_parser_rejects_invalid_and_image_only_documents",
+                        "test_empty_text_snapshots_fail_instead_of_generating_content",
+                    ),
+                    retrieval: (
+                        "test_paperqa_failure_is_structured_or_explicitly_falls_back",
+                        "test_contextual_backend_reports_timeout_and_exception",
+                    ),
+                },
+            ),
+        ),
+        (
+            "T2-11",
+            lambda: evidence(
+                "knowledge_read accepts stable Repository IDs and rejects local paths",
+                {
+                    retrieval: (
+                        "test_read_uses_stable_chunk_or_evidence_id_and_citation_chain",
+                        "test_search_and_read_requests_are_strict_and_read_rejects_paths",
+                    ),
+                    tools: ("test_tool_requests_forbid_extra_fields_and_paths",),
+                },
+            ),
+        ),
+        (
+            "T2-12",
+            lambda: evidence(
+                "Windows/Python 3.11 dependency matrix and native imports are compatible",
+                {
+                    dependency: (
+                        "test_fully_compatible_report_is_deterministic_without_network",
+                        "test_project_knowledge_extra_has_the_complete_exact_matrix",
+                        "test_missing_dependencies_are_structured_not_skipped",
+                    )
+                },
+                lambda: f"{dependency_evidence()}; {_check_phase2_packaging(root)}",
+            ),
+        ),
+        (
+            "T2-13",
+            lambda: evidence(
+                "candidate/pending evidence stays non-citable and inspection-only",
+                {
+                    ingestion: (
+                        "test_four_formats_persist_candidate_chunks_and_pending_context_evidence",
+                        "test_index_failure_retries_without_promoting_or_duplicating_version",
+                    ),
+                    cli: ("test_cli_import_reopen_and_candidate_inspection",),
+                    tools: (
+                        "test_candidate_search_and_read_require_service_capability",
+                        "test_phase2_contract_is_not_registered_with_production_tools",
+                    ),
+                },
+            ),
+        ),
+        (
+            "T2-14",
+            lambda: evidence(
+                "deleted source remains recoverable from hashed ContentBlob with locator",
+                {
+                    ingestion: (
+                        "test_four_formats_persist_candidate_chunks_and_pending_context_evidence",
+                        "test_source_rewrite_and_deletion_keep_original_blob_and_locator",
+                    )
+                },
+            ),
+        ),
+        (
+            "T2-15",
+            lambda: evidence(
+                "fresh native PaperQA state rehydrates authoritative scope-filtered records",
+                {
+                    native: (
+                        "test_native_paperqa_rehydrates_repository_with_local_embedding_only",
+                    ),
+                    retrieval: (
+                        "test_repository_retriever_scope_filters_as_of_and_candidate",
+                        "test_paperqa_adapter_prefilters_postfilters_and_uses_project_ids",
+                        "test_paperqa_adapter_deduplicates_and_sorts_by_score_then_chunk_id",
+                        "test_retrievers_fail_closed_when_catalog_leaks_another_scope",
+                    ),
+                    cli: (
+                        "test_cli_paperqa_opt_in_rehydrates_without_an_answer_agent",
+                    ),
+                },
+            ),
+        ),
+    ]
+    return [_run_check(acceptance_id, check) for acceptance_id, check in checks]
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the phase validator CLI."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--phase", type=int, required=True, choices=(0, 1))
+    parser.add_argument("--phase", type=int, required=True, choices=(0, 1, 2))
     parser.add_argument("--refs-lock", type=Path)
     parser.add_argument("--cases", type=Path)
     parser.add_argument("--fixture", type=Path)
@@ -903,8 +1519,10 @@ def main(argv: list[str] | None = None) -> int:
                 args.manifest or PROJECT_ROOT / "tests/baseline/baseline_manifest.json"
             ),
         )
-    else:
+    elif args.phase == 1:
         results = validate_phase1(PROJECT_ROOT)
+    else:
+        results = validate_phase2(PROJECT_ROOT)
     if args.as_json:
         sys.stdout.write(
             json.dumps(

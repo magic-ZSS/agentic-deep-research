@@ -13,4 +13,3 @@ __all__ = [
     "knowledge_read",
     "knowledge_search",
 ]
-

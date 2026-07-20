@@ -26,9 +26,9 @@
 
 - 主图为 `clarify_with_user → write_research_brief → research_supervisor → final_report_generation`；Supervisor 和 Researcher 均为循环子图。
 - Researcher 将 Web/MCP 工具结果压缩成自由文本 `compressed_research`；Supervisor 再把这些文本聚合为 `notes`。Writer 还接收 brief/messages，但 `notes` 是唯一研究 findings 通道，`raw_notes` 不进入 Writer。
-- 阶段 1 已提供 `Source`、`DocumentVersion`、`Chunk`、`Evidence` 的结构化身份和本地 Repository，但尚未接入主图；`Claim` 与程序化来源编号仍待阶段 6。
+- 阶段 2 已在阶段 1 的结构化身份与本地 Repository 上提供四类 candidate 导入、结构化 locator、内部 inspection 检索和受控 PaperQA raw-retrieval Adapter；这些能力仍未接入主图，`Claim` 与程序化来源编号仍待阶段 6。
 - 当前主实现只接入 Tavily、OpenAI/Anthropic 原生搜索和单个 HTTP MCP 配置；尚无本地知识库、Filesystem MCP、Knowledge MCP 或长期记忆。
-- 低成本自动测试现包括阶段 0 的 baseline/evaluation smoke、阶段 1 的 knowledge/evidence/storage contract suite，以及 `tests/test_research_limits.py`；LangSmith Deep Research Bench 仍会调用外部服务，不属于日常 smoke。
+- 低成本自动测试现包括阶段 0 的 baseline/evaluation smoke、阶段 1 的 knowledge/evidence/storage contract suite、阶段 2 的 ingestion/retrieval/PaperQA 离线 suite，以及 `tests/test_research_limits.py`；LangSmith Deep Research Bench 仍会调用外部服务，不属于日常 smoke。
 - 现有 `feature_list.json` 条目均为 `completed`，但代码仍存在配置文档漂移和恢复边界等已知风险，必须先在阶段 0 固定而不能在规划阶段静默修复。
 
 ## 4. 阶段导航与状态
@@ -39,7 +39,7 @@
 |---|---|---|---|
 | 0 | [Baseline 与参考仓库](phase_0_baseline_and_references.md) | 固定行为、数据集、遥测、最小 DeepEval 骨架、参考版本锁 | `completed` |
 | 1 | [知识与证据模型](phase_1_knowledge_evidence_models.md) | 领域模型、InMemory/SQLite Repository、版本/去重/Reducer | `completed` |
-| 2 | [文档导入与 PaperQA2](phase_2_document_ingestion_and_paperqa.md) | 四类导入、PaperQA2 Adapter、可定位检索工具 | `not-started` |
+| 2 | [文档导入与 PaperQA2](phase_2_document_ingestion_and_paperqa.md) | 四类导入、PaperQA2 Adapter、可定位检索工具 | `completed` |
 | 3 | [Agentic RAG 生命周期](phase_3_agentic_rag_lifecycle.md) | 本地优先、覆盖判断、候选验证、状态转换和审计 | `not-started` |
 | 4 | [MCP 集成](phase_4_mcp_integration.md) | 受限 Filesystem MCP、proposal-only Knowledge MCP、Windows 安全 | `not-started` |
 | 5 | [分层记忆](phase_5_memory_system.md) | Checkpoint、Namespace、五类记忆和 Memory Write Gate | `not-started` |
@@ -92,7 +92,7 @@ flowchart LR
 3. 将该代码块原样发送给 Codex；如需改变范围，明确写在同一条消息中。
 4. Codex 只能执行该阶段，必须完成测试、状态更新和工作树复核后停止。
 
-阶段 1 已完成；只有在用户明确下达下一阶段指令后，才可复制 [phase_2_document_ingestion_and_paperqa.md](phase_2_document_ingestion_and_paperqa.md#16-本阶段-codex-执行指令) 第 16 节，不得自动进入阶段 2。
+阶段 2 已完成；只有在用户明确下达下一阶段指令后，才可复制 [phase_3_agentic_rag_lifecycle.md](phase_3_agentic_rag_lifecycle.md#16-本阶段-codex-执行指令) 第 16 节，不得自动进入阶段 3。
 
 ## 8. 如何验收一个阶段
 
@@ -109,7 +109,7 @@ flowchart LR
 以下问题不在规划阶段擅自决定，进入相应阶段时必须显式确认或用可替换配置隔离：
 
 - `allow_clarification`、`print_process_info` 及模型字段的运行默认值与 UI/状态文档存在漂移；
-- PaperQA2 的固定发布版本、embedding/provider 与离线测试策略；
+- PaperQA2 发布版本已固定；生产 embedding/provider、索引代际和 contextual 模型仍待后续阶段按配置隔离；
 - 来源权威等级、时间有效期和置信度阈值的领域规则；
 - 本地运行时的可信 `tenant_id/user_id/project_id` 来源；
 - 可选live baseline以及阶段7必需的full eval/LLM Judge费用预算；

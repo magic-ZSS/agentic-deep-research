@@ -87,6 +87,14 @@
       "dependencies": ["phase-0-baseline-references-001"],
       "status": "completed",
       "evidence": "2026-07-21 运行 scripts/validate_phase.py --phase 1（退出码 0）：T1-1 同内容幂等、T1-2 新内容不可变版本、T1-3 Evidence 外键回溯、T1-4 page/heading locator、T1-5 确定性 reducer、T1-6 SQLite 重开持久化、T1-7 UNIQUE/事务并发去重、T1-8 soft delete/audit、T1-9 Python 3.11+/包发现/仓库外导入、T1-10 默认关闭兼容、T1-11 双后端 contract suite、T1-12 schema v1/status 边界、T1-13 scope-local blob 去重、T1-14 原始快照、T1-15 引用资格派生、T1-16 scope/private 隔离全部 PASS；全量离线 pytest 81 passed、1 skipped（退出码 0）；Phase 0 回归 T0-1 至 T0-12 全部 PASS。"
+    },
+    {
+      "id": "phase-2-document-ingestion-paperqa-001",
+      "name": "实现本地文档导入与受控 PaperQA 检索适配",
+      "description": "执行开发计划阶段 2：实现四类本地 candidate 导入、原始 ContentBlob、ImportJob、结构化 locator、KnowledgeRetriever、受控 PaperQA Adapter 和仅供内部 inspection 的 knowledge_search/read contract；不接入生产 Researcher。",
+      "dependencies": ["phase-1-knowledge-evidence-models-001"],
+      "status": "completed",
+      "evidence": "2026-07-21 运行 scripts/validate_phase.py --phase 2（退出码 0）：内部阶段 2 suite 83 passed、0 skipped，T2-1 至 T2-15 全部 PASS，覆盖四格式 candidate 导入、PDF/Markdown/HTML locator、空结果、禁止 PaperQA Agent API、幂等与新 Version、稳定 ID/排序、默认关闭和生产 Researcher 隔离、结构化失败重试、stable-ID read、Windows 依赖、candidate 不可引用、三格式源文件改写/删除后的 Blob/hash 恢复，以及真实 PaperQA 从权威 Repository rehydrate 和 scope/filter/as_of。目标环境为 Windows AMD64/Python 3.11.15；固定并实际安装 paper-qa 2026.3.18、paper-qa-pypdf 2026.3.18、tantivy 0.26.0、fhaviary 0.34.0、fhlmi 0.45.0、litellm 1.82.4；依赖 smoke 与 pip check 均退出码 0。全量离线 pytest 为 147 passed、1 skipped；T0 与 T1 回归全部 PASS；未调用真实模型、Web、LangSmith、Deep Research Bench 或 LLM Judge。"
     }
   ]
 }

@@ -142,8 +142,12 @@ class RepositoryRetrievalCatalog:
 def record_is_eligible(
     record: RetrievalRecord,
     request: KnowledgeSearchRequest | KnowledgeReadRequest,
+    *,
+    scope_id: str | None = None,
 ) -> bool:
     """Apply lifecycle and temporal policy without trusting a retrieval backend."""
+    if scope_id is not None and record.chunk.scope_id != scope_id:
+        return False
     allowed_statuses = {VersionLifecycleStatus.ACTIVE}
     if request.include_candidate:
         allowed_statuses.add(VersionLifecycleStatus.CANDIDATE)
@@ -190,10 +194,16 @@ def record_is_eligible(
 def eligible_records(
     records: Iterable[RetrievalRecord],
     request: KnowledgeSearchRequest | KnowledgeReadRequest,
+    *,
+    scope_id: str | None = None,
 ) -> tuple[RetrievalRecord, ...]:
     return tuple(
         sorted(
-            (record for record in records if record_is_eligible(record, request)),
+            (
+                record
+                for record in records
+                if record_is_eligible(record, request, scope_id=scope_id)
+            ),
             key=lambda item: item.chunk.chunk_id,
         )
     )
@@ -287,7 +297,9 @@ class RepositoryKnowledgeRetriever:
         scope: KnowledgeScope,
     ) -> KnowledgeSearchResult:
         records = eligible_records(
-            await self.catalog.list_records(access, scope), request
+            await self.catalog.list_records(access, scope),
+            request,
+            scope_id=scope.scope_id,
         )
         scored = [
             (lexical_score(request.query, record), record) for record in records
@@ -326,7 +338,7 @@ class RepositoryKnowledgeRetriever:
         scope: KnowledgeScope,
     ) -> KnowledgeReadResult:
         record = await self.catalog.get_record(access, scope, request.stable_id)
-        if not record_is_eligible(record, request):
+        if not record_is_eligible(record, request, scope_id=scope.scope_id):
             raise RetrievalNotFoundError(
                 "knowledge is unavailable for the requested lifecycle/as_of policy"
             )
@@ -339,4 +351,3 @@ class RepositoryKnowledgeRetriever:
                 at=request.as_of,
             )
         )
-

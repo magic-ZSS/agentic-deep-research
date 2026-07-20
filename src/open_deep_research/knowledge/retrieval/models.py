@@ -227,4 +227,3 @@ class KnowledgeReadResult(RetrievalModel):
 
     hit: EvidenceHit
     backend: str = "repository-read"
-

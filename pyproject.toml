@@ -51,6 +51,8 @@ dev = ["mypy>=1.11.1", "ruff>=0.6.1"]
 eval = ["deepeval==4.1.1"]
 knowledge = [
     "paper-qa==2026.3.18",
+    "paper-qa-pypdf==2026.3.18",
+    "tantivy==0.26.0",
     "fhaviary==0.34.0",
     "fhlmi==0.45.0",
     "litellm==1.82.4",

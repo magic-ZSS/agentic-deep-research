@@ -177,11 +177,13 @@ PaperQA `Docs`/默认Numpy索引是进程内派生状态，不视为持久化API
 ## 13. 验收命令
 
 ```powershell
-conda run --no-capture-output -n open-deep-research python -m pytest tests/unit/knowledge/ingestion tests/unit/knowledge/retrieval -q
-conda run --no-capture-output -n open-deep-research python -m pytest tests/integration/knowledge -m "not live" -q
-conda run --no-capture-output -n open-deep-research python scripts/ingest_knowledge.py --source tests/fixtures/knowledge --dry-run
-conda run --no-capture-output -n open-deep-research python scripts/ingest_knowledge.py --source tests/fixtures/knowledge --db artifacts/phase2/test-kb.sqlite --index-dir artifacts/phase2/paperqa-index
-conda run --no-capture-output -n open-deep-research python scripts/search_knowledge.py --db artifacts/phase2/test-kb.sqlite --index-dir artifacts/phase2/paperqa-index --scope fixture-project --include-candidate --query "fixture query" --json
+conda run --no-capture-output -n open-deep-research python -m pytest tests/unit/knowledge tests/unit/tools/test_knowledge_tools.py -q
+conda run --no-capture-output -n open-deep-research python -m pytest tests/integration/knowledge tests/integration/storage/test_phase2_repository_contract.py -m "not live" -q
+conda run --no-capture-output -n open-deep-research python scripts/check_phase2_dependencies.py --json
+conda run --no-capture-output -n open-deep-research python scripts/ingest_knowledge.py --source tests/fixtures/knowledge --tenant tenant-a --scope project-a --dry-run --json
+conda run --no-capture-output -n open-deep-research python scripts/ingest_knowledge.py --source tests/fixtures/knowledge --tenant tenant-a --scope project-a --db artifacts/phase2/test-kb.sqlite --blob-dir artifacts/phase2/blobs --index-dir artifacts/phase2/paperqa-index --json
+conda run --no-capture-output -n open-deep-research python scripts/search_knowledge.py --db artifacts/phase2/test-kb.sqlite --index-dir artifacts/phase2/paperqa-index --tenant tenant-a --scope project-a --include-candidate --query "storage evidence" --json
+conda run --no-capture-output -n open-deep-research python scripts/search_knowledge.py --db artifacts/phase2/test-kb.sqlite --index-dir artifacts/phase2/paperqa-index --tenant tenant-a --scope project-a --include-candidate --paperqa --query "storage evidence" --json
 conda run --no-capture-output -n open-deep-research python scripts/validate_phase.py --phase 2
 conda run --no-capture-output -n open-deep-research python -m ruff check src/open_deep_research/knowledge src/open_deep_research/tools tests/unit/knowledge tests/integration/knowledge scripts/ingest_knowledge.py scripts/search_knowledge.py
 conda run --no-capture-output -n open-deep-research python -m mypy src/open_deep_research/knowledge src/open_deep_research/tools

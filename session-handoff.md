@@ -2,48 +2,66 @@
 
 ## 当前目标（Current Objective）
 
-- `phase-0-baseline-references-001` 已完成。
-- `phase-1-knowledge-evidence-models-001` 已于 2026-07-21 完成收口。
-- 阶段 2 尚未开始；下一会话必须先重新核验阶段 1 状态与 T1 evidence。
+- `phase-0-baseline-references-001`、`phase-1-knowledge-evidence-models-001`、`phase-2-document-ingestion-paperqa-001` 均已完成。
+- 阶段 2 于 2026-07-21 收口；T2-1 至 T2-15 全部有机器可执行 evidence。
+- 阶段 3 尚未开始；下一会话必须先重新核验阶段 2 状态和 T2 evidence，不能直接绕过门禁。
 
-## 阶段 1 交付物
+## 阶段 2 交付物
 
-- 领域模型与稳定 ID：`src/open_deep_research/knowledge/`、`src/open_deep_research/evidence/`。
-- metadata Repository：同一 async contract 下的 `InMemoryRepository` 与 `SQLiteRepository`。
-- 原始快照：`InMemoryBlobRepository` 与 `LocalBlobRepository`。
-- SQLite migration v1：`src/open_deep_research/storage/migrations/v1.py`。
-- additive state/config：`source_ids/evidence_ids/requirement_ids` 及默认关闭的 structured-evidence 配置。
-- 阶段验证：`scripts/validate_phase.py --phase 1`。
-- 测试：`tests/unit/knowledge/`、`tests/unit/evidence/`、`tests/integration/storage/`。
-- 设计说明：`docs/codebase/KNOWLEDGE_EVIDENCE.md` 以及相关 codebase 文档局部更新。
+- 导入模型/服务：`src/open_deep_research/knowledge/ingestion/`。
+- 四类 parser：`src/open_deep_research/knowledge/ingestion/parsers/`。
+- ImportJob migration/Repository：`src/open_deep_research/storage/migrations/v2.py` 及 knowledge repositories。
+- 检索边界：`src/open_deep_research/knowledge/retrieval/`。
+- PaperQA 隔离层：`src/open_deep_research/knowledge/paperqa_adapter.py`。
+- 管理 inspection contract：`src/open_deep_research/tools/knowledge.py`。
+- CLI：`scripts/ingest_knowledge.py`、`scripts/search_knowledge.py`。
+- 依赖门禁：`scripts/check_phase2_dependencies.py`、`doc/development_plan/phase_2_dependency_matrix.md`。
+- 阶段验收：`scripts/validate_phase.py --phase 2`。
+- fixtures/tests：`tests/fixtures/knowledge/`、`tests/unit/knowledge/`、`tests/unit/tools/test_knowledge_tools.py`、`tests/integration/knowledge/`、`tests/integration/storage/test_phase2_repository_contract.py`。
 
 ## 已验证状态
 
+- `scripts/validate_phase.py --phase 2`：退出码 0；内部 `83 passed, 0 skipped`，T2-1 至 T2-15 全部 PASS。
+- 四格式本地 CLI 在 `artifacts/phase2/final-cli-20260721-c/` 完成 dry-run、candidate 导入、Repository/PaperQA inspection 与 active-only 空结果验证；不匹配 scope 的历史查询导入会以 `missing_scope` 拒绝。
 - `scripts/validate_phase.py --phase 1`：退出码 0，T1-1 至 T1-16 全部 PASS。
 - `scripts/validate_phase.py --phase 0`：退出码 0，T0-1 至 T0-12 全部 PASS。
-- 全量离线 pytest：退出码 0，`81 passed, 1 skipped, 30 warnings`。
-- 定向 unit：`20 passed`；integration/storage：`9 passed`；既有 `tests/test_research_limits.py`：`7 passed`。
-- compileall：退出码 0。
-- 未运行任何真实模型、搜索、LangSmith、Deep Research Bench 或 LLM Judge。
-- T1-1 至 T1-16 的逐项证据见 `progress.md`。
+- 全量离线 pytest：退出码 0，`147 passed, 1 skipped, 30 warnings`；唯一 skip 为未安装的可选 DeepEval adapter。
+- 既有 Researcher 限制测试：退出码 0，`7 passed`。
+- dependency smoke、`pip check`、compileall、`git diff --check`、`git diff --check HEAD^`：退出码均为 0；当前工作树和阶段整体差异均无 whitespace error。
+- legacy 只做 collect：退出码 0，收集 1 项；未修改或执行 legacy 测试正文。
+- `ruff`、`mypy` 在目标 conda 缺失，退出码 1；没有伪报通过。
+- 未调用真实模型、远程 embedding、Web、LangSmith、Deep Research Bench 或 LLM Judge。
+
+## 固定依赖与参考
+
+- Python：`3.11.15`，Windows AMD64。
+- `paper-qa==2026.3.18`
+- `paper-qa-pypdf==2026.3.18`
+- `tantivy==0.26.0`
+- `fhaviary==0.34.0`
+- `fhlmi==0.45.0`
+- `litellm==1.82.4`
+- PaperQA 参考提交：`d7675d7b7eddeb3535e8c260399c5bbeeb818c50`。
 
 ## 关键契约
 
-- 稳定 ID 和 Blob 去重始终包含 `KnowledgeScope`；跨 tenant/project/private 访问 fail closed。
-- 原始 bytes 使用完整 SHA-256；同内容幂等，变化内容创建不可变新 Version。
-- 所有删除均为 soft delete；Blob 不提供删除 API；状态改变写 audit。
-- SQLite 并发依靠 scope-aware UNIQUE、外键和事务保证，不使用内存 check-then-write。
-- `DocumentVersion` 生命周期与 Evidence validation 分离；引用资格由完整关系链派生。
-- `notes`、`raw_notes`、`compressed_research` 保持兼容。
-- `enable_structured_evidence=False` 为默认值；新模块尚未接入主图。
+- Repository/ContentBlob 是唯一权威存储；PaperQA 是从 scope-aware records 重建的派生检索状态。
+- 导入只接受调用方提供的本地 bytes，不打开 `input_ref`、不抓取 URL；CLI 只遍历显式 root，并拒绝 symlink/path escape。
+- 新 Version 固定为 `candidate`，新 Evidence 固定为 `pending`；index ready 不等于 active，不可引用。
+- Candidate 只能由可信 inspection capability 显式查看；生产 Researcher 没有绑定 `knowledge_search/read`。
+- scope/filter/as_of/lifecycle 在 backend 前后程序化执行；PaperQA 返回 ID 不能成为 canonical ID。
+- `paperqa.ask`、`Docs.aquery`、answer API 和 Agent loop 禁止；只允许 raw text retrieval。contextual provider 必须注入并受并发/timeout/token 限制。
+- 关闭 `enable_knowledge_base`、`enable_paperqa_retrieval` 和 contextual 开关后，不导入 PaperQA、不创建存储或索引，旧图保持不变。
+- `notes`、`raw_notes`、`compressed_research` 兼容路径未改变。
 
 ## 环境缺口与风险
 
-- `ruff`、`mypy` 在目标 conda 环境未安装，命令退出码均为 1；不得伪报通过或未经授权安装。
-- editable reinstall 受沙箱对 conda/临时目录写权限限制；阶段验证器已完成仓库外导入 smoke。
-- Windows 固定 pytest 临时目录曾出现 ACL 锁定；使用唯一 `--basetemp=.phase-validation-tmp/<run-id>` 可稳定执行，旧受限目录不要擅自删除。
-- SQLite metadata 与 Blob 文件不是单一跨资源事务；未来导入服务需使用幂等作业和可恢复步骤。
-- 既有 Pydantic/LangGraph 弃用警告仍存在，阶段 1 未修改核心图。
+- Windows pytest 沙箱临时目录可能在 session-finish 触发 `WinError 5`；使用唯一 `--basetemp=.phase-validation-tmp/<run-id>`，必要时按审批在沙箱外运行。不要擅自删除旧受限目录。
+- `ruff`/`mypy` 未安装；后续若需要补齐静态检查，应先取得用户依赖安装授权。
+- 当前 PaperQA inspection 每次从 Repository rehydrate，安全但可能较慢；未来可信 manifest 不能替代权威 Repository。
+- deterministic query embedding 当前会计算两次；无外部成本，但未来换模型时需控制计费。
+- `packaging==25.0`、`click==8.4.2` 是安装 knowledge extra 后的解析结果；当前 `pip check`/全量回归通过。
+- 许可证边界见 `doc/development_plan/phase_2_dependency_matrix.md`，尤其既有 PyMuPDF 的 AGPL/商业双许可证风险。
 
 ## 恢复时必读
 
@@ -59,4 +77,4 @@
 
 ## 下一步
 
-等待用户明确下达阶段 2 指令。收到后先确认 `phase-1-knowledge-evidence-models-001=completed`，并运行 `scripts/validate_phase.py --phase 1`；门禁未通过必须停止。不得自动实现阶段 2 或更后阶段。
+等待用户明确下达阶段 3 指令。收到后先确认 `phase-2-document-ingestion-paperqa-001=completed`，并运行 `scripts/validate_phase.py --phase 2`；门禁未通过必须停止。不得自动实现阶段 3 或更后阶段。

@@ -70,6 +70,7 @@ temp/
 
 # Local evaluation artifacts and isolated optional-tool caches
 /artifacts/baseline/
+/artifacts/phase2/
 /.deepeval/
 /pytest-cache-files-*/
 /.pytest-tmp/

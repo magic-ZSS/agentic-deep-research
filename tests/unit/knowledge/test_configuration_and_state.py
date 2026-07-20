@@ -1,5 +1,8 @@
 from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+
 from open_deep_research.configuration import Configuration
 from open_deep_research.state import ResearcherOutputState
 
@@ -11,7 +14,26 @@ def test_structured_evidence_defaults_off_without_creating_storage(tmp_path, mon
     assert configuration.knowledge_repository_backend == "sqlite"
     assert configuration.knowledge_db_path == "data/knowledge/knowledge.db"
     assert configuration.knowledge_blob_dir == "data/knowledge/blobs"
+    assert configuration.enable_knowledge_base is False
+    assert configuration.enable_paperqa_retrieval is False
+    assert configuration.knowledge_import_roots == ()
+    assert configuration.knowledge_import_staging == "data/knowledge/import"
+    assert configuration.paperqa_index_dir == "data/knowledge/paperqa-index"
+    assert configuration.knowledge_search_visibility == "active_only"
+    assert configuration.paperqa_contextual_summarization is False
     assert not Path("data").exists()
+
+
+def test_phase2_configuration_rejects_overlapping_or_unbounded_chunking():
+    with pytest.raises(ValidationError, match="overlap"):
+        Configuration(
+            knowledge_chunk_size_chars=256,
+            knowledge_chunk_overlap_chars=256,
+        )
+    with pytest.raises(ValidationError):
+        Configuration(knowledge_search_limit=51)
+    with pytest.raises(ValidationError):
+        Configuration(paperqa_contextual_max_concurrency=9)
 
 
 def test_legacy_researcher_output_remains_compatible_and_refs_are_additive():
