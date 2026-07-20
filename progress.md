@@ -4,9 +4,9 @@
 
 **最后更新（Last Updated）：** 2026-07-21
 
-**当前功能：** `phase-3-agentic-rag-lifecycle-001`
+**当前功能：** `phase-4-mcp-integration-001`
 
-**状态：** completed（阶段 3 已收口；阶段 4 未开始）
+**状态：** completed（阶段 4 已收口；阶段 5 未开始）
 
 ## 阶段门禁
 
@@ -14,7 +14,35 @@
 - `phase-1-knowledge-evidence-models-001` 为 `completed`；执行阶段 2 前及最终回归 T1-1 至 T1-16 全部 PASS。
 - `phase-2-document-ingestion-paperqa-001` 为 `completed`；`scripts/validate_phase.py --phase 2` 退出码 0，T2-1 至 T2-15 全部 PASS。
 - `phase-3-agentic-rag-lifecycle-001` 为 `completed`；最终离线映射 suite 103 passed、0 skipped，T3-1 至 T3-20 均有确定性 evidence。
-- 阶段 4 仍为 `not-started`；本轮未实现 Filesystem/Knowledge MCP、Memory、Checkpoint、Claim/Citation Validator 或报告修复。
+- `phase-4-mcp-integration-001` 为 `completed`；`scripts/validate_phase.py --phase 4` 退出码 0，T4-1 至 T4-16 全部 PASS。
+- 阶段 5 仍为 `not-started`；本轮未实现 Memory、Checkpoint 或后续 Citation Validator/报告修复。
+
+## 阶段 4 交付物
+
+- `src/open_deep_research/mcp/`：向后兼容的多 server schema/client/registry、显式诊断、Allowed Roots、去敏审计、只读 filesystem wrapper 和原子 exclusive-create staging。
+- `src/open_deep_research/mcp_servers/`：可信 `KnowledgeScope` 上下文、Knowledge MCP service/FastMCP server/LangChain tools；读操作复用 canonical Retriever/Repository，写操作只创建 pending lifecycle proposal。
+- `configuration.py`/`utils.py`：新增默认关闭的 `enable_filesystem_mcp`、`enable_knowledge_mcp`，保留旧 `mcp_config={url,tools,auth_required}`，命名 server 逐个隔离加载；Agentic RAG 路径仍不绑定未分类 MCP 旁路。
+- `config/examples/mcp.windows.example.json`、`scripts/validate_mcp_config.py`、`docs/mcp_windows.md`：固定 `@modelcontextprotocol/server-filesystem@2026.1.14`、无真实路径/secret 的 Windows 配置和 ACL/威胁模型说明。
+- `tests/{unit,security,integration}/mcp/`：路径、symlink/junction、root replacement、read-only、staging type/quota/race、scope/proposal/redaction、multi-server、unknown tool、annotation 和 Windows stdio 覆盖。
+
+## 阶段 4 威胁模型与决策
+
+- 模型只能提交 `root_id + relative_locator`；绝对路径、drive/UNC/WSL、null、`..`、sibling-prefix、symlink/junction 和 root identity replacement 均 fail closed。返回值仅含 `root://<alias>/<relative>`。
+- 只读 root 与 import staging 是分离 capability。上游 filesystem 原始 overwrite/edit/move/delete 工具从不注册；staging 仅用 `O_EXCL` 等效原子创建并做 suffix/media/单文件/每 run count/bytes 限制。
+- annotations 不是授权。可信 runtime context、registry 白名单、path policy 和生产 Windows ACL/独立进程是分层防线；示例文档记录 ACL 要求，自动测试验证前三层及真实 stdio 工具集合。
+- Knowledge MCP 的 tenant/project/user 不出现在工具参数中；跨 scope 查询和存在性探测返回同类授权错误。`kb_propose_ingest/stale/quarantine` 不改变 version 状态，不提供 hard delete、force 或虚假 Memory 工具。
+
+## 阶段 4 验证
+
+- 前置 Phase 3 门禁：退出码 0，`103 passed`。
+- Phase 4 单元/安全：退出码 0，`21 passed, 0 skipped`；Windows symlink 不可用时以临时 junction fallback 完成真实绕过拒绝测试。
+- Phase 4 离线集成：退出码 0，`9 passed`（含 SQLite proposal 重开持久化）。
+- Windows stdio：显式授权后退出码 0，`1 passed`；固定包完成 handshake、tools/list 和临时 Markdown read。
+- `scripts/validate_mcp_config.py --no-start`：退出码 0。
+- `scripts/validate_phase.py --phase 4`：退出码 0；T4-1 至 T4-16 全部 PASS，内部 `30 passed`。
+- Phase 3 回归首次为 `102 passed, 1 failed`，失败是 Phase 4 合法新增 `propose_ingest` 后旧枚举精确集合断言未更新；契约测试更新后最终回归退出码 0，`103 passed`。
+- `python -m compileall -q src scripts tests`、JSON parse 与 `git diff --check`：退出码 0。
+- `ruff`/`mypy`：目标 conda 环境缺少模块，命令退出码 1，未安装、未伪报。未调用模型、Web、LangSmith、Deep Research Bench 或 LLM Judge。
 
 ## 阶段 3 交付物
 
@@ -142,4 +170,4 @@ PaperQA 参考源码仍固定为 `d7675d7b7eddeb3535e8c260399c5bbeeb818c50`；�
 
 ## 下一步
 
-阶段 3 已满足完成定义并停止。只有用户明确下达阶段 4 指令、且重新核验本页 T3 evidence 后，才可读取并执行 `doc/development_plan/phase_4_mcp_integration.md`；不得自动开始阶段 4。
+阶段 4 已满足完成定义并停止。只有用户明确下达阶段 5 指令、且重新核验本页 T4 evidence 后，才可读取并执行 `doc/development_plan/phase_5_memory_system.md`；不得自动开始阶段 5。

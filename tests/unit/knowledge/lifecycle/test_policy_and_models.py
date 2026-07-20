@@ -60,6 +60,7 @@ def test_proposal_surface_is_strict_and_has_no_hard_delete() -> None:
         "propose_quarantine",
         "propose_supersede",
         "propose_soft_delete",
+        "propose_ingest",
     }
     with pytest.raises(ValueError):
         LifecycleProposalAction("hard_delete")

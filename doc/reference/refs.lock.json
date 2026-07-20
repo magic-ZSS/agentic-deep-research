@@ -69,7 +69,9 @@
       "tag_at_head": [],
       "version_evidence": {
         "components": {"workspace": "0.6.2", "filesystem": "0.6.3"},
-        "source": "package.json and src/filesystem/package.json"
+        "source": "package.json and src/filesystem/package.json",
+        "phase4_runtime_package": "@modelcontextprotocol/server-filesystem@2026.1.14",
+        "phase4_runtime_source": "npm cache/package metadata; Windows stdio acceptance pins the published package independently from the reference commit"
       },
       "acquired_at": "2026-07-20T16:31:47+08:00",
       "license": {

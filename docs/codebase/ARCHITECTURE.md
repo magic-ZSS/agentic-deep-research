@@ -61,9 +61,8 @@ messages
 
 ## 5) 已知架构风险
 
-- `supervisor_tools` 的异常分支使用 `if is_token_limit_exceeded(...) or True`，所有异常都会结束 research phase；这会掩盖非 token-limit 失败。
-- 当前主实现的 MCP 配置只构造 `"server_1"`，代码 TODO 明确等待 OAP multi-MCP server 支持；作者已确认多 MCP server 支持是明确后续 feature。
-- `load_mcp_tools` 在 MCP 连接失败时返回空列表；如果同时没有搜索工具，`researcher` 才会抛出 "No tools found"。
+- MCP 已支持命名多 server 和逐 server 故障隔离；Filesystem/Knowledge 能力需要 trusted runtime 服务注入，配置开关默认关闭。
+- 生产 Windows ACL 是 Allowed Roots/registry 之外的第二层防线，代码无法替代部署权限配置；部署变更后必须重跑 stdio/security 验收。
 - `MODEL_TOKEN_LIMITS` 注释说明 token limit map 可能过时或不适用于用户模型，需要随模型更新维护。
 - `langgraph.json` 配置了 auth path；本地 `langgraph dev` 时若启用该 auth，需要 `SUPABASE_URL` 和 `SUPABASE_KEY`。
 
@@ -86,3 +85,11 @@ messages
 - 完整 schema、回退和限制见 `docs/codebase/KNOWLEDGE_EVIDENCE.md`。
 
 证据：`src/open_deep_research/knowledge/`、`src/open_deep_research/evidence/`、`src/open_deep_research/storage/`、`tests/integration/storage/`。
+
+## 8) 阶段 4：MCP 能力边界
+
+- `mcp/` 负责连接配置、tool registry、显式诊断、路径 policy、去敏审计和 staging；`mcp_servers/` 只把已有 Repository/Retriever/Lifecycle service 暴露为工具，不直接访问 SQLite/blob/index。
+- Knowledge MCP 的读路径与内部 Retriever 共用同一实例和 stable ID；proposal 路径不会执行 promotion、soft delete 或 Memory write。
+- 非 Agentic Researcher 可按开关获得受限 MCP tools；Agentic 路径仍只有 `governed_retrieval`，不因阶段 4 重新开放旁路。
+
+证据：`src/open_deep_research/mcp/`、`src/open_deep_research/mcp_servers/`、`src/open_deep_research/utils.py`、`tests/integration/mcp/`。

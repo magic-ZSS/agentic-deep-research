@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "filesystem_package": "@modelcontextprotocol/server-filesystem@2026.1.14",
+  "enable_filesystem_mcp": false,
+  "enable_knowledge_mcp": false,
+  "mcp_servers": {
+    "filesystem_docs": {
+      "transport": "stdio",
+      "kind": "filesystem_read_only",
+      "enabled": true,
+      "command": "cmd",
+      "args": ["/c", "npx", "--offline", "@modelcontextprotocol/server-filesystem@2026.1.14", "${ALLOWED_READ_ROOT}"],
+      "allowed_tools": ["get_file_info", "list_directory", "read_text_file", "search_files"],
+      "allowed_roots": [
+        {
+          "root_id": "project_docs",
+          "path": "${ALLOWED_READ_ROOT}",
+          "mode": "read_only",
+          "public_alias": "project-docs"
+        }
+      ]
+    }
+  }
+}

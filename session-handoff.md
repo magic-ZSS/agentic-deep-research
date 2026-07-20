@@ -2,9 +2,33 @@
 
 ## 当前目标（Current Objective）
 
-- `phase-0-baseline-references-001`、`phase-1-knowledge-evidence-models-001`、`phase-2-document-ingestion-paperqa-001`、`phase-3-agentic-rag-lifecycle-001` 均已完成。
-- 阶段 3 于 2026-07-21 收口；T3-1 至 T3-20 全部有确定性离线测试 evidence。
-- 阶段 4 尚未开始；下一会话必须先重新核验阶段 3 状态和 T3 evidence，不能直接绕过门禁。
+- `phase-0-baseline-references-001` 至 `phase-4-mcp-integration-001` 均已完成。
+- 阶段 4 于 2026-07-21 收口；T4-1 至 T4-16 全部有确定性离线测试 evidence，固定版本 Windows stdio smoke 通过。
+- 阶段 5 尚未开始；下一会话必须先重新核验阶段 4 状态和 T4 evidence，不能直接绕过门禁。
+
+## 阶段 4 交付物
+
+- 多 MCP schema/client/registry/auth 边界：`src/open_deep_research/mcp/{config,client,tool_registry,auth,errors}.py`。
+- Allowed Roots、只读 filesystem、exclusive staging、去敏审计：`src/open_deep_research/mcp/{filesystem_policy,filesystem_adapter,staging,audit,tools}.py`。
+- Knowledge MCP：`src/open_deep_research/mcp_servers/`；可信 scope、read tools 和 pending-only proposal tools。
+- Windows 配置/说明：`config/examples/mcp.windows.example.json`、`docs/mcp_windows.md`、`scripts/validate_mcp_config.py`。
+- 验收：`scripts/validate_phase.py --phase 4` 与 `tests/{unit,security,integration}/mcp/`。
+
+## 阶段 4 已验证状态
+
+- T4 validator：退出码 0，T4-1 至 T4-16 全部 PASS，内部 `30 passed`。
+- 单元/安全：`21 passed, 0 skipped`；离线集成：`9 passed`。
+- Windows stdio：固定 `@modelcontextprotocol/server-filesystem@2026.1.14`，`1 passed`。
+- 配置 validator、compileall、JSON parse、git diff check 均退出码 0；Phase 3 最终回归 `103 passed`。
+- `ruff`/`mypy` 未安装；未运行任何模型/Web/付费评测。
+
+## 阶段 4 关键契约
+
+- 两个新开关默认关闭；旧单 HTTP `mcp_config` 自动映射，命名 server 单点失败有结构化诊断且不移除健康工具。
+- Agentic RAG 仍只有 governed retrieval 边界；Phase 4 MCP 工具不在该提前返回路径中形成 Web 旁路。
+- 空/无效 roots 不回退 cwd；只读 root 无写 API；staging 只有 exclusive create，路径/类型/quota/并发失败不覆盖且不留 partial。
+- Knowledge identity 来自可信 runtime，不接受模型自报 namespace；所有 `kb_propose_*` 仅为 pending proposal/audit。
+- 工具/结果/审计不得包含 Allowed Root、internal storage ref、数据库或 blob 路径；只公开稳定 ID 和 `root://` locator。
 
 ## 阶段 3 交付物
 
@@ -106,8 +130,8 @@
 6. `doc/development_plan/architecture_target.md`
 7. `doc/development_plan/reference_repositories.md`
 8. `doc/development_plan/execution_protocol.md`
-9. 用户明确指定的阶段文档；若执行下一阶段，则为 `doc/development_plan/phase_4_mcp_integration.md`
+9. 用户明确指定的阶段文档；若执行下一阶段，则为 `doc/development_plan/phase_5_memory_system.md`
 
 ## 下一步
 
-等待用户明确下达阶段 4 指令。收到后先确认 `phase-3-agentic-rag-lifecycle-001=completed`，并运行/核验阶段 3 验收及其已记录的 Windows ACL 证据；门禁未通过必须停止。不得自动实现阶段 4 或更后阶段。
+等待用户明确下达阶段 5 指令。收到后先确认 `phase-4-mcp-integration-001=completed`，并运行/核验阶段 4 验收及固定 Windows stdio/安全证据；门禁未通过必须停止。不得自动实现阶段 5 或更后阶段。

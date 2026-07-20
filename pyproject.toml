@@ -77,6 +77,8 @@ packages = [
     "open_deep_research.storage",
     "open_deep_research.storage.migrations",
     "open_deep_research.tools",
+    "open_deep_research.mcp",
+    "open_deep_research.mcp_servers",
     "legacy",
     "tests",
 ]
@@ -121,4 +123,5 @@ markers = [
     "smoke: deterministic offline evaluation tests",
     "live: tests that may call external models or search services",
     "full_eval: high-cost or LLM-judge evaluation tests",
+    "windows_stdio: local fixed-package Windows MCP subprocess smoke",
 ]

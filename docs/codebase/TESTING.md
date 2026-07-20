@@ -44,6 +44,7 @@ python tests/extract_langsmith_data.py --project-name "YOUR_EXPERIMENT_NAME" --m
 - `tests/run_evaluate.py`: 当前主图的 Deep Research Bench LangSmith 批量评估。
 - `tests/baseline/`: 三档 case、去敏 replay fixture、machine-readable manifest 与 replay/live runner 集成测试。
 - `tests/evaluation/`: schema、原子存储、callback、确定性 metric、DeepEval 可选边界、成本门禁与 T0 validator 测试。
+- `tests/unit/mcp/`、`tests/security/mcp/`、`tests/integration/mcp/`：多 server contract、Allowed Roots/staging、Knowledge scope/proposal、redaction、unknown tool 和固定 Windows stdio smoke。
 - `tests/conftest.py`: 默认关闭 `live` / `full_eval` marker；仅 CLI 与环境门禁同时打开时放行。
 - `tests/test_research_limits.py`: 当前主图 targeted unit tests，覆盖 researcher 工具并发限制、Tavily query/result 限制、summary `key_excerpts` 兼容、`print_process_info` trace helper 和 fake search/summary/researcher trace。
 - `tests/evaluators.py`: relevance、structure、correctness、groundedness、completeness、overall quality 等 evaluator。
@@ -60,6 +61,7 @@ python tests/extract_langsmith_data.py --project-name "YOUR_EXPERIMENT_NAME" --m
 | Type check | configured, env gap | `src` | `mypy` 在 optional dev dependency 和 `init.sh` 中声明，但本地 env 没有模块。 |
 | 单元测试 | partial | `tests/test_research_limits.py` | 覆盖主图并发限制、Tavily 限制、summary 结构兼容和可选流程 trace；不是完整主图 E2E。 |
 | Phase 0 offline evaluation | yes | `tests/evaluation`, `tests/baseline` | 覆盖三档 case、replay、无侵入 callback、失败/取消、成本门禁、DeepEval 缺失和 T0-1 至 T0-12。 |
+| Phase 4 MCP | yes | `tests/{unit,security,integration}/mcp` | 离线 30 项通过；固定 filesystem package Windows stdio 需显式环境门禁。 |
 | Legacy pytest | yes | legacy graph/multi-agent quality test | 当前收集 1 个测试，真实执行会调用模型/搜索。 |
 | Current graph evaluation | yes, external | Deep Research Bench via LangSmith | `tests/run_evaluate.py` 使用 dataset `Deep Research Bench`。 |
 | E2E/manual | yes, external | `langgraph dev`, `run.py` | 会依赖 `.env` 和外部 provider。 |
@@ -91,3 +93,6 @@ python tests/extract_langsmith_data.py --project-name "YOUR_EXPERIMENT_NAME" --m
 - `tests/supervisor_parallel_evaluation.py`
 - `tests/pairwise_evaluation.py`
 - `tests/extract_langsmith_data.py`
+- `tests/security/mcp/`
+- `tests/integration/mcp/`
+- `scripts/validate_phase.py`

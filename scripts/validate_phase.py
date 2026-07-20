@@ -1953,10 +1953,99 @@ def validate_phase3(root: Path) -> list[CheckResult]:
     ]
 
 
+def _check_phase4_suite(root: Path) -> str:
+    command = [
+        sys.executable,
+        "-m",
+        "pytest",
+        "tests/unit/mcp",
+        "tests/security/mcp",
+        "tests/integration/mcp",
+        "-m",
+        "not live",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        str(root / ".phase-validation-tmp" / f"phase4-{uuid4().hex}"),
+    ]
+    completed = subprocess.run(command, cwd=root, capture_output=True, text=True, check=False)
+    if completed.returncode != 0:
+        raise ValueError((completed.stdout + completed.stderr)[-4000:])
+    match = re.search(r"(\d+) passed", completed.stdout)
+    if not match or int(match.group(1)) < 25:
+        raise ValueError("Phase 4 suite did not execute the expected offline evidence")
+    return f"offline MCP suite passed ({match.group(1)} tests)"
+
+
+def _check_phase4_static(root: Path) -> str:
+    from open_deep_research.configuration import Configuration
+    from open_deep_research.mcp.config import FILESYSTEM_PACKAGE_VERSION
+    from validate_mcp_config import validate
+
+    configuration = Configuration()
+    if configuration.enable_filesystem_mcp or configuration.enable_knowledge_mcp:
+        raise ValueError("Phase 4 flags must default off")
+    validated = validate(root / "config/examples/mcp.windows.example.json")
+    if validated["filesystem_package"] != f"@modelcontextprotocol/server-filesystem@{FILESYSTEM_PACKAGE_VERSION}":
+        raise ValueError("filesystem package pin mismatch")
+    with (root / "pyproject.toml").open("rb") as source:
+        packages = set(tomllib.load(source)["tool"]["setuptools"]["packages"])
+    required = {"open_deep_research.mcp", "open_deep_research.mcp_servers"}
+    if not required <= packages:
+        raise ValueError("Phase 4 packages are missing from discovery")
+    source_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for base in (root / "src/open_deep_research/mcp", root / "src/open_deep_research/mcp_servers")
+        for path in base.rglob("*.py")
+    )
+    for symbol in ("hard_delete", "force_promote", "force_memory_write", "memory_search"):
+        if re.search(rf"(?:def|@tool\()[^\n]*{symbol}", source_text):
+            raise ValueError(f"forbidden Phase 4 tool is registered: {symbol}")
+    return "defaults off, config pin/template/package discovery and forbidden-tool inventory pass"
+
+
+def validate_phase4(root: Path) -> list[CheckResult]:
+    """Evaluate T4-1..T4-16 with deterministic offline security evidence."""
+    try:
+        suite = _check_phase4_suite(root)
+        static = _check_phase4_static(root)
+        error: BaseException | None = None
+    except BaseException as exc:
+        suite = static = ""
+        error = exc
+    focus = {
+        "T4-1": "Allowed Roots reject outside/prefix/traversal/drive/UNC inputs",
+        "T4-2": "symlink/junction, real-parent and empty/invalid root policy fail closed",
+        "T4-3": "read roots cannot write and staging is exclusive-create only",
+        "T4-4": "kb_search and the internal retriever return identical stable ordering",
+        "T4-5": "kb_read/get_source traverse repositories and expose public projections only",
+        "T4-6": "knowledge write tools create pending proposals without direct transitions",
+        "T4-7": "forbidden destructive/force/Memory tools are absent",
+        "T4-8": "legacy HTTP mapping and isolated multi-server failures are explicit",
+        "T4-9": "fixed Windows filesystem package/config contract is validated",
+        "T4-10": "annotations, whitelist, path policy and OS ACL are layered",
+        "T4-11": "denials/proposals carry sanitized request, actor and reason audit",
+        "T4-12": "both Phase 4 flags default off and baseline routing is preserved",
+        "T4-13": "trusted scope rejects cross-project reads and existence probes",
+        "T4-14": "unknown tool calls return controlled errors without removing known tools",
+        "T4-15": "model-visible results omit roots and internal storage references",
+        "T4-16": "staging rejects type/quota races without partial files or overwrite",
+    }
+    def detail(acceptance_id: str) -> str:
+        if error is not None:
+            raise error
+        return f"{focus[acceptance_id]}; {suite}; {static}"
+    return [
+        _run_check(acceptance_id, lambda acceptance_id=acceptance_id: detail(acceptance_id))
+        for acceptance_id in (f"T4-{index}" for index in range(1, 17))
+    ]
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the phase validator CLI."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--phase", type=int, required=True, choices=(0, 1, 2, 3))
+    parser.add_argument("--phase", type=int, required=True, choices=(0, 1, 2, 3, 4))
     parser.add_argument("--refs-lock", type=Path)
     parser.add_argument("--cases", type=Path)
     parser.add_argument("--fixture", type=Path)
@@ -1987,8 +2076,10 @@ def main(argv: list[str] | None = None) -> int:
         results = validate_phase1(PROJECT_ROOT)
     elif args.phase == 2:
         results = validate_phase2(PROJECT_ROOT)
-    else:
+    elif args.phase == 3:
         results = validate_phase3(PROJECT_ROOT)
+    else:
+        results = validate_phase4(PROJECT_ROOT)
     if args.as_json:
         sys.stdout.write(
             json.dumps(

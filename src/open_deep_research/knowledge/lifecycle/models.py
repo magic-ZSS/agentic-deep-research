@@ -24,6 +24,7 @@ class LifecycleProposalAction(StrEnum):
     PROPOSE_QUARANTINE = "propose_quarantine"
     PROPOSE_SUPERSEDE = "propose_supersede"
     PROPOSE_SOFT_DELETE = "propose_soft_delete"
+    PROPOSE_INGEST = "propose_ingest"
 
 
 class LifecycleProposalStatus(StrEnum):
@@ -44,6 +45,7 @@ class LifecycleTargetType(StrEnum):
     CHUNK = "chunk"
     REQUIREMENT = "requirement"
     EVIDENCE = "evidence"
+    STAGING_ARTIFACT = "staging_artifact"
 
 
 def _proposal_id(
@@ -103,7 +105,10 @@ class LifecycleProposal(DomainModel):
         run_id = self.run_id.strip() if self.run_id else None
         if not all((reason, proposed_by, correlation_id, target_id)):
             raise ValueError("proposal identity fields cannot be blank")
-        if (
+        if self.action is LifecycleProposalAction.PROPOSE_INGEST:
+            if self.target_entity_type is not LifecycleTargetType.STAGING_ARTIFACT:
+                raise ValueError("ingest proposals require a staging artifact")
+        elif (
             self.action is not LifecycleProposalAction.PROPOSE_SOFT_DELETE
             and self.target_entity_type is not LifecycleTargetType.DOCUMENT_VERSION
         ):

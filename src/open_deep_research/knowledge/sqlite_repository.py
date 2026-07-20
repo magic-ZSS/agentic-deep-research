@@ -29,6 +29,7 @@ from open_deep_research.knowledge.lifecycle.audit import governed_audit_event
 from open_deep_research.knowledge.lifecycle.models import (
     LifecycleProposal,
     LifecycleProposalStatus,
+    LifecycleTargetType,
 )
 from open_deep_research.knowledge.lifecycle.policy import ensure_version_transition
 from open_deep_research.knowledge.models import (
@@ -2030,18 +2031,19 @@ class SQLiteRepository:
                     "requirement": ("requirements", "requirement_id"),
                     "evidence": ("evidence", "evidence_id"),
                 }
-                target_table, target_column = targets[
-                    proposal.target_entity_type.value
-                ]
-                self._get_row(
-                    connection,
-                    table=target_table,
-                    id_column=target_column,
-                    scope_id=scope.scope_id,
-                    entity_id=proposal.target_id,
-                    include_deleted=True,
-                    entity_name=proposal.target_entity_type.value,
-                )
+                if proposal.target_entity_type is not LifecycleTargetType.STAGING_ARTIFACT:
+                    target_table, target_column = targets[
+                        proposal.target_entity_type.value
+                    ]
+                    self._get_row(
+                        connection,
+                        table=target_table,
+                        id_column=target_column,
+                        scope_id=scope.scope_id,
+                        entity_id=proposal.target_id,
+                        include_deleted=True,
+                        entity_name=proposal.target_entity_type.value,
+                    )
                 cursor = connection.execute(
                     "INSERT OR IGNORE INTO lifecycle_proposals "
                     "(scope_id, proposal_id, target_entity_type, target_id, "

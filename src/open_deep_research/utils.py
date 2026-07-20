@@ -24,12 +24,13 @@ from langchain_core.tools import (
     ToolException,
     tool,
 )
-from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.config import get_store
 from mcp import McpError
 from tavily import AsyncTavilyClient
 
 from open_deep_research.configuration import Configuration, SearchAPI
+from open_deep_research.mcp.client import load_external_mcp_tools
+from open_deep_research.mcp.config import MCPTransport, merge_mcp_servers
 from open_deep_research.prompts import summarize_webpage_prompt
 from open_deep_research.state import ResearchComplete, Summary
 
@@ -647,68 +648,52 @@ async def load_mcp_tools(
         List of configured MCP tools ready for use
     """
     configurable = Configuration.from_runnable_config(config)
-    
-    # Step 1: Handle authentication if required
-    if configurable.mcp_config and configurable.mcp_config.auth_required:
-        mcp_tokens = await fetch_tokens(config)
-    else:
-        mcp_tokens = None
-    
-    # Step 2: Validate configuration requirements
-    config_valid = (
-        configurable.mcp_config and 
-        configurable.mcp_config.url and 
-        configurable.mcp_config.tools and 
-        (mcp_tokens or not configurable.mcp_config.auth_required)
-    )
-    
-    if not config_valid:
+    servers = merge_mcp_servers(configurable.mcp_config, configurable.mcp_servers)
+    if not servers:
         return []
-    
-    # Step 3: Set up MCP server connection
-    server_url = configurable.mcp_config.url.rstrip("/") + "/mcp"
-    
-    # Configure authentication headers if tokens are available
-    auth_headers = None
-    if mcp_tokens:
-        auth_headers = {"Authorization": f"Bearer {mcp_tokens['access_token']}"}
-    
-    mcp_server_config = {
-        "server_1": {
-            "url": server_url,
-            "headers": auth_headers,
-            "transport": "streamable_http"
-        }
-    }
-    # TODO: When Multi-MCP Server support is merged in OAP, update this code
-    
-    # Step 4: Load tools from MCP server
-    try:
-        client = MultiServerMCPClient(mcp_server_config)
-        available_mcp_tools = await client.get_tools()
-    except Exception:
-        # If MCP server connection fails, return empty list
-        return []
-    
-    # Step 5: Filter and configure tools
-    configured_tools = []
-    for mcp_tool in available_mcp_tools:
-        # Skip tools with conflicting names
-        if mcp_tool.name in existing_tool_names:
-            warnings.warn(
-                f"MCP tool '{mcp_tool.name}' conflicts with existing tool name - skipping"
+    headers_by_server: dict[str, dict[str, str] | None] = {}
+    for name, server in servers.items():
+        if not server.auth_required:
+            headers_by_server[name] = None
+            continue
+        if server.transport is not MCPTransport.STREAMABLE_HTTP:
+            warnings.warn(f"MCP server '{name}' requires unsupported stdio auth")
+            continue
+        if name == "legacy_http" and configurable.mcp_config is not None:
+            # Preserve the historical LangGraph Store token cache/refresh path.
+            tokens = await fetch_tokens(config)
+        else:
+            supabase_token = config.get("configurable", {}).get(
+                "x-supabase-access-token"
             )
+            tokens = (
+                await get_mcp_access_token(supabase_token, server.url)
+                if supabase_token and server.url
+                else None
+            )
+        if not tokens or not tokens.get("access_token"):
+            warnings.warn(f"MCP server '{name}' authentication is unavailable")
             continue
-        
-        # Only include tools specified in configuration
-        if mcp_tool.name not in set(configurable.mcp_config.tools):
-            continue
-        
-        # Wrap tool with authentication handling and add to list
-        enhanced_tool = wrap_mcp_authenticate_tool(mcp_tool)
-        configured_tools.append(enhanced_tool)
-    
-    return configured_tools
+        headers_by_server[name] = {
+            "Authorization": f"Bearer {tokens['access_token']}"
+        }
+    eligible = {
+        name: server
+        for name, server in servers.items()
+        if not server.auth_required or name in headers_by_server
+    }
+    result = await load_external_mcp_tools(
+        eligible,
+        existing_tool_names=existing_tool_names,
+        headers_by_server=headers_by_server,
+    )
+    for diagnostic in result.diagnostics:
+        if diagnostic.status == "failed":
+            warnings.warn(
+                f"MCP server '{diagnostic.server_name}' failed: "
+                f"{diagnostic.error_type}"
+            )
+    return [wrap_mcp_authenticate_tool(tool) for tool in result.tools]
 
 
 ##########################
@@ -790,6 +775,16 @@ async def get_all_tools(config: RunnableConfig):
         )
 
         tools.extend((knowledge_search_active, knowledge_read_active))
+
+    if configurable.enable_knowledge_mcp:
+        from open_deep_research.mcp_servers.tools import KNOWLEDGE_MCP_TOOLS
+
+        tools.extend(KNOWLEDGE_MCP_TOOLS)
+
+    if configurable.enable_filesystem_mcp:
+        from open_deep_research.mcp.tools import FILESYSTEM_MCP_TOOLS
+
+        tools.extend(FILESYSTEM_MCP_TOOLS)
     
     # Track existing tool names to prevent conflicts
     existing_tool_names = {

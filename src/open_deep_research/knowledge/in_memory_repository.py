@@ -28,6 +28,7 @@ from open_deep_research.knowledge.lifecycle.audit import governed_audit_event
 from open_deep_research.knowledge.lifecycle.models import (
     LifecycleProposal,
     LifecycleProposalStatus,
+    LifecycleTargetType,
 )
 from open_deep_research.knowledge.lifecycle.policy import ensure_version_transition
 from open_deep_research.knowledge.models import (
@@ -1417,13 +1418,14 @@ class InMemoryRepository:
                 "requirement": self._requirements,
                 "evidence": self._evidence,
             }
-            self._get_scoped(
-                targets[proposal.target_entity_type.value],
-                scope.scope_id,
-                proposal.target_id,
-                include_deleted=True,
-                entity_name=proposal.target_entity_type.value,
-            )
+            if proposal.target_entity_type is not LifecycleTargetType.STAGING_ARTIFACT:
+                self._get_scoped(
+                    targets[proposal.target_entity_type.value],
+                    scope.scope_id,
+                    proposal.target_id,
+                    include_deleted=True,
+                    entity_name=proposal.target_entity_type.value,
+                )
             key = (scope.scope_id, proposal.proposal_id)
             existing = self._lifecycle_proposals.get(key)
             if existing is not None:

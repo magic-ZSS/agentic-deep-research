@@ -77,4 +77,7 @@ temp/
 /.pytest-tmp-*/
 /.phase-validation-tmp/
 
+# Local MCP roots/configuration (the placeholder example remains tracked)
+/config/mcp.local.json
+/data/mcp-staging/
 

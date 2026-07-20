@@ -103,6 +103,14 @@
       "dependencies": ["phase-2-document-ingestion-paperqa-001"],
       "status": "completed",
       "evidence": "2026-07-21 已先运行 scripts/validate_phase.py --phase 2（退出码 0，内部 83 passed、T2-1 至 T2-15 全部 PASS）后实施阶段 3。最终离线阶段 3 映射 suite 退出码 0：103 passed、0 skipped，T3-1 至 T3-20 均有确定性测试 evidence；阶段 1/2 knowledge regression 19 passed，compileall 与 git diff --check 退出码 0。实现覆盖 brief→稳定 RequirementSet、同轮 ConductResearch/ResearchComplete 保序、必需 gap+预算 completion gate、active-only legacy augmentation、Agentic 模式无 Tavily/provider-native/MCP 旁路、local sufficient 时 Web=0、missing-only Web、统一 ValidationGate、run-first evidence、可选 candidate writeback、六态原子 transition/proposal/soft delete/audit、并发预算与稳定去重、compression 真实重试及诊断 ToolMessage 过滤。所有新增开关默认关闭，未调用真实模型、Web 或付费评测。最终再次执行聚合 scripts/validate_phase.py --phase 3 时，功能测试已完成但 pytest session-finish 受 Windows 沙箱临时目录 WinError 5 影响而无法形成新的干净 wrapper 退出码；较早版本的同一 wrapper 曾退出码 0（101 passed、T3-1 至 T3-20 PASS），最终新增/修正后的映射测试和 validator 自测均单独退出码 0；该 ACL 限制已如实记录，未伪报。ruff/mypy 未安装。"
+    },
+    {
+      "id": "phase-4-mcp-integration-001",
+      "name": "实现受限 Filesystem MCP 与 Knowledge MCP",
+      "description": "执行开发计划阶段 4：建立多 server MCP 配置/客户端/registry、Windows Allowed Roots、只读文件服务、exclusive-create staging、可信 KnowledgeScope 的 Knowledge MCP 读工具与 lifecycle proposal 工具；不实现 Memory、硬删除或强制写入能力。",
+      "dependencies": ["phase-3-agentic-rag-lifecycle-001"],
+      "status": "completed",
+      "evidence": "2026-07-21 阶段 3 前置门禁直接 suite 103 passed；Phase 4 单元/安全测试 21 passed、0 skipped，离线集成 9 passed；固定 @modelcontextprotocol/server-filesystem@2026.1.14 Windows stdio handshake/tools-list/read smoke 1 passed；scripts/validate_mcp_config.py 退出码 0；scripts/validate_phase.py --phase 4 退出码 0，T4-1 至 T4-16 全部 PASS，内部 30 passed。Phase 3 首轮回归因新增合法 propose_ingest 枚举导致旧精确集合断言 1 failed/102 passed，更新该契约测试后复验通过。compileall/git diff --check 通过；ruff/mypy 在目标 conda 环境未安装（退出码 1），未伪报。全部文件测试使用 pytest 临时 roots，未调用模型、Web、LangSmith、LLM Judge 或用户真实文件。"
     }
   ]
 }

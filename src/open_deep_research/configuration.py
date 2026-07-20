@@ -2,10 +2,12 @@
 
 import os
 from enum import Enum
-from typing import Any, List, Literal, Optional
+from typing import Any, Literal, Optional
 
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field, model_validator
+
+from open_deep_research.mcp.config import MCPConfig, MCPServerConfig
 
 
 class SearchAPI(Enum):
@@ -15,30 +17,6 @@ class SearchAPI(Enum):
     OPENAI = "openai"
     TAVILY = "tavily"
     NONE = "none"
-
-class MCPConfig(BaseModel):
-    """Configuration for Model Context Protocol (MCP) servers."""
-
-    # 配置 MCP 服务地址。
-    url: Optional[str] = Field(
-        default=None,
-        optional=True,
-    )
-    """The URL of the MCP server"""
-
-    # 配置允许使用的 MCP 工具。
-    tools: Optional[List[str]] = Field(
-        default=None,
-        optional=True,
-    )
-    """The tools to make available to the LLM"""
-
-    # 配置 MCP 服务是否需要鉴权。
-    auth_required: Optional[bool] = Field(
-        default=False,
-        optional=True,
-    )
-    """Whether the MCP server requires authentication"""
 
 class Configuration(BaseModel):
     """Main configuration class for the Deep Research agent."""
@@ -375,6 +353,9 @@ class Configuration(BaseModel):
             }
         }
     )
+    mcp_servers: dict[str, MCPServerConfig] = Field(default_factory=dict)
+    enable_filesystem_mcp: bool = False
+    enable_knowledge_mcp: bool = False
 
     # 配置传给 MCP 工具的额外提示词。
     mcp_prompt: Optional[str] = Field(
