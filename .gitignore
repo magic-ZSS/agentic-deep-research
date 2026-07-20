@@ -74,6 +74,7 @@ temp/
 /.deepeval/
 /pytest-cache-files-*/
 /.pytest-tmp/
+/.pytest-tmp-*/
 /.phase-validation-tmp/
 
 

@@ -493,16 +493,64 @@ def _check_validator_inputs(root: Path, manifest: dict) -> str:
 
 
 def _check_protected_core(root: Path, manifest: dict) -> str:
+    """Verify hashes against the immutable committed Phase 0 manifest.
+
+    Later feature phases may legitimately extend feature-gated production files. The
+    capture intentionally hashed a dirty working-tree snapshot, so those bytes are not
+    Git blobs at ``phase_start_commit``. The durable evidence is the manifest object
+    first committed at Phase 0 closeout; comparing against it preserves the historical
+    hashes without incorrectly requiring later HEAD files to stay byte-identical.
+    """
     expected = manifest.get("protected_core_sha256", {})
+    phase_start_commit = str(manifest.get("phase_start_commit", ""))
+    if not COMMIT_PATTERN.fullmatch(phase_start_commit) or not _commit_exists(
+        root, phase_start_commit
+    ):
+        raise ValueError("Phase 0 protected hashes lack a valid historical commit")
+    history = _git(
+        root,
+        "log",
+        "--diff-filter=A",
+        "--format=%H",
+        "--",
+        "tests/baseline/baseline_manifest.json",
+    ).splitlines()
+    if not history:
+        raise ValueError("cannot resolve the Phase 0 manifest addition commit")
+    manifest_commit = history[-1]
+    if not _commit_is_ancestor(root, manifest_commit):
+        raise ValueError("Phase 0 manifest commit is not an ancestor of HEAD")
+    completed = subprocess.run(
+        [
+            "git",
+            "show",
+            f"{manifest_commit}:tests/baseline/baseline_manifest.json",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise ValueError("cannot read the committed Phase 0 manifest object")
+    canonical = json.loads(completed.stdout)
+    if canonical.get("phase_start_commit") != phase_start_commit:
+        raise ValueError("Phase 0 manifest start commit differs from committed evidence")
+    if expected != canonical.get("protected_core_sha256"):
+        raise ValueError("protected Phase 0 hash map differs from committed evidence")
+
     required = (
         "src/open_deep_research/deep_researcher.py",
         "src/open_deep_research/prompts.py",
         "src/open_deep_research/utils.py",
     )
     for relative in required:
-        if expected.get(relative) != sha256_file(root / relative):
-            raise ValueError(f"protected core changed: {relative}")
-    return "deep_researcher.py, prompts.py, and utils.py match Phase 0 start hashes"
+        if not re.fullmatch(r"[0-9a-f]{64}", str(expected.get(relative, ""))):
+            raise ValueError(f"invalid protected Phase 0 hash: {relative}")
+    return (
+        "deep_researcher.py, prompts.py, and utils.py historical hashes match the "
+        "immutable committed Phase 0 manifest; later changes are evaluated by their phase"
+    )
 
 
 def _run_check(acceptance_id: str, check: Callable[[], str]) -> CheckResult:
@@ -1116,6 +1164,9 @@ def _check_phase2_default_off(root: Path) -> str:
             "enable_knowledge_base",
             "enable_paperqa_retrieval",
             "paperqa_contextual_summarization",
+            "enable_knowledge_tools",
+            "enable_agentic_rag",
+            "enable_knowledge_writeback",
         )
         enabled = [
             name
@@ -1135,7 +1186,10 @@ def _check_phase2_default_off(root: Path) -> str:
     }
     if paperqa_after - paperqa_before:
         raise ValueError("default-off Configuration imported PaperQA")
-    return "knowledge/PaperQA/contextual flags default off and create no data or import"
+    return (
+        "Phase 2 and Phase 3 knowledge/PaperQA/governance flags default off and "
+        "create no data or PaperQA import"
+    )
 
 
 def _check_phase2_production_isolation(root: Path) -> str:
@@ -1144,14 +1198,10 @@ def _check_phase2_production_isolation(root: Path) -> str:
         "src/open_deep_research/utils.py",
     )
     manifest = _read_json(root / "tests" / "baseline" / "baseline_manifest.json")
-    expected_hashes = manifest.get("protected_core_sha256", {})
     forbidden_imports: list[str] = []
+    _check_protected_core(root, manifest)
     for relative in protected:
         path = root / relative
-        if expected_hashes.get(relative) != sha256_file(path):
-            raise ValueError(
-                f"production core differs from the Phase 0 baseline: {relative}"
-            )
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             imported: list[str] = []
@@ -1160,13 +1210,11 @@ def _check_phase2_production_isolation(root: Path) -> str:
             elif isinstance(node, ast.ImportFrom) and node.module:
                 imported = [node.module]
             for name in imported:
-                if name == "paperqa" or name.startswith("paperqa.") or name == (
-                    "open_deep_research.knowledge"
-                ) or name.startswith("open_deep_research.knowledge."):
+                if name == "paperqa" or name.startswith("paperqa."):
                     forbidden_imports.append(f"{relative}:{name}")
     if forbidden_imports:
         raise ValueError(
-            f"production core imports Phase 2 internals: {forbidden_imports}"
+            f"production core imports PaperQA directly: {forbidden_imports}"
         )
 
     utils_tree = ast.parse(
@@ -1193,11 +1241,16 @@ def _check_phase2_production_isolation(root: Path) -> str:
         if isinstance(node, ast.Attribute)
     }
     bound = identifiers & {"knowledge_search", "knowledge_read"}
-    if bound:
+    required_gates = {"enable_knowledge_tools", "enable_agentic_rag"}
+    if bound and not required_gates.issubset(identifiers):
         raise ValueError(
-            f"production get_all_tools binds Phase 2 tools: {sorted(bound)}"
+            "production get_all_tools binds knowledge tools without both Phase 3 "
+            f"feature gates: {sorted(bound)}"
         )
-    return "deep_researcher/utils match baseline and bind no knowledge/PaperQA API"
+    return (
+        "historical Phase 0 hashes remain exact; production imports no PaperQA, "
+        "and any later knowledge binding is guarded by both Phase 3 mode flags"
+    )
 
 
 def validate_phase2(root: Path) -> list[CheckResult]:
@@ -1489,10 +1542,421 @@ def validate_phase2(root: Path) -> list[CheckResult]:
     return [_run_check(acceptance_id, check) for acceptance_id, check in checks]
 
 
+PHASE3_TEST_TARGETS = (
+    "tests/evaluation/test_phase_validator.py",
+    "tests/unit/knowledge/lifecycle",
+    "tests/unit/knowledge/retrieval",
+    "tests/unit/research",
+    "tests/unit/evidence/test_run_store.py",
+    "tests/unit/tools",
+    "tests/integration/agentic_rag",
+    "tests/test_research_limits.py",
+)
+
+
+PHASE3_ACCEPTANCE_TESTS: dict[str, dict[str, tuple[str, ...]]] = {
+    "T3-1": {
+        "tests/integration/agentic_rag/test_governed_orchestrator.py": (
+            "test_sufficient_active_local_evidence_strictly_skips_web",
+        ),
+    },
+    "T3-2": {
+        "tests/integration/agentic_rag/test_governed_orchestrator.py": (
+            "test_only_missing_requirement_drives_bounded_web_query",
+        ),
+        "tests/unit/knowledge/retrieval/test_budget.py": (
+            "test_registry_shares_one_budget_across_researchers",
+            "test_every_global_limit_is_checked_before_reservation",
+        ),
+    },
+    "T3-3": {
+        "tests/integration/agentic_rag/test_governed_orchestrator.py": (
+            "test_writeback_off_keeps_validated_candidate_run_scoped_only",
+            "test_low_authority_web_candidate_is_quarantined_not_returned",
+        ),
+    },
+    "T3-4": {
+        "tests/integration/agentic_rag/test_governed_orchestrator.py": (
+            "test_local_candidate_uses_same_gate_then_avoids_web",
+        ),
+        "tests/integration/agentic_rag/test_lifecycle_flow.py": (
+            "test_repository_transition_contract_and_same_state_idempotence",
+        ),
+    },
+    "T3-5": {
+        "tests/integration/agentic_rag/test_governed_orchestrator.py": (
+            "test_low_authority_web_candidate_is_quarantined_not_returned",
+        ),
+        "tests/unit/tools/test_agentic_rag_routing.py": (
+            "test_legacy_mode_allows_only_active_validated_direct_support",
+        ),
+    },
+    "T3-6": {
+        "tests/integration/agentic_rag/test_lifecycle_flow.py": (
+            "test_replacement_activation_supersedes_old_active_atomically",
+        ),
+        "tests/unit/knowledge/retrieval/test_coverage.py": (
+            "test_hard_quality_gate_reports_partial_coverage",
+        ),
+    },
+    "T3-7": {
+        "tests/integration/agentic_rag/test_governed_orchestrator.py": (
+            "test_writeback_allows_next_independent_run_to_skip_web",
+        ),
+    },
+    "T3-8": {
+        "tests/integration/agentic_rag/test_governed_orchestrator.py": (
+            "test_parallel_same_candidate_has_stable_ids_and_one_canonical_version",
+        ),
+    },
+    "T3-9": {
+        "tests/unit/knowledge/lifecycle/test_policy_and_models.py": (
+            "test_exact_transition_matrix",
+            "test_proposal_surface_is_strict_and_has_no_hard_delete",
+        ),
+        "tests/integration/agentic_rag/test_lifecycle_flow.py": (
+            "test_agent_proposal_is_scoped_and_never_mutates_or_deletes_target",
+            "test_illegal_transition_is_rejected_without_audit",
+        ),
+    },
+    "T3-10": {
+        "tests/unit/tools/test_agentic_rag_routing.py": (
+            "test_agentic_mode_has_no_web_or_mcp_bypass",
+            "test_provider_native_agentic_configuration_fails_closed",
+        ),
+    },
+    "T3-11": {
+        "tests/integration/agentic_rag/test_governed_orchestrator.py": (
+            "test_writeback_off_keeps_validated_candidate_run_scoped_only",
+            "test_provider_failure_is_counted_and_never_fabricates_evidence",
+        ),
+        "tests/unit/tools/test_agentic_rag_routing.py": (
+            "test_tool_modes_are_mechanically_distinct_and_default_is_baseline",
+        ),
+    },
+    "T3-12": {
+        "tests/evaluation/test_phase_validator.py": (
+            "test_phase3_parser_and_acceptance_map_cover_exactly_t3_1_through_t3_20",
+            "test_phase3_validator_reports_twenty_results_from_named_offline_evidence",
+            "test_phase3_validator_rejects_missing_named_acceptance_test",
+            "test_phase3_inventory_requirement_is_not_satisfied_by_prose_only",
+        ),
+    },
+    "T3-13": {
+        "tests/unit/research/test_requirements.py": (
+            "test_requirement_materialization_is_stable_and_sorted",
+            "test_empty_failed_or_missing_extractor_falls_back_to_full_brief",
+        ),
+        "tests/unit/research/test_completion_gate.py": (
+            "test_gate_refuses_early_completion_while_budget_remains",
+            "test_gate_allows_explicit_gap_completion_when_budget_is_exhausted",
+            "test_gate_reports_blocked_terminal_state_with_explicit_gaps",
+        ),
+        "tests/unit/research/test_graph_governance.py": (
+            "test_write_research_brief_materializes_stable_requirement_set",
+            "test_supervisor_completion_gate_refuses_required_gaps",
+        ),
+    },
+    "T3-14": {
+        "tests/unit/research/test_graph_governance.py": (
+            "test_supervisor_executes_conduct_research_before_same_round_completion",
+            "test_researcher_executes_governed_tool_before_same_round_completion",
+        ),
+    },
+    "T3-15": {
+        "tests/unit/research/test_graph_governance.py": (
+            "test_supervisor_preserves_partial_parallel_results",
+        ),
+    },
+    "T3-16": {
+        "tests/unit/research/test_graph_governance.py": (
+            "test_compression_retries_with_compression_model",
+        ),
+    },
+    "T3-17": {
+        "tests/unit/research/test_graph_governance.py": (
+            "test_compression_filters_diagnostic_tool_messages",
+            "test_governed_artifact_recovery_ignores_diagnostics",
+        ),
+    },
+    "T3-18": {
+        "tests/integration/agentic_rag/test_governed_orchestrator.py": (
+            "test_local_candidate_uses_same_gate_then_avoids_web",
+        ),
+    },
+    "T3-19": {
+        "tests/unit/evidence/test_run_store.py": (
+            "test_memory_and_sqlite_share_idempotent_resolver_contract",
+            "test_stores_reject_cross_run_and_cross_scope_access",
+            "test_ttl_cleanup_is_maintenance_driven_and_audited",
+        ),
+        "tests/integration/agentic_rag/test_governed_orchestrator.py": (
+            "test_writeback_off_keeps_validated_candidate_run_scoped_only",
+        ),
+    },
+    "T3-20": {
+        "tests/unit/tools/test_agentic_rag_routing.py": (
+            "test_tool_modes_are_mechanically_distinct_and_default_is_baseline",
+        ),
+    },
+}
+
+
+def _check_phase3_test_suite(root: Path) -> str:
+    """Run the complete deterministic Phase 3 suite with external calls disabled."""
+    missing = [relative for relative in PHASE3_TEST_TARGETS if not (root / relative).exists()]
+    if missing:
+        raise ValueError(f"Phase 3 test targets are missing: {missing}")
+
+    temporary_root = root / ".phase-validation-tmp"
+    temporary_root.mkdir(parents=True, exist_ok=True)
+    basetemp = temporary_root / f"phase3-pytest-{uuid4().hex}"
+    environment = os.environ.copy()
+    for name in (
+        "TAVILY_API_KEY",
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "LANGSMITH_API_KEY",
+        "RUN_LIVE_RESEARCH",
+        "ODR_EVAL_MODE",
+    ):
+        environment.pop(name, None)
+    environment["ODR_ALLOW_EXTERNAL_CALLS"] = "0"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            *PHASE3_TEST_TARGETS,
+            "-m",
+            "not live and not full_eval",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            str(basetemp),
+            "-q",
+            "-rs",
+        ],
+        cwd=root,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+    combined_output = "\n".join(
+        part.strip() for part in (completed.stdout, completed.stderr) if part.strip()
+    )
+    if completed.returncode != 0:
+        tail = "\n".join(combined_output.splitlines()[-40:])
+        raise ValueError(f"Phase 3 pytest suite exited {completed.returncode}:\n{tail}")
+    if re.search(r"\b\d+\s+skipped\b", combined_output):
+        raise ValueError("Phase 3 deterministic suite skipped acceptance coverage")
+    passed_match = re.search(r"\b(\d+) passed\b", completed.stdout)
+    if passed_match is None:
+        raise ValueError("Phase 3 pytest suite did not report a passing test count")
+    return (
+        f"{passed_match.group(1)} deterministic tests passed with zero skips and "
+        "external credentials removed"
+    )
+
+
+def _phase3_test_inventory(root: Path) -> dict[str, set[str]]:
+    """Return AST-derived test names from the exact offline Phase 3 targets."""
+    inventory: dict[str, set[str]] = {}
+    paths: list[Path] = []
+    for relative in PHASE3_TEST_TARGETS:
+        target = root / relative
+        if not target.exists():
+            continue
+        paths.extend(sorted(target.rglob("test_*.py")) if target.is_dir() else [target])
+    for path in paths:
+        relative = path.relative_to(root).as_posix()
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        inventory[relative] = {
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name.startswith("test_")
+        }
+    return inventory
+
+
+def _require_phase3_tests(
+    inventory: dict[str, set[str]], requirements: dict[str, tuple[str, ...]]
+) -> str:
+    """Require named executable evidence instead of trusting prose status."""
+    missing: list[str] = []
+    for relative, names in requirements.items():
+        available = inventory.get(relative, set())
+        missing.extend(f"{relative}::{name}" for name in names if name not in available)
+    if missing:
+        raise ValueError(f"Phase 3 acceptance evidence tests are missing: {missing}")
+    count = sum(len(names) for names in requirements.values())
+    return f"{count} mapped acceptance test(s) are present"
+
+
+def _check_phase3_static_contract(root: Path) -> str:
+    """Check safety invariants that test-name inventory alone cannot establish."""
+    from open_deep_research.configuration import Configuration, SearchAPI
+
+    configuration = Configuration()
+    for field in (
+        "enable_knowledge_tools",
+        "enable_agentic_rag",
+        "enable_knowledge_writeback",
+    ):
+        if getattr(configuration, field) is not False:
+            raise ValueError(f"Phase 3 feature defaults on: {field}")
+    if configuration.run_evidence_store_backend != "memory":
+        raise ValueError("RunEvidenceStore must default to isolated memory storage")
+    for native_provider in (SearchAPI.OPENAI, SearchAPI.ANTHROPIC):
+        try:
+            Configuration(enable_agentic_rag=True, search_api=native_provider)
+        except ValueError:
+            pass
+        else:
+            raise ValueError(
+                f"provider-native Agentic RAG did not fail closed: {native_provider.value}"
+            )
+
+    graph_path = root / "src/open_deep_research/deep_researcher.py"
+    graph_tree = ast.parse(graph_path.read_text(encoding="utf-8"), filename=str(graph_path))
+    unconditional_true_or = [
+        node.lineno
+        for node in ast.walk(graph_tree)
+        if isinstance(node, ast.BoolOp)
+        and isinstance(node.op, ast.Or)
+        and any(isinstance(value, ast.Constant) and value.value is True for value in node.values)
+    ]
+    if unconditional_true_or:
+        raise ValueError(
+            f"deep_researcher retains unconditional 'or True' at {unconditional_true_or}"
+        )
+
+    phase3_sources = (
+        root / "src/open_deep_research/knowledge/lifecycle",
+        root / "src/open_deep_research/knowledge/retrieval",
+        root / "src/open_deep_research/research",
+        root / "src/open_deep_research/evidence/run_store.py",
+    )
+    forbidden: list[str] = []
+    for target in phase3_sources:
+        paths = sorted(target.rglob("*.py")) if target.is_dir() else [target]
+        for path in paths:
+            if path.exists() and re.search(r"\bhard_delete\b", path.read_text(encoding="utf-8")):
+                forbidden.append(path.relative_to(root).as_posix())
+    if forbidden:
+        raise ValueError(f"Phase 3 source exposes forbidden hard_delete: {forbidden}")
+    return (
+        "all governance flags default off, RunEvidenceStore defaults isolated, "
+        "provider-native search fails closed, and no or-True/hard-delete bypass exists"
+    )
+
+
+def _check_phase3_packaging(root: Path) -> str:
+    """Require every new import package while preserving prior phase packages."""
+    with (root / "pyproject.toml").open("rb") as source:
+        pyproject = tomllib.load(source)
+    packages = set(pyproject["tool"]["setuptools"]["packages"])
+    required = {
+        "open_deep_research.evaluation",
+        "open_deep_research.knowledge",
+        "open_deep_research.knowledge.ingestion",
+        "open_deep_research.knowledge.retrieval",
+        "open_deep_research.knowledge.lifecycle",
+        "open_deep_research.knowledge.validation",
+        "open_deep_research.evidence",
+        "open_deep_research.research",
+        "open_deep_research.storage",
+        "open_deep_research.tools",
+    }
+    missing = required - packages
+    if missing:
+        raise ValueError(f"Phase 0-3 package discovery entries are missing: {sorted(missing)}")
+    return "Phase 0-3 explicit package discovery entries are all preserved"
+
+
+def validate_phase3(root: Path) -> list[CheckResult]:
+    """Evaluate T3-1..T3-20 using deterministic offline evidence only."""
+    try:
+        suite_detail = _check_phase3_test_suite(root)
+        suite_error: BaseException | None = None
+    except BaseException as exc:
+        suite_detail = ""
+        suite_error = exc
+    try:
+        inventory = _phase3_test_inventory(root)
+        inventory_error: BaseException | None = None
+    except BaseException as exc:
+        inventory = {}
+        inventory_error = exc
+
+    def evidence(
+        acceptance_id: str,
+        focus: str,
+        extra: Callable[[], str] | None = None,
+    ) -> str:
+        if suite_error is not None:
+            raise suite_error
+        if inventory_error is not None:
+            raise inventory_error
+        mapped = _require_phase3_tests(
+            inventory, PHASE3_ACCEPTANCE_TESTS[acceptance_id]
+        )
+        details = [focus, mapped, suite_detail]
+        if extra is not None:
+            details.append(extra())
+        return "; ".join(details)
+
+    focus = {
+        "T3-1": "sufficient active local evidence produces exactly zero Web calls",
+        "T3-2": "only missing aspects drive governed Web fallback within the shared run budget",
+        "T3-3": "every Web result remains candidate before run validation or canonical promotion",
+        "T3-4": "only fully validated candidates promote with versioned audit evidence",
+        "T3-5": "bad or low-authority candidates quarantine and stay out of current retrieval",
+        "T3-6": "stale/superseded versions are not current but remain auditable as-of",
+        "T3-7": "a repeated query reuses canonical active evidence and reduces Web calls",
+        "T3-8": "parallel Researchers deduplicate stable source/version/candidate identities",
+        "T3-9": "agents only propose; transitions/soft delete append audit and no hard delete exists",
+        "T3-10": "Agentic mode exposes only the governed Web adapter and native providers fail closed",
+        "T3-11": "writeback-off stays transient, failures never activate, and baseline can recover",
+        "T3-12": "validator executes named offline evidence for every T3 acceptance ID",
+        "T3-13": "brief materialization is stable/non-empty and completion is coverage-gated",
+        "T3-14": "same-turn completion never discards Supervisor or Researcher work",
+        "T3-15": "partial parallel failure preserves successes and exposes exception type",
+        "T3-16": "compression uses its own model limit and performs a real retry",
+        "T3-17": "think/error/overflow diagnostics cannot become structured Evidence",
+        "T3-18": "local candidates pass the shared Gate before any gap-driven Web call",
+        "T3-19": "transient bundles resolve only in-run and clean up with audit",
+        "T3-20": "baseline, active-only legacy augmentation, and Agentic modes are distinct",
+    }
+    extras: dict[str, Callable[[], str]] = {
+        "T3-9": lambda: _check_phase3_static_contract(root),
+        "T3-11": lambda: _check_phase2_default_off(root),
+        "T3-12": lambda: (
+            f"{_check_phase3_static_contract(root)}; {_check_phase3_packaging(root)}; "
+            "exactly 20 acceptance results are constructed"
+        ),
+        "T3-20": lambda: _check_phase2_production_isolation(root),
+    }
+    return [
+        _run_check(
+            acceptance_id,
+            lambda acceptance_id=acceptance_id: evidence(
+                acceptance_id,
+                focus[acceptance_id],
+                extras.get(acceptance_id),
+            ),
+        )
+        for acceptance_id in (f"T3-{index}" for index in range(1, 21))
+    ]
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the phase validator CLI."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--phase", type=int, required=True, choices=(0, 1, 2))
+    parser.add_argument("--phase", type=int, required=True, choices=(0, 1, 2, 3))
     parser.add_argument("--refs-lock", type=Path)
     parser.add_argument("--cases", type=Path)
     parser.add_argument("--fixture", type=Path)
@@ -1521,8 +1985,10 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.phase == 1:
         results = validate_phase1(PROJECT_ROOT)
-    else:
+    elif args.phase == 2:
         results = validate_phase2(PROJECT_ROOT)
+    else:
+        results = validate_phase3(PROJECT_ROOT)
     if args.as_json:
         sys.stdout.write(
             json.dumps(

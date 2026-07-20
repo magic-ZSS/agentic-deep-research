@@ -113,7 +113,7 @@ def test_sqlite_reopen_and_original_blob_survive_source_overwrite(tmp_path):
 
     reopened_repo = SQLiteRepository(str(database_path))
     reopened_blobs = LocalBlobRepository(blob_root)
-    assert reopened_repo.schema_version == SCHEMA_VERSION == 2
+    assert reopened_repo.schema_version == SCHEMA_VERSION == 3
     assert asyncio.run(reopened_repo.get_source(access, scope, source.source_id)) == source
     assert asyncio.run(
         reopened_repo.list_versions(access, scope, document.document_id)

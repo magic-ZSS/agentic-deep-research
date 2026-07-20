@@ -21,6 +21,10 @@ from open_deep_research.knowledge.ingestion.models import (
     ImportJobError,
     ImportJobStatus,
 )
+from open_deep_research.knowledge.lifecycle.models import (
+    LifecycleProposal,
+    LifecycleProposalStatus,
+)
 from open_deep_research.knowledge.models import (
     AuthorityClass,
     Chunk,
@@ -280,6 +284,23 @@ class DocumentRepository(Protocol):
         correlation_id: str,
     ) -> AuditEvent: ...
 
+    async def transition_version_lifecycle(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        version_id: str,
+        *,
+        expected_status: VersionLifecycleStatus,
+        status: VersionLifecycleStatus,
+        actor_type: str,
+        reason: str,
+        policy_version: str,
+        rule_results: Sequence[str],
+        run_id: str | None,
+        proposal_id: str | None,
+        correlation_id: str,
+    ) -> DocumentVersion: ...
+
 
 @runtime_checkable
 class EvidenceRepository(Protocol):
@@ -337,6 +358,70 @@ class EvidenceRepository(Protocol):
         *,
         include_deleted: bool = False,
     ) -> list[Evidence]: ...
+
+    async def transition_evidence_validation(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        evidence_id: str,
+        *,
+        expected_status: EvidenceValidationStatus,
+        status: EvidenceValidationStatus,
+        relation: EvidenceRelation,
+        directness: EvidenceDirectness,
+        confidence: float,
+        valid_at: datetime | None,
+        actor_type: str,
+        reason: str,
+        policy_version: str,
+        rule_results: Sequence[str],
+        run_id: str | None,
+        proposal_id: str | None,
+        correlation_id: str,
+    ) -> Evidence: ...
+
+
+@runtime_checkable
+class LifecycleProposalRepository(Protocol):
+    """Agent proposals and review decisions; never a hard-delete surface."""
+
+    async def create_lifecycle_proposal(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        proposal: LifecycleProposal,
+    ) -> LifecycleProposal: ...
+
+    async def get_lifecycle_proposal(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        proposal_id: str,
+    ) -> LifecycleProposal: ...
+
+    async def list_lifecycle_proposals(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        status: LifecycleProposalStatus | None = None,
+        run_id: str | None = None,
+    ) -> list[LifecycleProposal]: ...
+
+    async def transition_lifecycle_proposal(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        proposal_id: str,
+        *,
+        expected_status: LifecycleProposalStatus,
+        status: LifecycleProposalStatus,
+        actor_type: str,
+        reason: str,
+        policy_version: str,
+        rule_results: Sequence[str],
+        correlation_id: str,
+    ) -> LifecycleProposal: ...
 
 
 @runtime_checkable
@@ -471,6 +556,7 @@ class KnowledgeEvidenceRepository(
     RequirementRepository,
     AuditRepository,
     ImportJobRepository,
+    LifecycleProposalRepository,
     Protocol,
 ):
     """Aggregate contract shared by InMemory and SQLite backends."""

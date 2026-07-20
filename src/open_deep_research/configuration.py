@@ -111,6 +111,31 @@ class Configuration(BaseModel):
     paperqa_contextual_timeout_seconds: float = Field(default=30.0, ge=1, le=300)
     paperqa_contextual_token_limit: int = Field(default=4000, ge=256, le=20000)
 
+    # Phase 3 governance modes are mutually exclusive at the tool-routing layer.
+    # Defaults deliberately preserve the Phase 0/2 production path.
+    enable_knowledge_tools: bool = False
+    enable_agentic_rag: bool = False
+    enable_knowledge_writeback: bool = False
+    agentic_web_provider: Literal["tavily"] = "tavily"
+    run_evidence_store_backend: Literal["memory", "sqlite"] = "memory"
+    run_evidence_db_path: str = "data/run-evidence/run-evidence.db"
+    run_evidence_ttl_seconds: int = Field(default=86400, ge=60, le=2592000)
+    requirement_extraction_model: Optional[str] = None
+    requirement_completion_policy_version: str = "phase3-completion-v1"
+    knowledge_lifecycle_policy_version: str = "phase3-lifecycle-v1"
+    knowledge_coverage_threshold: float = Field(default=1.0, ge=0, le=1)
+    min_direct_evidence: int = Field(default=1, ge=1, le=10)
+    min_source_authority: Literal[
+        "unknown", "self_reported", "secondary", "primary", "official"
+    ] = "secondary"
+    max_evidence_age_days: Optional[int] = Field(default=None, ge=1, le=36500)
+    candidate_min_content_chars: int = Field(default=40, ge=1, le=10000)
+    candidate_min_confidence: float = Field(default=0.7, ge=0, le=1)
+    max_web_queries_per_run: int = Field(default=5, ge=0, le=50)
+    max_web_results_per_query: int = Field(default=3, ge=1, le=20)
+    max_web_results_per_run: int = Field(default=15, ge=1, le=200)
+    max_concurrent_web_requests: int = Field(default=2, ge=1, le=20)
+
     # 配置同时运行的研究子任务数量。
     max_concurrent_research_units: int = Field(
         default=3,
@@ -312,6 +337,7 @@ class Configuration(BaseModel):
             }
         }
     )
+    compression_max_retries: int = Field(default=2, ge=1, le=10)
 
     # 配置最终报告生成使用的模型。
     final_report_model: str = Field(
@@ -369,6 +395,27 @@ class Configuration(BaseModel):
             raise ValueError(
                 "knowledge_chunk_overlap_chars must be smaller than "
                 "knowledge_chunk_size_chars"
+            )
+        if self.enable_knowledge_writeback and not self.enable_agentic_rag:
+            raise ValueError(
+                "enable_knowledge_writeback requires enable_agentic_rag"
+            )
+        if self.enable_agentic_rag and self.search_api in {
+            SearchAPI.OPENAI,
+            SearchAPI.ANTHROPIC,
+        }:
+            raise ValueError(
+                "Agentic RAG cannot govern provider-native Web search; "
+                "use Tavily or disable Web search"
+            )
+        if (
+            self.run_evidence_store_backend == "sqlite"
+            and os.path.normcase(os.path.abspath(self.run_evidence_db_path))
+            == os.path.normcase(os.path.abspath(self.knowledge_db_path))
+        ):
+            raise ValueError(
+                "run evidence SQLite storage must be isolated from the canonical "
+                "knowledge database"
             )
         return self
 

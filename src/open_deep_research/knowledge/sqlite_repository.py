@@ -25,6 +25,12 @@ from open_deep_research.knowledge.ingestion.models import (
     ImportJobError,
     ImportJobStatus,
 )
+from open_deep_research.knowledge.lifecycle.audit import governed_audit_event
+from open_deep_research.knowledge.lifecycle.models import (
+    LifecycleProposal,
+    LifecycleProposalStatus,
+)
+from open_deep_research.knowledge.lifecycle.policy import ensure_version_transition
 from open_deep_research.knowledge.models import (
     AuthorityClass,
     Chunk,
@@ -1623,6 +1629,626 @@ class SQLiteRepository:
             except sqlite3.IntegrityError as exc:
                 connection.rollback()
                 raise RepositoryConflictError("import job constraint conflict") from exc
+            except BaseException:
+                connection.rollback()
+                raise
+            finally:
+                connection.close()
+
+        return await self._run(operation)
+
+    async def transition_version_lifecycle(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        version_id: str,
+        *,
+        expected_status: VersionLifecycleStatus,
+        status: VersionLifecycleStatus,
+        actor_type: str,
+        reason: str,
+        policy_version: str,
+        rule_results: Sequence[str],
+        run_id: str | None,
+        proposal_id: str | None,
+        correlation_id: str,
+    ) -> DocumentVersion:
+        """Atomically CAS lifecycle JSON/status, replacement, and audit rows."""
+
+        def operation() -> DocumentVersion:
+            connection = self.database.connect()
+            try:
+                self._begin(connection)
+                self._prepare(connection, access, scope)
+                row = self._get_row(
+                    connection,
+                    table="document_versions",
+                    id_column="version_id",
+                    scope_id=scope.scope_id,
+                    entity_id=version_id,
+                    include_deleted=False,
+                    entity_name="version",
+                )
+                current = _load(DocumentVersion, row["payload"])
+                if current.lifecycle_status is status:
+                    connection.commit()
+                    return current
+                if current.lifecycle_status is not expected_status:
+                    raise RepositoryConflictError(
+                        "document-version lifecycle compare-and-swap failed"
+                    )
+                ensure_version_transition(current.lifecycle_status, status)
+                if proposal_id is not None:
+                    proposal_row = connection.execute(
+                        "SELECT payload FROM lifecycle_proposals "
+                        "WHERE scope_id = ? AND proposal_id = ?",
+                        (scope.scope_id, proposal_id),
+                    ).fetchone()
+                    if proposal_row is None:
+                        raise RepositoryNotFoundError("lifecycle proposal not found")
+                    proposal = _load(LifecycleProposal, proposal_row["payload"])
+                    if proposal.target_id != version_id:
+                        raise RepositoryConflictError(
+                            "proposal target does not match document version"
+                        )
+
+                predecessor: DocumentVersion | None = None
+                if (
+                    status is VersionLifecycleStatus.ACTIVE
+                    and current.supersedes_version_id is not None
+                ):
+                    predecessor_row = self._get_row(
+                        connection,
+                        table="document_versions",
+                        id_column="version_id",
+                        scope_id=scope.scope_id,
+                        entity_id=current.supersedes_version_id,
+                        include_deleted=False,
+                        entity_name="superseded version",
+                    )
+                    predecessor = _load(DocumentVersion, predecessor_row["payload"])
+                    if predecessor.document_id != current.document_id:
+                        raise RepositoryConflictError(
+                            "replacement and predecessor belong to different documents"
+                        )
+                    if predecessor.lifecycle_status not in {
+                        VersionLifecycleStatus.ACTIVE,
+                        VersionLifecycleStatus.SUPERSEDED,
+                    }:
+                        raise RepositoryConflictError(
+                            "replacement predecessor is not active"
+                        )
+                    if predecessor.lifecycle_status is VersionLifecycleStatus.ACTIVE:
+                        predecessor_updated = predecessor.model_copy(
+                            update={
+                                "lifecycle_status": VersionLifecycleStatus.SUPERSEDED
+                            }
+                        )
+                        connection.execute(
+                            "UPDATE document_versions "
+                            "SET lifecycle_status = ?, payload = ? "
+                            "WHERE scope_id = ? AND version_id = ? "
+                            "AND lifecycle_status = ?",
+                            (
+                                VersionLifecycleStatus.SUPERSEDED.value,
+                                _dump(predecessor_updated),
+                                scope.scope_id,
+                                predecessor.version_id,
+                                VersionLifecycleStatus.ACTIVE.value,
+                            ),
+                        )
+                        self._insert_audit(
+                            connection,
+                            governed_audit_event(
+                                scope_id=scope.scope_id,
+                                entity_type="document_version",
+                                entity_id=predecessor.version_id,
+                                action="lifecycle_transition",
+                                actor_type=actor_type,
+                                reason=f"superseded by {version_id}: {reason}",
+                                before_status=VersionLifecycleStatus.ACTIVE.value,
+                                after_status=VersionLifecycleStatus.SUPERSEDED.value,
+                                correlation_id=correlation_id,
+                                policy_version=policy_version,
+                                rule_results=rule_results,
+                                run_id=run_id,
+                                proposal_id=proposal_id,
+                                extra_metadata={
+                                    "replacement_version_id": version_id
+                                },
+                            ),
+                        )
+
+                updated = current.model_copy(update={"lifecycle_status": status})
+                cursor = connection.execute(
+                    "UPDATE document_versions SET lifecycle_status = ?, payload = ? "
+                    "WHERE scope_id = ? AND version_id = ? AND lifecycle_status = ?",
+                    (
+                        status.value,
+                        _dump(updated),
+                        scope.scope_id,
+                        version_id,
+                        expected_status.value,
+                    ),
+                )
+                if cursor.rowcount != 1:
+                    raise RepositoryConflictError(
+                        "document-version lifecycle compare-and-swap failed"
+                    )
+                self._insert_audit(
+                    connection,
+                    governed_audit_event(
+                        scope_id=scope.scope_id,
+                        entity_type="document_version",
+                        entity_id=version_id,
+                        action="lifecycle_transition",
+                        actor_type=actor_type,
+                        reason=reason,
+                        before_status=current.lifecycle_status.value,
+                        after_status=status.value,
+                        correlation_id=correlation_id,
+                        policy_version=policy_version,
+                        rule_results=rule_results,
+                        run_id=run_id,
+                        proposal_id=proposal_id,
+                    ),
+                )
+                connection.commit()
+                return updated
+            except BaseException:
+                connection.rollback()
+                raise
+            finally:
+                connection.close()
+
+        return await self._run(operation)
+
+    async def transition_evidence_validation(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        evidence_id: str,
+        *,
+        expected_status: EvidenceValidationStatus,
+        status: EvidenceValidationStatus,
+        relation: EvidenceRelation,
+        directness: EvidenceDirectness,
+        confidence: float,
+        valid_at: datetime | None,
+        actor_type: str,
+        reason: str,
+        policy_version: str,
+        rule_results: Sequence[str],
+        run_id: str | None,
+        proposal_id: str | None,
+        correlation_id: str,
+    ) -> Evidence:
+        """Atomically validate evidence; relation changes replace its identity."""
+        allowed = {
+            EvidenceValidationStatus.PENDING: {
+                EvidenceValidationStatus.VALIDATED,
+                EvidenceValidationStatus.REJECTED,
+            },
+            EvidenceValidationStatus.VALIDATED: {
+                EvidenceValidationStatus.PENDING,
+                EvidenceValidationStatus.REJECTED,
+            },
+            EvidenceValidationStatus.REJECTED: {
+                EvidenceValidationStatus.PENDING,
+            },
+        }
+
+        def operation() -> Evidence:
+            connection = self.database.connect()
+            try:
+                self._begin(connection)
+                self._prepare(connection, access, scope)
+                row = self._get_row(
+                    connection,
+                    table="evidence",
+                    id_column="evidence_id",
+                    scope_id=scope.scope_id,
+                    entity_id=evidence_id,
+                    include_deleted=True,
+                    entity_name="evidence",
+                )
+                current = _load(Evidence, row["payload"])
+                replacement = Evidence(
+                    scope_id=current.scope_id,
+                    chunk_id=current.chunk_id,
+                    requirement_id=current.requirement_id,
+                    excerpt=current.excerpt,
+                    relation=relation,
+                    directness=directness,
+                    confidence=confidence,
+                    valid_at=valid_at,
+                    retrieval_method=current.retrieval_method,
+                    created_at=current.created_at,
+                    validation_status=status,
+                )
+                if current.soft_deleted_at is not None:
+                    replacement_row = connection.execute(
+                        "SELECT payload FROM evidence "
+                        "WHERE scope_id = ? AND evidence_id = ?",
+                        (scope.scope_id, replacement.evidence_id),
+                    ).fetchone()
+                    if replacement_row is not None:
+                        existing = _load(Evidence, replacement_row["payload"])
+                        if existing == replacement:
+                            connection.commit()
+                            return existing
+                    raise RepositoryConflictError("evidence is already soft deleted")
+                same_identity = replacement.evidence_id == current.evidence_id
+                if current.validation_status is not expected_status:
+                    if current == replacement:
+                        connection.commit()
+                        return current
+                    raise RepositoryConflictError(
+                        "evidence validation compare-and-swap failed"
+                    )
+                if status is not current.validation_status and status not in allowed[
+                    current.validation_status
+                ]:
+                    raise InvalidTransitionError(
+                        "invalid evidence validation transition: "
+                        f"{current.validation_status.value}->{status.value}"
+                    )
+                if current == replacement:
+                    connection.commit()
+                    return current
+
+                if same_identity:
+                    cursor = connection.execute(
+                        "UPDATE evidence SET validation_status = ?, payload = ? "
+                        "WHERE scope_id = ? AND evidence_id = ? "
+                        "AND validation_status = ? AND soft_deleted_at IS NULL",
+                        (
+                            status.value,
+                            _dump(replacement),
+                            scope.scope_id,
+                            evidence_id,
+                            expected_status.value,
+                        ),
+                    )
+                    if cursor.rowcount != 1:
+                        raise RepositoryConflictError(
+                            "evidence validation compare-and-swap failed"
+                        )
+                else:
+                    deleted_at = utc_now()
+                    deleted = current.model_copy(
+                        update={"soft_deleted_at": deleted_at}
+                    )
+                    cursor = connection.execute(
+                        "UPDATE evidence SET soft_deleted_at = ?, payload = ? "
+                        "WHERE scope_id = ? AND evidence_id = ? "
+                        "AND validation_status = ? AND soft_deleted_at IS NULL",
+                        (
+                            deleted_at.isoformat(),
+                            _dump(deleted),
+                            scope.scope_id,
+                            evidence_id,
+                            expected_status.value,
+                        ),
+                    )
+                    if cursor.rowcount != 1:
+                        raise RepositoryConflictError(
+                            "evidence validation compare-and-swap failed"
+                        )
+                    connection.execute(
+                        "INSERT INTO evidence "
+                        "(scope_id, evidence_id, chunk_id, requirement_id, "
+                        "validation_status, soft_deleted_at, payload) "
+                        "VALUES (?, ?, ?, ?, ?, NULL, ?)",
+                        (
+                            scope.scope_id,
+                            replacement.evidence_id,
+                            replacement.chunk_id,
+                            replacement.requirement_id,
+                            replacement.validation_status.value,
+                            _dump(replacement),
+                        ),
+                    )
+                    self._insert_audit(
+                        connection,
+                        governed_audit_event(
+                            scope_id=scope.scope_id,
+                            entity_type="evidence",
+                            entity_id=current.evidence_id,
+                            action="evidence_replaced",
+                            actor_type=actor_type,
+                            reason=reason,
+                            before_status=current.validation_status.value,
+                            after_status="soft_deleted",
+                            correlation_id=correlation_id,
+                            policy_version=policy_version,
+                            rule_results=rule_results,
+                            run_id=run_id,
+                            proposal_id=proposal_id,
+                            extra_metadata={
+                                "replacement_evidence_id": replacement.evidence_id
+                            },
+                        ),
+                    )
+                self._insert_audit(
+                    connection,
+                    governed_audit_event(
+                        scope_id=scope.scope_id,
+                        entity_type="evidence",
+                        entity_id=replacement.evidence_id,
+                        action="validation_transition",
+                        actor_type=actor_type,
+                        reason=reason,
+                        before_status=current.validation_status.value,
+                        after_status=status.value,
+                        correlation_id=correlation_id,
+                        policy_version=policy_version,
+                        rule_results=rule_results,
+                        run_id=run_id,
+                        proposal_id=proposal_id,
+                        extra_metadata=(
+                            {"replaces_evidence_id": current.evidence_id}
+                            if not same_identity
+                            else None
+                        ),
+                    ),
+                )
+                connection.commit()
+                return replacement
+            except sqlite3.IntegrityError as exc:
+                connection.rollback()
+                raise RepositoryConflictError(
+                    "evidence validation constraint conflict"
+                ) from exc
+            except BaseException:
+                connection.rollback()
+                raise
+            finally:
+                connection.close()
+
+        return await self._run(operation)
+
+    async def create_lifecycle_proposal(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        proposal: LifecycleProposal,
+    ) -> LifecycleProposal:
+        if proposal.scope_id != scope.scope_id:
+            raise RepositoryAccessError("lifecycle proposal belongs to another scope")
+
+        def operation() -> LifecycleProposal:
+            connection = self.database.connect()
+            try:
+                self._begin(connection)
+                self._prepare(connection, access, scope)
+                targets = {
+                    "source": ("sources", "source_id"),
+                    "document": ("documents", "document_id"),
+                    "document_version": ("document_versions", "version_id"),
+                    "chunk": ("chunks", "chunk_id"),
+                    "requirement": ("requirements", "requirement_id"),
+                    "evidence": ("evidence", "evidence_id"),
+                }
+                target_table, target_column = targets[
+                    proposal.target_entity_type.value
+                ]
+                self._get_row(
+                    connection,
+                    table=target_table,
+                    id_column=target_column,
+                    scope_id=scope.scope_id,
+                    entity_id=proposal.target_id,
+                    include_deleted=True,
+                    entity_name=proposal.target_entity_type.value,
+                )
+                cursor = connection.execute(
+                    "INSERT OR IGNORE INTO lifecycle_proposals "
+                    "(scope_id, proposal_id, target_entity_type, target_id, "
+                    "proposed_action, status, run_id, correlation_id, created_at, "
+                    "updated_at, payload) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        scope.scope_id,
+                        proposal.proposal_id,
+                        proposal.target_entity_type.value,
+                        proposal.target_id,
+                        proposal.action.value,
+                        proposal.status.value,
+                        proposal.run_id,
+                        proposal.correlation_id,
+                        proposal.created_at.isoformat(),
+                        proposal.updated_at.isoformat(),
+                        _dump(proposal),
+                    ),
+                )
+                row = connection.execute(
+                    "SELECT payload FROM lifecycle_proposals "
+                    "WHERE scope_id = ? AND proposal_id = ?",
+                    (scope.scope_id, proposal.proposal_id),
+                ).fetchone()
+                stored = _load(LifecycleProposal, row["payload"])
+                if stored != proposal:
+                    raise RepositoryConflictError("proposal ID was reused")
+                if cursor.rowcount == 1:
+                    self._record_created(
+                        connection,
+                        scope.scope_id,
+                        "lifecycle_proposal",
+                        proposal.proposal_id,
+                        proposal.correlation_id,
+                        after_status=proposal.status.value,
+                    )
+                connection.commit()
+                return stored
+            except BaseException:
+                connection.rollback()
+                raise
+            finally:
+                connection.close()
+
+        return await self._run(operation)
+
+    async def get_lifecycle_proposal(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        proposal_id: str,
+    ) -> LifecycleProposal:
+        def operation() -> LifecycleProposal:
+            connection = self.database.connect()
+            try:
+                self._prepare(connection, access, scope)
+                row = connection.execute(
+                    "SELECT payload FROM lifecycle_proposals "
+                    "WHERE scope_id = ? AND proposal_id = ?",
+                    (scope.scope_id, proposal_id),
+                ).fetchone()
+                if row is None:
+                    other = connection.execute(
+                        "SELECT 1 FROM lifecycle_proposals "
+                        "WHERE proposal_id = ? LIMIT 1",
+                        (proposal_id,),
+                    ).fetchone()
+                    if other is not None:
+                        raise RepositoryAccessError(
+                            "lifecycle proposal belongs to another scope"
+                        )
+                    raise RepositoryNotFoundError("lifecycle proposal not found")
+                return _load(LifecycleProposal, row["payload"])
+            finally:
+                connection.close()
+
+        return await self._run(operation)
+
+    async def list_lifecycle_proposals(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        status: LifecycleProposalStatus | None = None,
+        run_id: str | None = None,
+    ) -> list[LifecycleProposal]:
+        def operation() -> list[LifecycleProposal]:
+            connection = self.database.connect()
+            try:
+                self._prepare(connection, access, scope)
+                conditions = ["scope_id = ?"]
+                parameters: list[object] = [scope.scope_id]
+                if status is not None:
+                    conditions.append("status = ?")
+                    parameters.append(status.value)
+                if run_id is not None:
+                    conditions.append("run_id = ?")
+                    parameters.append(run_id)
+                rows = connection.execute(
+                    "SELECT payload FROM lifecycle_proposals WHERE "
+                    + " AND ".join(conditions)
+                    + " ORDER BY proposal_id",
+                    tuple(parameters),
+                ).fetchall()
+                return [
+                    _load(LifecycleProposal, row["payload"]) for row in rows
+                ]
+            finally:
+                connection.close()
+
+        return await self._run(operation)
+
+    async def transition_lifecycle_proposal(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        proposal_id: str,
+        *,
+        expected_status: LifecycleProposalStatus,
+        status: LifecycleProposalStatus,
+        actor_type: str,
+        reason: str,
+        policy_version: str,
+        rule_results: Sequence[str],
+        correlation_id: str,
+    ) -> LifecycleProposal:
+        allowed = {
+            LifecycleProposalStatus.PENDING: {
+                LifecycleProposalStatus.APPROVED,
+                LifecycleProposalStatus.REJECTED,
+                LifecycleProposalStatus.APPLIED,
+            },
+            LifecycleProposalStatus.APPROVED: {
+                LifecycleProposalStatus.APPLIED,
+                LifecycleProposalStatus.REJECTED,
+            },
+            LifecycleProposalStatus.REJECTED: set(),
+            LifecycleProposalStatus.APPLIED: set(),
+        }
+
+        def operation() -> LifecycleProposal:
+            connection = self.database.connect()
+            try:
+                self._begin(connection)
+                self._prepare(connection, access, scope)
+                row = connection.execute(
+                    "SELECT payload FROM lifecycle_proposals "
+                    "WHERE scope_id = ? AND proposal_id = ?",
+                    (scope.scope_id, proposal_id),
+                ).fetchone()
+                if row is None:
+                    raise RepositoryNotFoundError("lifecycle proposal not found")
+                current = _load(LifecycleProposal, row["payload"])
+                if current.status is status:
+                    connection.commit()
+                    return current
+                if current.status is not expected_status:
+                    raise RepositoryConflictError("proposal compare-and-swap failed")
+                if status not in allowed[current.status]:
+                    raise InvalidTransitionError(
+                        "invalid proposal transition: "
+                        f"{current.status.value}->{status.value}"
+                    )
+                updated = current.model_copy(
+                    update={
+                        "status": status,
+                        "policy_version": policy_version,
+                        "rule_results": tuple(rule_results),
+                        "decision_reason": reason,
+                        "updated_at": utc_now(),
+                    }
+                )
+                cursor = connection.execute(
+                    "UPDATE lifecycle_proposals SET status = ?, updated_at = ?, "
+                    "payload = ? "
+                    "WHERE scope_id = ? AND proposal_id = ? AND status = ?",
+                    (
+                        status.value,
+                        updated.updated_at.isoformat(),
+                        _dump(updated),
+                        scope.scope_id,
+                        proposal_id,
+                        expected_status.value,
+                    ),
+                )
+                if cursor.rowcount != 1:
+                    raise RepositoryConflictError("proposal compare-and-swap failed")
+                self._insert_audit(
+                    connection,
+                    governed_audit_event(
+                        scope_id=scope.scope_id,
+                        entity_type="lifecycle_proposal",
+                        entity_id=proposal_id,
+                        action="proposal_transition",
+                        actor_type=actor_type,
+                        reason=reason,
+                        before_status=current.status.value,
+                        after_status=status.value,
+                        correlation_id=correlation_id,
+                        policy_version=policy_version,
+                        rule_results=rule_results,
+                        run_id=current.run_id,
+                        proposal_id=proposal_id,
+                    ),
+                )
+                connection.commit()
+                return updated
             except BaseException:
                 connection.rollback()
                 raise

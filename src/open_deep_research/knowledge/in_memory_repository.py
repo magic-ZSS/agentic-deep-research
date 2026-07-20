@@ -24,6 +24,12 @@ from open_deep_research.knowledge.ingestion.models import (
     ImportJobError,
     ImportJobStatus,
 )
+from open_deep_research.knowledge.lifecycle.audit import governed_audit_event
+from open_deep_research.knowledge.lifecycle.models import (
+    LifecycleProposal,
+    LifecycleProposalStatus,
+)
+from open_deep_research.knowledge.lifecycle.policy import ensure_version_transition
 from open_deep_research.knowledge.models import (
     AuthorityClass,
     Chunk,
@@ -68,6 +74,7 @@ class InMemoryRepository:
         self._evidence: dict[tuple[str, str], Evidence] = {}
         self._audit: dict[tuple[str, str], AuditEvent] = {}
         self._import_jobs: dict[tuple[str, str], ImportJob] = {}
+        self._lifecycle_proposals: dict[tuple[str, str], LifecycleProposal] = {}
         self._lock = RLock()
 
     def _prepare(
@@ -1115,6 +1122,437 @@ class InMemoryRepository:
                     correlation_id=correlation_id,
                 )
             )
+            return _copy(updated)
+
+    async def transition_version_lifecycle(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        version_id: str,
+        *,
+        expected_status: VersionLifecycleStatus,
+        status: VersionLifecycleStatus,
+        actor_type: str,
+        reason: str,
+        policy_version: str,
+        rule_results: Sequence[str],
+        run_id: str | None,
+        proposal_id: str | None,
+        correlation_id: str,
+    ) -> DocumentVersion:
+        """CAS a version status and atomically supersede its declared predecessor."""
+        with self._lock:
+            self._prepare(access, scope)
+            current = self._get_scoped(
+                self._versions,
+                scope.scope_id,
+                version_id,
+                include_deleted=False,
+                entity_name="version",
+            )
+            if current.lifecycle_status is status:
+                return _copy(current)
+            if current.lifecycle_status is not expected_status:
+                raise RepositoryConflictError(
+                    "document-version lifecycle compare-and-swap failed"
+                )
+            ensure_version_transition(current.lifecycle_status, status)
+            if proposal_id is not None:
+                proposal = self._get_scoped(
+                    self._lifecycle_proposals,
+                    scope.scope_id,
+                    proposal_id,
+                    include_deleted=True,
+                    entity_name="lifecycle proposal",
+                )
+                if proposal.target_id != version_id:
+                    raise RepositoryConflictError(
+                        "proposal target does not match document version"
+                    )
+
+            predecessor: DocumentVersion | None = None
+            if (
+                status is VersionLifecycleStatus.ACTIVE
+                and current.supersedes_version_id is not None
+            ):
+                predecessor = self._get_scoped(
+                    self._versions,
+                    scope.scope_id,
+                    current.supersedes_version_id,
+                    include_deleted=False,
+                    entity_name="superseded version",
+                )
+                if predecessor.document_id != current.document_id:
+                    raise RepositoryConflictError(
+                        "replacement and predecessor belong to different documents"
+                    )
+                if predecessor.lifecycle_status not in {
+                    VersionLifecycleStatus.ACTIVE,
+                    VersionLifecycleStatus.SUPERSEDED,
+                }:
+                    raise RepositoryConflictError(
+                        "replacement predecessor is not active"
+                    )
+
+            updated = current.model_copy(update={"lifecycle_status": status})
+            predecessor_updated: DocumentVersion | None = None
+            predecessor_event: AuditEvent | None = None
+            if (
+                predecessor is not None
+                and predecessor.lifecycle_status is VersionLifecycleStatus.ACTIVE
+            ):
+                predecessor_updated = predecessor.model_copy(
+                    update={"lifecycle_status": VersionLifecycleStatus.SUPERSEDED}
+                )
+                predecessor_event = governed_audit_event(
+                    scope_id=scope.scope_id,
+                    entity_type="document_version",
+                    entity_id=predecessor.version_id,
+                    action="lifecycle_transition",
+                    actor_type=actor_type,
+                    reason=f"superseded by {version_id}: {reason}",
+                    before_status=VersionLifecycleStatus.ACTIVE.value,
+                    after_status=VersionLifecycleStatus.SUPERSEDED.value,
+                    correlation_id=correlation_id,
+                    policy_version=policy_version,
+                    rule_results=rule_results,
+                    run_id=run_id,
+                    proposal_id=proposal_id,
+                    extra_metadata={"replacement_version_id": version_id},
+                )
+            event = governed_audit_event(
+                scope_id=scope.scope_id,
+                entity_type="document_version",
+                entity_id=version_id,
+                action="lifecycle_transition",
+                actor_type=actor_type,
+                reason=reason,
+                before_status=current.lifecycle_status.value,
+                after_status=status.value,
+                correlation_id=correlation_id,
+                policy_version=policy_version,
+                rule_results=rule_results,
+                run_id=run_id,
+                proposal_id=proposal_id,
+            )
+            # Preflight deterministic IDs so an audit conflict cannot leave partial state.
+            for candidate_event in (predecessor_event, event):
+                if candidate_event is None:
+                    continue
+                existing = self._audit.get(
+                    (candidate_event.scope_id, candidate_event.event_id)
+                )
+                if existing is not None and existing != candidate_event:
+                    raise RepositoryConflictError("audit event ID was reused")
+            if predecessor_updated is not None:
+                self._versions[(scope.scope_id, predecessor_updated.version_id)] = (
+                    predecessor_updated
+                )
+                self._append_audit_unlocked(predecessor_event)
+            self._versions[(scope.scope_id, version_id)] = updated
+            self._append_audit_unlocked(event)
+            return _copy(updated)
+
+    async def transition_evidence_validation(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        evidence_id: str,
+        *,
+        expected_status: EvidenceValidationStatus,
+        status: EvidenceValidationStatus,
+        relation: EvidenceRelation,
+        directness: EvidenceDirectness,
+        confidence: float,
+        valid_at: datetime | None,
+        actor_type: str,
+        reason: str,
+        policy_version: str,
+        rule_results: Sequence[str],
+        run_id: str | None,
+        proposal_id: str | None,
+        correlation_id: str,
+    ) -> Evidence:
+        """CAS evidence validation; relation changes create a soft-linked identity."""
+        allowed = {
+            EvidenceValidationStatus.PENDING: {
+                EvidenceValidationStatus.VALIDATED,
+                EvidenceValidationStatus.REJECTED,
+            },
+            EvidenceValidationStatus.VALIDATED: {
+                EvidenceValidationStatus.PENDING,
+                EvidenceValidationStatus.REJECTED,
+            },
+            EvidenceValidationStatus.REJECTED: {
+                EvidenceValidationStatus.PENDING,
+            },
+        }
+        with self._lock:
+            self._prepare(access, scope)
+            current = self._get_scoped(
+                self._evidence,
+                scope.scope_id,
+                evidence_id,
+                include_deleted=True,
+                entity_name="evidence",
+            )
+            replacement = Evidence(
+                scope_id=current.scope_id,
+                chunk_id=current.chunk_id,
+                requirement_id=current.requirement_id,
+                excerpt=current.excerpt,
+                relation=relation,
+                directness=directness,
+                confidence=confidence,
+                valid_at=valid_at,
+                retrieval_method=current.retrieval_method,
+                created_at=current.created_at,
+                validation_status=status,
+            )
+            if current.soft_deleted_at is not None:
+                existing_replacement = self._evidence.get(
+                    (scope.scope_id, replacement.evidence_id)
+                )
+                if existing_replacement == replacement:
+                    return _copy(existing_replacement)
+                raise RepositoryConflictError("evidence is already soft deleted")
+            desired_same_identity = replacement.evidence_id == current.evidence_id
+            if current.validation_status is not expected_status:
+                if current == replacement:
+                    return _copy(current)
+                raise RepositoryConflictError(
+                    "evidence validation compare-and-swap failed"
+                )
+            if status is not current.validation_status and status not in allowed[
+                current.validation_status
+            ]:
+                raise InvalidTransitionError(
+                    "invalid evidence validation transition: "
+                    f"{current.validation_status.value}->{status.value}"
+                )
+            if current == replacement:
+                return _copy(current)
+
+            event = governed_audit_event(
+                scope_id=scope.scope_id,
+                entity_type="evidence",
+                entity_id=replacement.evidence_id,
+                action="validation_transition",
+                actor_type=actor_type,
+                reason=reason,
+                before_status=current.validation_status.value,
+                after_status=status.value,
+                correlation_id=correlation_id,
+                policy_version=policy_version,
+                rule_results=rule_results,
+                run_id=run_id,
+                proposal_id=proposal_id,
+                extra_metadata=(
+                    {"replaces_evidence_id": current.evidence_id}
+                    if not desired_same_identity
+                    else None
+                ),
+            )
+            replaced_event = None
+            if not desired_same_identity:
+                replaced_event = governed_audit_event(
+                    scope_id=scope.scope_id,
+                    entity_type="evidence",
+                    entity_id=current.evidence_id,
+                    action="evidence_replaced",
+                    actor_type=actor_type,
+                    reason=reason,
+                    before_status=current.validation_status.value,
+                    after_status="soft_deleted",
+                    correlation_id=correlation_id,
+                    policy_version=policy_version,
+                    rule_results=rule_results,
+                    run_id=run_id,
+                    proposal_id=proposal_id,
+                    extra_metadata={
+                        "replacement_evidence_id": replacement.evidence_id
+                    },
+                )
+            for candidate_event in (replaced_event, event):
+                if candidate_event is None:
+                    continue
+                existing_event = self._audit.get(
+                    (scope.scope_id, candidate_event.event_id)
+                )
+                if existing_event is not None and existing_event != candidate_event:
+                    raise RepositoryConflictError("audit event ID was reused")
+            if desired_same_identity:
+                self._evidence[(scope.scope_id, evidence_id)] = replacement
+            else:
+                existing = self._evidence.get(
+                    (scope.scope_id, replacement.evidence_id)
+                )
+                if existing is not None and existing != replacement:
+                    raise RepositoryConflictError(
+                        "replacement evidence identity already exists"
+                    )
+                self._evidence[(scope.scope_id, evidence_id)] = current.model_copy(
+                    update={"soft_deleted_at": utc_now()}
+                )
+                self._evidence[(scope.scope_id, replacement.evidence_id)] = replacement
+                self._append_audit_unlocked(replaced_event)
+            self._append_audit_unlocked(event)
+            return _copy(replacement)
+
+    async def create_lifecycle_proposal(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        proposal: LifecycleProposal,
+    ) -> LifecycleProposal:
+        with self._lock:
+            self._prepare(access, scope)
+            if proposal.scope_id != scope.scope_id:
+                raise RepositoryAccessError("lifecycle proposal belongs to another scope")
+            targets = {
+                "source": self._sources,
+                "document": self._documents,
+                "document_version": self._versions,
+                "chunk": self._chunks,
+                "requirement": self._requirements,
+                "evidence": self._evidence,
+            }
+            self._get_scoped(
+                targets[proposal.target_entity_type.value],
+                scope.scope_id,
+                proposal.target_id,
+                include_deleted=True,
+                entity_name=proposal.target_entity_type.value,
+            )
+            key = (scope.scope_id, proposal.proposal_id)
+            existing = self._lifecycle_proposals.get(key)
+            if existing is not None:
+                if existing != proposal:
+                    raise RepositoryConflictError("proposal ID was reused")
+                return _copy(existing)
+            self._lifecycle_proposals[key] = _copy(proposal)
+            self._record_created(
+                scope.scope_id,
+                "lifecycle_proposal",
+                proposal.proposal_id,
+                proposal.correlation_id,
+                after_status=proposal.status.value,
+            )
+            return _copy(proposal)
+
+    async def get_lifecycle_proposal(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        proposal_id: str,
+    ) -> LifecycleProposal:
+        with self._lock:
+            self._prepare(access, scope)
+            return _copy(
+                self._get_scoped(
+                    self._lifecycle_proposals,
+                    scope.scope_id,
+                    proposal_id,
+                    include_deleted=True,
+                    entity_name="lifecycle proposal",
+                )
+            )
+
+    async def list_lifecycle_proposals(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        status: LifecycleProposalStatus | None = None,
+        run_id: str | None = None,
+    ) -> list[LifecycleProposal]:
+        with self._lock:
+            self._prepare(access, scope)
+            values = [
+                proposal
+                for (scope_id, _), proposal in self._lifecycle_proposals.items()
+                if scope_id == scope.scope_id
+                and (status is None or proposal.status is status)
+                and (run_id is None or proposal.run_id == run_id)
+            ]
+            return [
+                _copy(item)
+                for item in sorted(values, key=lambda item: item.proposal_id)
+            ]
+
+    async def transition_lifecycle_proposal(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        proposal_id: str,
+        *,
+        expected_status: LifecycleProposalStatus,
+        status: LifecycleProposalStatus,
+        actor_type: str,
+        reason: str,
+        policy_version: str,
+        rule_results: Sequence[str],
+        correlation_id: str,
+    ) -> LifecycleProposal:
+        allowed = {
+            LifecycleProposalStatus.PENDING: {
+                LifecycleProposalStatus.APPROVED,
+                LifecycleProposalStatus.REJECTED,
+                LifecycleProposalStatus.APPLIED,
+            },
+            LifecycleProposalStatus.APPROVED: {
+                LifecycleProposalStatus.APPLIED,
+                LifecycleProposalStatus.REJECTED,
+            },
+            LifecycleProposalStatus.REJECTED: set(),
+            LifecycleProposalStatus.APPLIED: set(),
+        }
+        with self._lock:
+            self._prepare(access, scope)
+            current = self._get_scoped(
+                self._lifecycle_proposals,
+                scope.scope_id,
+                proposal_id,
+                include_deleted=True,
+                entity_name="lifecycle proposal",
+            )
+            if current.status is status:
+                return _copy(current)
+            if current.status is not expected_status:
+                raise RepositoryConflictError("proposal compare-and-swap failed")
+            if status not in allowed[current.status]:
+                raise InvalidTransitionError(
+                    f"invalid proposal transition: {current.status.value}->{status.value}"
+                )
+            updated = current.model_copy(
+                update={
+                    "status": status,
+                    "policy_version": policy_version,
+                    "rule_results": tuple(rule_results),
+                    "decision_reason": reason,
+                    "updated_at": utc_now(),
+                }
+            )
+            event = governed_audit_event(
+                scope_id=scope.scope_id,
+                entity_type="lifecycle_proposal",
+                entity_id=proposal_id,
+                action="proposal_transition",
+                actor_type=actor_type,
+                reason=reason,
+                before_status=current.status.value,
+                after_status=status.value,
+                correlation_id=correlation_id,
+                policy_version=policy_version,
+                rule_results=rule_results,
+                run_id=current.run_id,
+                proposal_id=proposal_id,
+            )
+            existing_event = self._audit.get((scope.scope_id, event.event_id))
+            if existing_event is not None and existing_event != event:
+                raise RepositoryConflictError("audit event ID was reused")
+            self._lifecycle_proposals[(scope.scope_id, proposal_id)] = updated
+            self._append_audit_unlocked(event)
             return _copy(updated)
 
     async def soft_delete(

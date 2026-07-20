@@ -40,7 +40,7 @@
 | 0 | [Baseline 与参考仓库](phase_0_baseline_and_references.md) | 固定行为、数据集、遥测、最小 DeepEval 骨架、参考版本锁 | `completed` |
 | 1 | [知识与证据模型](phase_1_knowledge_evidence_models.md) | 领域模型、InMemory/SQLite Repository、版本/去重/Reducer | `completed` |
 | 2 | [文档导入与 PaperQA2](phase_2_document_ingestion_and_paperqa.md) | 四类导入、PaperQA2 Adapter、可定位检索工具 | `completed` |
-| 3 | [Agentic RAG 生命周期](phase_3_agentic_rag_lifecycle.md) | 本地优先、覆盖判断、候选验证、状态转换和审计 | `not-started` |
+| 3 | [Agentic RAG 生命周期](phase_3_agentic_rag_lifecycle.md) | 本地优先、覆盖判断、候选验证、状态转换和审计 | `completed` |
 | 4 | [MCP 集成](phase_4_mcp_integration.md) | 受限 Filesystem MCP、proposal-only Knowledge MCP、Windows 安全 | `not-started` |
 | 5 | [分层记忆](phase_5_memory_system.md) | Checkpoint、Namespace、五类记忆和 Memory Write Gate | `not-started` |
 | 6 | [引用验证与修复](phase_6_citation_validation.md) | 原子 Claim、蕴含/时效/权威验证、局部修复、来源注册表 | `not-started` |
@@ -92,7 +92,7 @@ flowchart LR
 3. 将该代码块原样发送给 Codex；如需改变范围，明确写在同一条消息中。
 4. Codex 只能执行该阶段，必须完成测试、状态更新和工作树复核后停止。
 
-阶段 2 已完成；只有在用户明确下达下一阶段指令后，才可复制 [phase_3_agentic_rag_lifecycle.md](phase_3_agentic_rag_lifecycle.md#16-本阶段-codex-执行指令) 第 16 节，不得自动进入阶段 3。
+阶段 3 已完成；只有在用户明确下达下一阶段指令后，才可复制 [phase_4_mcp_integration.md](phase_4_mcp_integration.md#16-本阶段-codex-执行指令) 第 16 节，不得自动进入阶段 4。
 
 ## 8. 如何验收一个阶段
 

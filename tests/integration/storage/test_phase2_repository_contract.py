@@ -242,7 +242,7 @@ def test_import_job_and_enumeration_are_scope_isolated(tmp_path):
     asyncio.run(scenario())
 
 
-def test_existing_v1_database_migrates_to_v2_without_changing_v1(tmp_path):
+def test_existing_v1_database_migrates_to_v3_without_changing_v1(tmp_path):
     database_path = tmp_path / "v1.db"
     connection = sqlite3.connect(database_path)
     connection.execute("BEGIN IMMEDIATE")
@@ -258,7 +258,7 @@ def test_existing_v1_database_migrates_to_v2_without_changing_v1(tmp_path):
     connection.close()
 
     database = SQLiteDatabase(database_path)
-    assert database.schema_version() == SCHEMA_VERSION == 2
+    assert database.schema_version() == SCHEMA_VERSION == 3
     reopened = sqlite3.connect(database_path)
     try:
         tables = {
@@ -270,6 +270,7 @@ def test_existing_v1_database_migrates_to_v2_without_changing_v1(tmp_path):
     finally:
         reopened.close()
     assert "import_jobs" in tables
+    assert "lifecycle_proposals" in tables
 
 
 def test_two_sqlite_workers_claim_import_job_with_cas(tmp_path):

@@ -1,0 +1,16 @@
+# Keep repository text deterministic across Windows, WSL, and CI.
+* text=auto eol=lf
+
+# Windows command scripts require CRLF for native cmd.exe compatibility.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Never apply text conversion to binary artifacts.
+*.blob binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary

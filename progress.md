@@ -4,18 +4,57 @@
 
 **最后更新（Last Updated）：** 2026-07-21
 
-**当前功能：** `phase-2-document-ingestion-paperqa-001`
+**当前功能：** `phase-3-agentic-rag-lifecycle-001`
 
-**状态：** completed（阶段 2 已收口；阶段 3 未开始）
+**状态：** completed（阶段 3 已收口；阶段 4 未开始）
 
 ## 阶段门禁
 
 - `phase-0-baseline-references-001` 为 `completed`；最终回归 T0-1 至 T0-12 全部 PASS。
 - `phase-1-knowledge-evidence-models-001` 为 `completed`；执行阶段 2 前及最终回归 T1-1 至 T1-16 全部 PASS。
 - `phase-2-document-ingestion-paperqa-001` 为 `completed`；`scripts/validate_phase.py --phase 2` 退出码 0，T2-1 至 T2-15 全部 PASS。
-- 阶段 3 仍为 `not-started`；本轮未实现 Agentic RAG、知识 writeback 或生产 Researcher 工具绑定。
+- `phase-3-agentic-rag-lifecycle-001` 为 `completed`；最终离线映射 suite 103 passed、0 skipped，T3-1 至 T3-20 均有确定性 evidence。
+- 阶段 4 仍为 `not-started`；本轮未实现 Filesystem/Knowledge MCP、Memory、Checkpoint、Claim/Citation Validator 或报告修复。
 
-## 阶段 2 交付物
+## 阶段 3 交付物
+
+- `src/open_deep_research/research/`：从 brief 生成稳定 `RequirementSet`、确定性 coverage/gap 与程序化 Supervisor completion gate。
+- `src/open_deep_research/evidence/run_store.py`：InMemory/SQLite 的 scope+run 隔离 `RunEvidenceStore`，支持完整 ID 回溯、CAS、TTL 清理与审计。
+- `src/open_deep_research/knowledge/retrieval/`：共享原子预算、结构化 Web adapter、`GovernedRetrievalOrchestrator`、active-only 查询、missing-only Web 和受控 writeback。
+- `src/open_deep_research/knowledge/validation/`：本地 candidate 与 Web candidate 共用的确定性 Gate，覆盖可解析性、直接性、支持度、来源权威、时效、冲突和敏感性规则。
+- `src/open_deep_research/knowledge/lifecycle/` 与 migration v3：六态 transition、proposal、soft delete 与 append-only audit；没有 hard-delete capability。
+- `src/open_deep_research/tools/governed_retrieval.py` 及最小图集成：Agentic 模式单一受治理工具入口；legacy augmentation 仅检索 active+validated 知识；所有开关关闭时保持 baseline 路由。
+- `deep_researcher.py` 的限定恢复修复：同轮 tool+complete 保序、并行部分失败保留成功、真实 compression retry，以及 think/error/limit 诊断消息不进入结构化证据输入。
+
+## 阶段 3 transition 与 coverage 决策
+
+- 唯一允许的状态边为：`candidate→active|quarantined|archived`、`active→stale|superseded|quarantined|archived`、`stale→active|superseded|archived`、`quarantined→candidate|archived`、`superseded→archived`；`archived` 无出边。同态请求幂等且不追加重复审计。
+- stale/quarantine/supersede/soft-delete 只能经 proposal/Repository 原子转换；Agent 不持有 hard-delete API。
+- active Evidence 仍须针对当前 `Requirement` 重跑 Gate，不能仅凭词法命中覆盖需求；必需 gap 存在且预算尚余时 Supervisor 不得结束。
+- 本地 active 足够时 Web 严格为 0；不足时只查询 missing aspects。Agentic 模式禁止 Tavily、MCP 和当前 OpenAI/Anthropic provider-native 搜索旁路，无法治理的 provider 配置 fail closed。
+- Web 结果总是先写 run-scoped `RunEvidenceStore`；只有 `enable_knowledge_writeback=True` 且 Gate 通过时，才写 canonical `candidate` 并按策略 promotion。writeback 关闭时不会跨 run 复用 transient evidence。
+
+## 阶段 3 验证命令与结果
+
+- 前置门禁 `conda run --no-capture-output -n open-deep-research python scripts/validate_phase.py --phase 2`：退出码 0；内部 `83 passed, 0 skipped`，T2-1 至 T2-15 全部 PASS。
+- 最终阶段 3 映射 suite（validator、lifecycle、retrieval、research、RunEvidenceStore、tools、agentic_rag、legacy limits）：退出码 0，`103 passed, 0 skipped, 30 warnings`；T3-1 至 T3-20 的直接测试全部通过。
+- `tests/test_research_limits.py tests/integration/knowledge` 回归：退出码 0，`19 passed`。
+- 图治理与 validator 自测最终复验：退出码 0，`18 passed`；missing-only orchestrator 定向复验：退出码 0，`11 passed`。
+- `python -m compileall -q src scripts tests` 与 `git diff --check`：退出码 0。
+- 较早阶段 3 聚合 validator 运行曾退出码 0（内部 `101 passed`，T3-1 至 T3-20 PASS）。最终补齐两项测试并修正 acceptance 映射后，首次重跑发现 `_check_phase3_test_suite` 的 `basetemp` 定义误置，20 项均报告 `NameError`；已将定义移回 Phase 3 suite 并复验进入 pytest。修复后 pytest 功能测试完成，但工具沙箱在 session-finish 清理 basetemp 时触发 Windows `WinError 5`；沙箱外同命令申请因当前执行额度被系统拒绝，故不将这两次 wrapper 记为通过。最终 103 项映射 suite 与 validator 自测均单独退出码 0。
+- 曾误写不存在的 `tests/unit/knowledge/validation` 路径，pytest 退出码 1/未收集；更正为真实目录后组合 suite 退出码 0，`84 passed`。这是命令路径错误，不是产品测试失败。
+- `ruff`、`mypy`：目标 conda 环境未安装对应模块，命令退出码 1；未安装新工具，未伪报通过。
+- 未调用真实模型、Tavily/Web、MCP、LangSmith、Deep Research Bench、DeepEval LLM Judge 或任何付费路径。
+
+## 阶段 3 兼容、回退与风险
+
+- `enable_agentic_rag`、`enable_knowledge_tools`、`enable_knowledge_writeback` 等新增开关默认均为 `False`；全部关闭时 `get_all_tools` 和旧图行为保持 baseline。回退只需关闭开关，不删除 SQLite/Blob/audit 数据。
+- run budget 以 scope+run 共享并原子扣减；失败调用也消耗预算，防止并行 Researcher 绕过成本上限。SQLite UNIQUE/事务与稳定 ID 负责跨 worker 去重，不依赖先查内存。
+- 当前 Gate 是确定性第一版；来源权威/时效策略需要后续以领域 fixture 扩展，但不得由 prompt 绕过。
+- Windows pytest basetemp ACL 仍可能导致 session-finish 假性失败；已有受限 gitignored 临时目录未擅自删除。正式 CI 应使用独立可控 temp root。
+- 既有 Pydantic/LangGraph deprecation warnings 共 30 条；本阶段未扩大范围修复。`ruff`/`mypy` 仍是环境缺口。
+
+## 阶段 2 交付物（历史）
 
 - `src/open_deep_research/knowledge/ingestion/`：bytes-only `DocumentInput`、`ImportJob`、PDF/Markdown/HTML/verified past-query parser、结构化 locator 和可恢复 `IngestionService`。
 - `src/open_deep_research/storage/migrations/v2.py` 与 Repository 扩展：scope-aware ImportJob、CAS 状态转换、审计、SQLite 重开和并发 claim。
@@ -103,4 +142,4 @@ PaperQA 参考源码仍固定为 `d7675d7b7eddeb3535e8c260399c5bbeeb818c50`；�
 
 ## 下一步
 
-阶段 2 已满足完成定义并停止。只有用户明确下达阶段 3 指令、且重新核验本页 T2 evidence 后，才可读取并执行 `doc/development_plan/phase_3_agentic_rag_lifecycle.md`；不得自动开始阶段 3。
+阶段 3 已满足完成定义并停止。只有用户明确下达阶段 4 指令、且重新核验本页 T3 evidence 后，才可读取并执行 `doc/development_plan/phase_4_mcp_integration.md`；不得自动开始阶段 4。

@@ -1,7 +1,7 @@
 """Graph state definitions and data structures for the Deep Research agent."""
 
 import operator
-from typing import Annotated, Optional
+from typing import Annotated, Any, Optional
 
 from langchain_core.messages import MessageLikeRepresentation
 from langgraph.graph import MessagesState
@@ -94,6 +94,13 @@ class AgentState(MessagesState):
     source_ids: Annotated[list[str], stable_id_reducer] = []
     evidence_ids: Annotated[list[str], stable_id_reducer] = []
     requirement_ids: Annotated[list[str], stable_id_reducer] = []
+    run_evidence_ids: Annotated[list[str], stable_id_reducer] = []
+    coverage_assessment_ids: Annotated[list[str], stable_id_reducer] = []
+    retrieval_decision_ids: Annotated[list[str], stable_id_reducer] = []
+    completion_decision_ids: Annotated[list[str], stable_id_reducer] = []
+    research_run_id: Optional[str]
+    requirement_set: Optional[dict[str, Any]]
+    research_gaps: Annotated[list[str], override_reducer] = []
     final_report: str
 
 class SupervisorState(TypedDict):
@@ -107,6 +114,13 @@ class SupervisorState(TypedDict):
     source_ids: Annotated[list[str], stable_id_reducer] = []
     evidence_ids: Annotated[list[str], stable_id_reducer] = []
     requirement_ids: Annotated[list[str], stable_id_reducer] = []
+    run_evidence_ids: Annotated[list[str], stable_id_reducer] = []
+    coverage_assessment_ids: Annotated[list[str], stable_id_reducer] = []
+    retrieval_decision_ids: Annotated[list[str], stable_id_reducer] = []
+    completion_decision_ids: Annotated[list[str], stable_id_reducer] = []
+    research_run_id: str
+    requirement_set: dict[str, Any]
+    research_gaps: Annotated[list[str], override_reducer] = []
 
 class ResearcherState(TypedDict):
     """State for individual researchers conducting research."""
@@ -119,6 +133,13 @@ class ResearcherState(TypedDict):
     source_ids: Annotated[list[str], stable_id_reducer] = []
     evidence_ids: Annotated[list[str], stable_id_reducer] = []
     requirement_ids: Annotated[list[str], stable_id_reducer] = []
+    run_evidence_ids: Annotated[list[str], stable_id_reducer] = []
+    coverage_assessment_ids: Annotated[list[str], stable_id_reducer] = []
+    retrieval_decision_ids: Annotated[list[str], stable_id_reducer] = []
+    completion_decision_ids: Annotated[list[str], stable_id_reducer] = []
+    research_run_id: str
+    requirement_set: dict[str, Any]
+    research_gaps: Annotated[list[str], override_reducer] = []
 
 class ResearcherOutputState(BaseModel):
     """Output state from individual researchers."""
@@ -128,3 +149,8 @@ class ResearcherOutputState(BaseModel):
     source_ids: Annotated[list[str], stable_id_reducer] = []
     evidence_ids: Annotated[list[str], stable_id_reducer] = []
     requirement_ids: Annotated[list[str], stable_id_reducer] = []
+    run_evidence_ids: Annotated[list[str], stable_id_reducer] = []
+    coverage_assessment_ids: Annotated[list[str], stable_id_reducer] = []
+    retrieval_decision_ids: Annotated[list[str], stable_id_reducer] = []
+    completion_decision_ids: Annotated[list[str], stable_id_reducer] = []
+    research_gaps: Annotated[list[str], override_reducer] = []

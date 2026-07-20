@@ -762,14 +762,34 @@ async def get_all_tools(config: RunnableConfig):
     Returns:
         List of all configured and available tools for research operations
     """
-    # Start with core research tools
-    tools = [tool(ResearchComplete), think_tool]
-    
-    # Add configured search tools
     configurable = Configuration.from_runnable_config(config)
+    # Agentic mode has exactly one information-retrieval boundary. Native Web
+    # providers are rejected by Configuration validation and MCP is deliberately
+    # not bound here because it may contain an unclassified Web-search bypass.
+    if configurable.enable_agentic_rag:
+        from open_deep_research.tools.governed_retrieval import (
+            governed_retrieval,
+        )
+
+        return [tool(ResearchComplete), think_tool, governed_retrieval]
+
+    # Start with the unchanged baseline research tools.
+    tools = [tool(ResearchComplete), think_tool]
+
+    # Add configured legacy search tools.
     search_api = SearchAPI(get_config_value(configurable.search_api))
     search_tools = await get_search_tool(search_api)
     tools.extend(search_tools)
+
+    # The non-Agentic ablation exposes only active/validated knowledge while
+    # retaining the legacy Web and MCP path.
+    if configurable.enable_knowledge_tools:
+        from open_deep_research.tools.governed_retrieval import (
+            knowledge_read_active,
+            knowledge_search_active,
+        )
+
+        tools.extend((knowledge_search_active, knowledge_read_active))
     
     # Track existing tool names to prevent conflicts
     existing_tool_names = {
@@ -786,6 +806,22 @@ async def get_all_tools(config: RunnableConfig):
 def get_notes_from_tool_calls(messages: list[MessageLikeRepresentation]):
     """Extract notes from tool call messages."""
     return [tool_msg.content for tool_msg in filter_messages(messages, include_types="tool")]
+
+
+def get_governed_results_from_tool_calls(
+    messages: list[MessageLikeRepresentation],
+):
+    """Return only schema-validated governed artifacts, excluding diagnostics."""
+    from open_deep_research.tools.governed_retrieval import parse_governed_result
+
+    results = []
+    for message in filter_messages(messages, include_types="tool"):
+        if getattr(message, "name", None) != "governed_retrieval":
+            continue
+        parsed = parse_governed_result(message)
+        if parsed is not None:
+            results.append(parsed)
+    return results
 
 ##########################
 # Model Provider Native Websearch Utils

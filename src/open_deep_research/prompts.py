@@ -448,6 +448,32 @@ evidence.
 </Output Format>
 """
 
+# These additions describe the opt-in Phase 3 tool surface. They are appended only
+# when the corresponding programmatic gates are active; they do not replace those
+# gates and therefore cannot authorize a Web bypass or knowledge transition.
+agentic_rag_supervisor_prompt = """
+
+The run is using evidence-governed retrieval. A programmatic Requirement coverage
+gate will evaluate ResearchComplete. If it reports required gaps and budget remains,
+delegate only those gaps. A ResearchComplete request cannot override that gate.
+"""
+
+agentic_rag_researcher_prompt = """
+
+The only information-retrieval tool for this run is governed_retrieval. It searches
+eligible local evidence first and may use the configured Web adapter only for an
+uncovered requirement. Do not request or infer a direct Tavily/provider-native Web
+path. Treat returned evidence/source/requirement IDs as the authoritative structured
+handoff; diagnostic, reflection, overflow, and error messages are not evidence.
+"""
+
+knowledge_augmented_legacy_prompt = """
+
+This run exposes active, validated local knowledge as optional read/search tools in
+addition to the legacy Web path. Candidate, stale, superseded, quarantined, archived,
+rejected, and pending records are never available through those production tools.
+"""
+
 
 compress_research_simple_human_message = """
 The messages above contain the complete research trace for the assigned task.

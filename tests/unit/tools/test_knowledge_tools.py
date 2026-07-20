@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
 from datetime import UTC, datetime
 from functools import wraps
 
@@ -166,7 +165,13 @@ def test_tool_requests_forbid_extra_fields_and_paths() -> None:
         KnowledgeReadRequest(stable_id="../secret.pdf")
 
 
-def test_phase2_contract_is_not_registered_with_production_tools() -> None:
-    source = inspect.getsource(get_all_tools)
-    assert "knowledge_search" not in source
-    assert "knowledge_read" not in source
+@async_test
+async def test_phase2_contract_is_not_registered_with_production_tools() -> None:
+    tools = await get_all_tools({"configurable": {"search_api": "none"}})
+    names = {
+        item.name if hasattr(item, "name") else item.get("name", "web_search")
+        for item in tools
+    }
+    assert "knowledge_search" not in names
+    assert "knowledge_read" not in names
+    assert "governed_retrieval" not in names

@@ -21,6 +21,13 @@ def test_structured_evidence_defaults_off_without_creating_storage(tmp_path, mon
     assert configuration.paperqa_index_dir == "data/knowledge/paperqa-index"
     assert configuration.knowledge_search_visibility == "active_only"
     assert configuration.paperqa_contextual_summarization is False
+    assert configuration.enable_knowledge_tools is False
+    assert configuration.enable_agentic_rag is False
+    assert configuration.enable_knowledge_writeback is False
+    assert configuration.run_evidence_store_backend == "memory"
+    assert configuration.run_evidence_db_path == (
+        "data/run-evidence/run-evidence.db"
+    )
     assert not Path("data").exists()
 
 
@@ -46,3 +53,8 @@ def test_legacy_researcher_output_remains_compatible_and_refs_are_additive():
     assert output.source_ids == []
     assert output.evidence_ids == []
     assert output.requirement_ids == []
+    assert output.run_evidence_ids == []
+    assert output.coverage_assessment_ids == []
+    assert output.retrieval_decision_ids == []
+    assert output.completion_decision_ids == []
+    assert output.research_gaps == []

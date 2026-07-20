@@ -95,6 +95,14 @@
       "dependencies": ["phase-1-knowledge-evidence-models-001"],
       "status": "completed",
       "evidence": "2026-07-21 运行 scripts/validate_phase.py --phase 2（退出码 0）：内部阶段 2 suite 83 passed、0 skipped，T2-1 至 T2-15 全部 PASS，覆盖四格式 candidate 导入、PDF/Markdown/HTML locator、空结果、禁止 PaperQA Agent API、幂等与新 Version、稳定 ID/排序、默认关闭和生产 Researcher 隔离、结构化失败重试、stable-ID read、Windows 依赖、candidate 不可引用、三格式源文件改写/删除后的 Blob/hash 恢复，以及真实 PaperQA 从权威 Repository rehydrate 和 scope/filter/as_of。目标环境为 Windows AMD64/Python 3.11.15；固定并实际安装 paper-qa 2026.3.18、paper-qa-pypdf 2026.3.18、tantivy 0.26.0、fhaviary 0.34.0、fhlmi 0.45.0、litellm 1.82.4；依赖 smoke 与 pip check 均退出码 0。全量离线 pytest 为 147 passed、1 skipped；T0 与 T1 回归全部 PASS；未调用真实模型、Web、LangSmith、Deep Research Bench 或 LLM Judge。"
+    },
+    {
+      "id": "phase-3-agentic-rag-lifecycle-001",
+      "name": "实现证据治理的 Agentic RAG 与知识生命周期",
+      "description": "执行开发计划阶段 3：建立稳定 RequirementSet、程序化完成门禁、RunEvidenceStore、共享预算、受治理本地/Web 检索、统一候选验证、六态生命周期、提议/软删除/审计，以及默认关闭的最小 Supervisor/Researcher 工具路由；不实现阶段 4 MCP 或后续 Memory/Citation Validator。",
+      "dependencies": ["phase-2-document-ingestion-paperqa-001"],
+      "status": "completed",
+      "evidence": "2026-07-21 已先运行 scripts/validate_phase.py --phase 2（退出码 0，内部 83 passed、T2-1 至 T2-15 全部 PASS）后实施阶段 3。最终离线阶段 3 映射 suite 退出码 0：103 passed、0 skipped，T3-1 至 T3-20 均有确定性测试 evidence；阶段 1/2 knowledge regression 19 passed，compileall 与 git diff --check 退出码 0。实现覆盖 brief→稳定 RequirementSet、同轮 ConductResearch/ResearchComplete 保序、必需 gap+预算 completion gate、active-only legacy augmentation、Agentic 模式无 Tavily/provider-native/MCP 旁路、local sufficient 时 Web=0、missing-only Web、统一 ValidationGate、run-first evidence、可选 candidate writeback、六态原子 transition/proposal/soft delete/audit、并发预算与稳定去重、compression 真实重试及诊断 ToolMessage 过滤。所有新增开关默认关闭，未调用真实模型、Web 或付费评测。最终再次执行聚合 scripts/validate_phase.py --phase 3 时，功能测试已完成但 pytest session-finish 受 Windows 沙箱临时目录 WinError 5 影响而无法形成新的干净 wrapper 退出码；较早版本的同一 wrapper 曾退出码 0（101 passed、T3-1 至 T3-20 PASS），最终新增/修正后的映射测试和 validator 自测均单独退出码 0；该 ACL 限制已如实记录，未伪报。ruff/mypy 未安装。"
     }
   ]
 }

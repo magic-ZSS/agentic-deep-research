@@ -7,10 +7,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from open_deep_research.knowledge.repositories import CorruptSchemaError
-from open_deep_research.storage.migrations import MIGRATION_V1, MIGRATION_V2
+from open_deep_research.storage.migrations import (
+    MIGRATION_V1,
+    MIGRATION_V2,
+    MIGRATION_V3,
+)
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 REQUIRED_TABLES_V1 = frozenset(
     {
         "schema_metadata",
@@ -26,7 +30,8 @@ REQUIRED_TABLES_V1 = frozenset(
     }
 )
 REQUIRED_TABLES_V2 = REQUIRED_TABLES_V1 | {"import_jobs"}
-REQUIRED_TABLES = REQUIRED_TABLES_V2
+REQUIRED_TABLES_V3 = REQUIRED_TABLES_V2 | {"lifecycle_proposals"}
+REQUIRED_TABLES = REQUIRED_TABLES_V3
 
 
 class SQLiteDatabase:
@@ -76,10 +81,13 @@ class SQLiteDatabase:
                     raise CorruptSchemaError(
                         f"unsupported SQLite schema version: {found!r}"
                     )
+                required_by_version = {
+                    1: REQUIRED_TABLES_V1,
+                    2: REQUIRED_TABLES_V2,
+                    3: REQUIRED_TABLES_V3,
+                }
                 self._validate_required_tables(
-                    connection,
-                    REQUIRED_TABLES_V1 if found == 1 else REQUIRED_TABLES_V2,
-                    found,
+                    connection, required_by_version[found], found
                 )
             else:
                 self._execute_migration(connection, MIGRATION_V1)
@@ -97,7 +105,15 @@ class SQLiteDatabase:
                     (2, datetime.now(UTC).isoformat()),
                 )
                 found = 2
-            self._validate_required_tables(connection, REQUIRED_TABLES_V2, found)
+            if found == 2:
+                self._execute_migration(connection, MIGRATION_V3)
+                connection.execute(
+                    "UPDATE schema_metadata SET schema_version = ?, applied_at = ? "
+                    "WHERE singleton = 1",
+                    (3, datetime.now(UTC).isoformat()),
+                )
+                found = 3
+            self._validate_required_tables(connection, REQUIRED_TABLES_V3, found)
             connection.commit()
         except BaseException:
             connection.rollback()
