@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Any, List, Literal, Optional
 
 from langchain_core.runnables import RunnableConfig
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class SearchAPI(Enum):
@@ -92,6 +92,24 @@ class Configuration(BaseModel):
     knowledge_db_path: str = "data/knowledge/knowledge.db"
     knowledge_blob_dir: str = "data/knowledge/blobs"
     sqlite_busy_timeout_ms: int = Field(default=5000, ge=1, le=120000)
+
+    # Phase 2 knowledge ingestion/retrieval remains opt-in and is deliberately
+    # disconnected from the production Researcher tool set. Candidate visibility
+    # is granted by a trusted inspection context, never by model configuration.
+    enable_knowledge_base: bool = False
+    enable_paperqa_retrieval: bool = False
+    knowledge_import_roots: tuple[str, ...] = ()
+    knowledge_import_staging: str = "data/knowledge/import"
+    paperqa_index_dir: str = "data/knowledge/paperqa-index"
+    knowledge_search_visibility: Literal["active_only"] = "active_only"
+    knowledge_search_limit: int = Field(default=8, ge=1, le=50)
+    knowledge_chunk_size_chars: int = Field(default=4000, ge=256, le=20000)
+    knowledge_chunk_overlap_chars: int = Field(default=200, ge=0, le=4000)
+    paperqa_contextual_summarization: bool = False
+    paperqa_evidence_k: int = Field(default=8, ge=1, le=50)
+    paperqa_contextual_max_concurrency: int = Field(default=2, ge=1, le=8)
+    paperqa_contextual_timeout_seconds: float = Field(default=30.0, ge=1, le=300)
+    paperqa_contextual_token_limit: int = Field(default=4000, ge=256, le=20000)
 
     # 配置同时运行的研究子任务数量。
     max_concurrent_research_units: int = Field(
@@ -343,6 +361,16 @@ class Configuration(BaseModel):
             }
         }
     )
+
+    @model_validator(mode="after")
+    def validate_knowledge_chunking(self) -> "Configuration":
+        """Reject overlap settings that cannot advance the chunk window."""
+        if self.knowledge_chunk_overlap_chars >= self.knowledge_chunk_size_chars:
+            raise ValueError(
+                "knowledge_chunk_overlap_chars must be smaller than "
+                "knowledge_chunk_size_chars"
+            )
+        return self
 
 
     @classmethod

@@ -85,8 +85,8 @@
       "name": "建立知识、来源、证据与本地存储契约",
       "description": "执行开发计划阶段 1：建立 scope-aware 领域模型、稳定 ID、InMemory/SQLite metadata Repository、InMemory/Local Blob Repository、迁移 v1、软删除、审计、确定性 reducer 和 additive graph state 引用；不接入主图或 PaperQA2。",
       "dependencies": ["phase-0-baseline-references-001"],
-      "status": "in-progress",
-      "evidence": "阶段 0 状态为 completed；2026-07-20 重新运行 scripts/validate_phase.py --phase 0，T0-1 至 T0-12 全部 PASS。阶段 1 当前正在实现，尚未验收。"
+      "status": "completed",
+      "evidence": "2026-07-21 运行 scripts/validate_phase.py --phase 1（退出码 0）：T1-1 同内容幂等、T1-2 新内容不可变版本、T1-3 Evidence 外键回溯、T1-4 page/heading locator、T1-5 确定性 reducer、T1-6 SQLite 重开持久化、T1-7 UNIQUE/事务并发去重、T1-8 soft delete/audit、T1-9 Python 3.11+/包发现/仓库外导入、T1-10 默认关闭兼容、T1-11 双后端 contract suite、T1-12 schema v1/status 边界、T1-13 scope-local blob 去重、T1-14 原始快照、T1-15 引用资格派生、T1-16 scope/private 隔离全部 PASS；全量离线 pytest 81 passed、1 skipped（退出码 0）；Phase 0 回归 T0-1 至 T0-12 全部 PASS。"
     }
   ]
 }

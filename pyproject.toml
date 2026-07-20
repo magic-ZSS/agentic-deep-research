@@ -49,6 +49,12 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["mypy>=1.11.1", "ruff>=0.6.1"]
 eval = ["deepeval==4.1.1"]
+knowledge = [
+    "paper-qa==2026.3.18",
+    "fhaviary==0.34.0",
+    "fhlmi==0.45.0",
+    "litellm==1.82.4",
+]
 
 [build-system]
 requires = ["setuptools>=73.0.0", "wheel"]
@@ -59,9 +65,13 @@ packages = [
     "open_deep_research",
     "open_deep_research.evaluation",
     "open_deep_research.knowledge",
+    "open_deep_research.knowledge.ingestion",
+    "open_deep_research.knowledge.ingestion.parsers",
+    "open_deep_research.knowledge.retrieval",
     "open_deep_research.evidence",
     "open_deep_research.storage",
     "open_deep_research.storage.migrations",
+    "open_deep_research.tools",
     "legacy",
     "tests",
 ]

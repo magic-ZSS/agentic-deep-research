@@ -7,11 +7,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from open_deep_research.knowledge.repositories import CorruptSchemaError
-from open_deep_research.storage.migrations import MIGRATION_V1
+from open_deep_research.storage.migrations import MIGRATION_V1, MIGRATION_V2
 
 
-SCHEMA_VERSION = 1
-REQUIRED_TABLES = frozenset(
+SCHEMA_VERSION = 2
+REQUIRED_TABLES_V1 = frozenset(
     {
         "schema_metadata",
         "knowledge_scopes",
@@ -25,6 +25,8 @@ REQUIRED_TABLES = frozenset(
         "audit_events",
     }
 )
+REQUIRED_TABLES_V2 = REQUIRED_TABLES_V1 | {"import_jobs"}
+REQUIRED_TABLES = REQUIRED_TABLES_V2
 
 
 class SQLiteDatabase:
@@ -52,7 +54,7 @@ class SQLiteDatabase:
         return connection
 
     def migrate(self) -> None:
-        """Create v1 atomically or reject an unknown/newer schema."""
+        """Apply ordered migrations atomically or reject an invalid schema."""
         connection = self.connect()
         try:
             connection.execute("BEGIN IMMEDIATE")
@@ -67,37 +69,65 @@ class SQLiteDatabase:
                     ).fetchone()
                 except sqlite3.DatabaseError as exc:
                     raise CorruptSchemaError("schema_metadata is malformed") from exc
-                if row is None or int(row["schema_version"]) != SCHEMA_VERSION:
-                    found = None if row is None else row["schema_version"]
+                if row is None:
+                    raise CorruptSchemaError("schema_metadata row is missing")
+                found = int(row["schema_version"])
+                if found < 1 or found > SCHEMA_VERSION:
                     raise CorruptSchemaError(
                         f"unsupported SQLite schema version: {found!r}"
                     )
-                present = {
-                    str(item["name"])
-                    for item in connection.execute(
-                        "SELECT name FROM sqlite_master WHERE type = 'table'"
-                    ).fetchall()
-                }
-                missing = REQUIRED_TABLES - present
-                if missing:
-                    raise CorruptSchemaError(
-                        f"SQLite schema v1 is missing tables: {sorted(missing)}"
-                    )
+                self._validate_required_tables(
+                    connection,
+                    REQUIRED_TABLES_V1 if found == 1 else REQUIRED_TABLES_V2,
+                    found,
+                )
             else:
-                for statement in MIGRATION_V1.split(";"):
-                    if statement.strip():
-                        connection.execute(statement)
+                self._execute_migration(connection, MIGRATION_V1)
                 connection.execute(
                     "INSERT INTO schema_metadata(singleton, schema_version, applied_at) "
                     "VALUES (1, ?, ?)",
-                    (SCHEMA_VERSION, datetime.now(UTC).isoformat()),
+                    (1, datetime.now(UTC).isoformat()),
                 )
+                found = 1
+            if found == 1:
+                self._execute_migration(connection, MIGRATION_V2)
+                connection.execute(
+                    "UPDATE schema_metadata SET schema_version = ?, applied_at = ? "
+                    "WHERE singleton = 1",
+                    (2, datetime.now(UTC).isoformat()),
+                )
+                found = 2
+            self._validate_required_tables(connection, REQUIRED_TABLES_V2, found)
             connection.commit()
         except BaseException:
             connection.rollback()
             raise
         finally:
             connection.close()
+
+    @staticmethod
+    def _execute_migration(connection: sqlite3.Connection, migration: str) -> None:
+        for statement in migration.split(";"):
+            if statement.strip():
+                connection.execute(statement)
+
+    @staticmethod
+    def _validate_required_tables(
+        connection: sqlite3.Connection,
+        required: frozenset[str],
+        version: int,
+    ) -> None:
+        present = {
+            str(item["name"])
+            for item in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall()
+        }
+        missing = required - present
+        if missing:
+            raise CorruptSchemaError(
+                f"SQLite schema v{version} is missing tables: {sorted(missing)}"
+            )
 
     def schema_version(self) -> int:
         """Return the installed schema version after integrity checks."""

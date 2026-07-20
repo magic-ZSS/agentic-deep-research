@@ -1,0 +1,26 @@
+{
+  "records": [
+    {
+      "record_id": "query-record-001",
+      "verified": true,
+      "query": "Which storage is authoritative?",
+      "scope": {
+        "tenant_id": "tenant-a",
+        "project_id": "project-a",
+        "visibility": "project"
+      },
+      "facts": [
+        {
+          "text": "SQLite is the authoritative metadata store.",
+          "source_id": "src_fixture_001",
+          "evidence_id": "evd_fixture_001"
+        },
+        {
+          "text": "Original document bytes remain content-addressed.",
+          "source_id": "src_fixture_002",
+          "evidence_id": "evd_fixture_002"
+        }
+      ]
+    }
+  ]
+}

@@ -18,6 +18,12 @@ from open_deep_research.evidence.models import (
     Requirement,
     RequirementStatus,
 )
+from open_deep_research.knowledge.ingestion.models import (
+    ImportIndexStatus,
+    ImportJob,
+    ImportJobError,
+    ImportJobStatus,
+)
 from open_deep_research.knowledge.models import (
     AuthorityClass,
     Chunk,
@@ -61,6 +67,7 @@ class InMemoryRepository:
         self._requirements: dict[tuple[str, str], Requirement] = {}
         self._evidence: dict[tuple[str, str], Evidence] = {}
         self._audit: dict[tuple[str, str], AuditEvent] = {}
+        self._import_jobs: dict[tuple[str, str], ImportJob] = {}
         self._lock = RLock()
 
     def _prepare(
@@ -186,6 +193,27 @@ class InMemoryRepository:
                 )
             )
 
+    async def list_sources(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        kind: SourceKind | None = None,
+        include_deleted: bool = False,
+    ) -> list[Source]:
+        with self._lock:
+            self._prepare(access, scope)
+            values = [
+                value
+                for (current_scope, _), value in self._sources.items()
+                if current_scope == scope.scope_id
+                and (kind is None or value.kind is kind)
+                and (include_deleted or value.soft_deleted_at is None)
+            ]
+            return [
+                _copy(value) for value in sorted(values, key=lambda item: item.source_id)
+            ]
+
     async def upsert_document(
         self,
         access: KnowledgeAccessContext,
@@ -242,6 +270,70 @@ class InMemoryRepository:
                     entity_name="document",
                 )
             )
+
+    async def list_documents(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        source_id: str | None = None,
+        include_deleted: bool = False,
+    ) -> list[Document]:
+        with self._lock:
+            self._prepare(access, scope)
+            if source_id is not None:
+                self._get_scoped(
+                    self._sources,
+                    scope.scope_id,
+                    source_id,
+                    include_deleted=include_deleted,
+                    entity_name="source",
+                )
+            values = [
+                value
+                for (current_scope, _), value in self._documents.items()
+                if current_scope == scope.scope_id
+                and (source_id is None or value.source_id == source_id)
+                and (include_deleted or value.soft_deleted_at is None)
+            ]
+            return [
+                _copy(value)
+                for value in sorted(values, key=lambda item: item.document_id)
+            ]
+
+    async def get_content_blob_metadata(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        blob_id: str,
+    ) -> ContentBlob:
+        with self._lock:
+            self._prepare(access, scope)
+            return _copy(
+                self._get_scoped(
+                    self._blobs,
+                    scope.scope_id,
+                    blob_id,
+                    include_deleted=True,
+                    entity_name="blob",
+                )
+            )
+
+    async def list_content_blob_metadata(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+    ) -> list[ContentBlob]:
+        with self._lock:
+            self._prepare(access, scope)
+            values = [
+                value
+                for (current_scope, _), value in self._blobs.items()
+                if current_scope == scope.scope_id
+            ]
+            return [
+                _copy(value) for value in sorted(values, key=lambda item: item.blob_id)
+            ]
 
     async def add_version(
         self,
@@ -378,6 +470,25 @@ class InMemoryRepository:
             ]
             return [_copy(value) for value in sorted(values, key=lambda item: item.version_number)]
 
+    async def list_versions_for_scope(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        include_deleted: bool = False,
+    ) -> list[DocumentVersion]:
+        with self._lock:
+            self._prepare(access, scope)
+            values = [
+                value
+                for (current_scope, _), value in self._versions.items()
+                if current_scope == scope.scope_id
+                and (include_deleted or value.soft_deleted_at is None)
+            ]
+            return [
+                _copy(value) for value in sorted(values, key=lambda item: item.version_id)
+            ]
+
     async def find_by_content_hash(
         self,
         access: KnowledgeAccessContext,
@@ -471,6 +582,35 @@ class InMemoryRepository:
                     entity_name="chunk",
                 )
             )
+
+    async def list_chunks_for_version(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        version_id: str,
+        *,
+        include_deleted: bool = False,
+    ) -> list[Chunk]:
+        with self._lock:
+            self._prepare(access, scope)
+            self._get_scoped(
+                self._versions,
+                scope.scope_id,
+                version_id,
+                include_deleted=include_deleted,
+                entity_name="version",
+            )
+            values = [
+                value
+                for (current_scope, _), value in self._chunks.items()
+                if current_scope == scope.scope_id
+                and value.version_id == version_id
+                and (include_deleted or value.soft_deleted_at is None)
+            ]
+            return [
+                _copy(value)
+                for value in sorted(values, key=lambda item: (item.ordinal, item.chunk_id))
+            ]
 
     async def add_requirement(
         self,
@@ -776,6 +916,206 @@ class InMemoryRepository:
                 include_deleted=include_deleted,
                 predicate=lambda value: value.chunk_id in chunk_ids,
             )
+
+    def _validate_import_job_references_unlocked(
+        self, scope_id: str, job: ImportJob
+    ) -> None:
+        blob = source = document = version = None
+        if job.blob_id is not None:
+            blob = self._get_scoped(
+                self._blobs,
+                scope_id,
+                job.blob_id,
+                include_deleted=True,
+                entity_name="blob",
+            )
+            if blob.content_sha256 != job.content_sha256:
+                raise RepositoryConflictError("import job blob hash does not match")
+        if job.source_id is not None:
+            source = self._get_scoped(
+                self._sources,
+                scope_id,
+                job.source_id,
+                include_deleted=False,
+                entity_name="source",
+            )
+        if job.document_id is not None:
+            document = self._get_scoped(
+                self._documents,
+                scope_id,
+                job.document_id,
+                include_deleted=False,
+                entity_name="document",
+            )
+        if job.version_id is not None:
+            version = self._get_scoped(
+                self._versions,
+                scope_id,
+                job.version_id,
+                include_deleted=False,
+                entity_name="version",
+            )
+        if document is not None and source is not None:
+            if document.source_id != source.source_id:
+                raise RepositoryConflictError("import job source/document chain conflicts")
+        if version is not None and document is not None:
+            if version.document_id != document.document_id:
+                raise RepositoryConflictError("import job document/version chain conflicts")
+        if version is not None and blob is not None:
+            if (
+                version.blob_id != blob.blob_id
+                or version.content_sha256 != blob.content_sha256
+            ):
+                raise RepositoryConflictError("import job blob/version chain conflicts")
+
+    async def create_import_job(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        job: ImportJob,
+        *,
+        correlation_id: str = "ingestion",
+    ) -> ImportJob:
+        if job.scope_id != scope.scope_id:
+            raise RepositoryAccessError("import job belongs to another scope")
+        if (
+            job.status is not ImportJobStatus.PENDING
+            or job.index_status is not ImportIndexStatus.NOT_REQUESTED
+        ):
+            raise InvalidTransitionError("new import job must start pending")
+        with self._lock:
+            self._prepare(access, scope)
+            self._validate_import_job_references_unlocked(scope.scope_id, job)
+            key = (scope.scope_id, job.job_id)
+            existing = self._import_jobs.get(key)
+            if existing is not None:
+                return _copy(existing)
+            self._import_jobs[key] = _copy(job)
+            self._record_created(
+                scope.scope_id,
+                "import_job",
+                job.job_id,
+                correlation_id,
+                after_status=f"{job.status.value}:{job.index_status.value}",
+            )
+            return _copy(job)
+
+    async def get_import_job(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        job_id: str,
+    ) -> ImportJob:
+        with self._lock:
+            self._prepare(access, scope)
+            return _copy(
+                self._get_scoped(
+                    self._import_jobs,
+                    scope.scope_id,
+                    job_id,
+                    include_deleted=True,
+                    entity_name="import job",
+                )
+            )
+
+    async def list_import_jobs(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        status: ImportJobStatus | None = None,
+        index_status: ImportIndexStatus | None = None,
+    ) -> list[ImportJob]:
+        with self._lock:
+            self._prepare(access, scope)
+            values = [
+                value
+                for (current_scope, _), value in self._import_jobs.items()
+                if current_scope == scope.scope_id
+                and (status is None or value.status is status)
+                and (index_status is None or value.index_status is index_status)
+            ]
+            return [
+                _copy(value) for value in sorted(values, key=lambda item: item.job_id)
+            ]
+
+    async def transition_import_job(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        job_id: str,
+        *,
+        expected_status: ImportJobStatus,
+        status: ImportJobStatus,
+        expected_index_status: ImportIndexStatus | None = None,
+        index_status: ImportIndexStatus | None = None,
+        error: ImportJobError | None = None,
+        blob_id: str | None = None,
+        source_id: str | None = None,
+        document_id: str | None = None,
+        version_id: str | None = None,
+        actor_type: str,
+        reason: str,
+        correlation_id: str,
+    ) -> ImportJob:
+        if index_status is not None and expected_index_status is None:
+            raise RepositoryConflictError(
+                "index transition requires expected_index_status CAS"
+            )
+        with self._lock:
+            self._prepare(access, scope)
+            current = self._get_scoped(
+                self._import_jobs,
+                scope.scope_id,
+                job_id,
+                include_deleted=True,
+                entity_name="import job",
+            )
+            if current.status is not expected_status or (
+                expected_index_status is not None
+                and current.index_status is not expected_index_status
+            ):
+                raise RepositoryConflictError("import job CAS precondition failed")
+            if (
+                current.status is status
+                and (index_status is None or current.index_status is index_status)
+                and error is None
+                and all(
+                    value is None
+                    for value in (blob_id, source_id, document_id, version_id)
+                )
+            ):
+                return _copy(current)
+            try:
+                updated = current.transition(
+                    status=status,
+                    index_status=index_status,
+                    error=error,
+                    blob_id=blob_id,
+                    source_id=source_id,
+                    document_id=document_id,
+                    version_id=version_id,
+                )
+            except ValueError as exc:
+                raise InvalidTransitionError(str(exc)) from exc
+            self._validate_import_job_references_unlocked(scope.scope_id, updated)
+            self._import_jobs[(scope.scope_id, job_id)] = _copy(updated)
+            self._append_audit_unlocked(
+                AuditEvent(
+                    scope_id=scope.scope_id,
+                    entity_type="import_job",
+                    entity_id=job_id,
+                    action="state_changed",
+                    actor_type=actor_type,
+                    reason=reason,
+                    before_status=(
+                        f"{current.status.value}:{current.index_status.value}"
+                    ),
+                    after_status=f"{updated.status.value}:{updated.index_status.value}",
+                    correlation_id=correlation_id,
+                )
+            )
+            return _copy(updated)
 
     async def soft_delete(
         self,

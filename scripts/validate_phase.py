@@ -738,7 +738,7 @@ def _check_phase1_schema() -> str:
         "evidence",
         "audit_events",
     )
-    if SCHEMA_VERSION != 1 or any(name not in MIGRATION_V1 for name in required_tables):
+    if SCHEMA_VERSION < 1 or any(name not in MIGRATION_V1 for name in required_tables):
         raise ValueError("migration v1 is incomplete")
     if {item.value for item in VersionLifecycleStatus} != {
         "candidate",
@@ -755,7 +755,10 @@ def _check_phase1_schema() -> str:
         "rejected",
     }:
         raise ValueError("Evidence validation vocabulary changed")
-    return "schema version 1, required tables, and disjoint status vocabularies pass"
+    return (
+        "historical migration v1 remains intact under the current schema, and "
+        "required tables/status vocabularies pass"
+    )
 
 
 def _check_phase1_citation_eligibility() -> str:

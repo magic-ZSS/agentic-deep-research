@@ -19,6 +19,12 @@ from open_deep_research.evidence.models import (
     Requirement,
     RequirementStatus,
 )
+from open_deep_research.knowledge.ingestion.models import (
+    ImportIndexStatus,
+    ImportJob,
+    ImportJobError,
+    ImportJobStatus,
+)
 from open_deep_research.knowledge.models import (
     AuthorityClass,
     Chunk,
@@ -278,6 +284,31 @@ class SQLiteRepository:
             "source",
         )
 
+    async def list_sources(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        kind: SourceKind | None = None,
+        include_deleted: bool = False,
+    ) -> list[Source]:
+        clauses: list[str] = []
+        parameters: list[object] = []
+        if kind is not None:
+            clauses.append("kind = ?")
+            parameters.append(kind.value)
+        if not include_deleted:
+            clauses.append("soft_deleted_at IS NULL")
+        return await self._list_models(
+            access,
+            scope,
+            table="sources",
+            model_type=Source,
+            clauses=clauses,
+            parameters=parameters,
+            order_by="source_id",
+        )
+
     async def upsert_document(
         self,
         access: KnowledgeAccessContext,
@@ -367,6 +398,79 @@ class SQLiteRepository:
             "document",
         )
 
+    async def list_documents(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        source_id: str | None = None,
+        include_deleted: bool = False,
+    ) -> list[Document]:
+        if source_id is not None:
+            await self.get_source(
+                access, scope, source_id, include_deleted=include_deleted
+            )
+        clauses: list[str] = []
+        parameters: list[object] = []
+        if source_id is not None:
+            clauses.append("source_id = ?")
+            parameters.append(source_id)
+        if not include_deleted:
+            clauses.append("soft_deleted_at IS NULL")
+        return await self._list_models(
+            access,
+            scope,
+            table="documents",
+            model_type=Document,
+            clauses=clauses,
+            parameters=parameters,
+            order_by="document_id",
+        )
+
+    async def get_content_blob_metadata(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        blob_id: str,
+    ) -> ContentBlob:
+        def operation() -> ContentBlob:
+            connection = self.database.connect()
+            try:
+                self._prepare(connection, access, scope)
+                row = connection.execute(
+                    "SELECT payload FROM content_blobs "
+                    "WHERE scope_id = ? AND blob_id = ?",
+                    (scope.scope_id, blob_id),
+                ).fetchone()
+                if row is None:
+                    other = connection.execute(
+                        "SELECT 1 FROM content_blobs WHERE blob_id = ? LIMIT 1",
+                        (blob_id,),
+                    ).fetchone()
+                    if other is not None:
+                        raise RepositoryAccessError("blob belongs to another scope")
+                    raise RepositoryNotFoundError("blob not found")
+                return _load(ContentBlob, row["payload"])
+            finally:
+                connection.close()
+
+        return await self._run(operation)
+
+    async def list_content_blob_metadata(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+    ) -> list[ContentBlob]:
+        return await self._list_models(
+            access,
+            scope,
+            table="content_blobs",
+            model_type=ContentBlob,
+            clauses=[],
+            parameters=[],
+            order_by="blob_id",
+        )
+
     async def _get_model(
         self,
         access: KnowledgeAccessContext,
@@ -392,6 +496,37 @@ class SQLiteRepository:
                     entity_name=entity_name,
                 )
                 return _load(model_type, row["payload"])
+            finally:
+                connection.close()
+
+        return await self._run(operation)
+
+    async def _list_models(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        table: str,
+        model_type: type[ModelT],
+        clauses: list[str],
+        parameters: list[object],
+        order_by: str,
+    ) -> list[ModelT]:
+        def operation() -> list[ModelT]:
+            connection = self.database.connect()
+            try:
+                self._prepare(connection, access, scope)
+                conditions = ["scope_id = ?", *clauses]
+                rows = connection.execute(
+                    "SELECT payload FROM "
+                    + table
+                    + " WHERE "
+                    + " AND ".join(conditions)
+                    + " ORDER BY "
+                    + order_by,
+                    (scope.scope_id, *parameters),
+                ).fetchall()
+                return [_load(model_type, row["payload"]) for row in rows]
             finally:
                 connection.close()
 
@@ -591,6 +726,24 @@ class SQLiteRepository:
 
         return await self._run(operation)
 
+    async def list_versions_for_scope(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        include_deleted: bool = False,
+    ) -> list[DocumentVersion]:
+        clauses = [] if include_deleted else ["soft_deleted_at IS NULL"]
+        return await self._list_models(
+            access,
+            scope,
+            table="document_versions",
+            model_type=DocumentVersion,
+            clauses=clauses,
+            parameters=[],
+            order_by="version_id",
+        )
+
     async def find_by_content_hash(
         self,
         access: KnowledgeAccessContext,
@@ -719,6 +872,30 @@ class SQLiteRepository:
             Chunk,
             include_deleted,
             "chunk",
+        )
+
+    async def list_chunks_for_version(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        version_id: str,
+        *,
+        include_deleted: bool = False,
+    ) -> list[Chunk]:
+        await self.get_version(
+            access, scope, version_id, include_deleted=include_deleted
+        )
+        clauses = ["version_id = ?"]
+        if not include_deleted:
+            clauses.append("soft_deleted_at IS NULL")
+        return await self._list_models(
+            access,
+            scope,
+            table="chunks",
+            model_type=Chunk,
+            clauses=clauses,
+            parameters=[version_id],
+            order_by="ordinal, chunk_id",
         )
 
     async def add_requirement(
@@ -1121,6 +1298,338 @@ class SQLiteRepository:
             f"{condition} ORDER BY e.evidence_id",
             (scope.scope_id, source_id),
         )
+
+    @staticmethod
+    def _get_import_job_row(
+        connection: sqlite3.Connection,
+        scope_id: str,
+        job_id: str,
+    ) -> sqlite3.Row:
+        row = connection.execute(
+            "SELECT payload FROM import_jobs WHERE scope_id = ? AND job_id = ?",
+            (scope_id, job_id),
+        ).fetchone()
+        if row is None:
+            other = connection.execute(
+                "SELECT 1 FROM import_jobs WHERE job_id = ? LIMIT 1",
+                (job_id,),
+            ).fetchone()
+            if other is not None:
+                raise RepositoryAccessError("import job belongs to another scope")
+            raise RepositoryNotFoundError("import job not found")
+        return row
+
+    @classmethod
+    def _validate_import_job_references(
+        cls,
+        connection: sqlite3.Connection,
+        scope_id: str,
+        job: ImportJob,
+    ) -> None:
+        blob = source = document = version = None
+        if job.blob_id is not None:
+            row = connection.execute(
+                "SELECT payload FROM content_blobs "
+                "WHERE scope_id = ? AND blob_id = ?",
+                (scope_id, job.blob_id),
+            ).fetchone()
+            if row is None:
+                other = connection.execute(
+                    "SELECT 1 FROM content_blobs WHERE blob_id = ? LIMIT 1",
+                    (job.blob_id,),
+                ).fetchone()
+                if other is not None:
+                    raise RepositoryAccessError("blob belongs to another scope")
+                raise RepositoryNotFoundError("blob not found")
+            blob = _load(ContentBlob, row["payload"])
+            if blob.content_sha256 != job.content_sha256:
+                raise RepositoryConflictError("import job blob hash does not match")
+        if job.source_id is not None:
+            row = cls._get_row(
+                connection,
+                table="sources",
+                id_column="source_id",
+                scope_id=scope_id,
+                entity_id=job.source_id,
+                include_deleted=False,
+                entity_name="source",
+            )
+            source = _load(Source, row["payload"])
+        if job.document_id is not None:
+            row = cls._get_row(
+                connection,
+                table="documents",
+                id_column="document_id",
+                scope_id=scope_id,
+                entity_id=job.document_id,
+                include_deleted=False,
+                entity_name="document",
+            )
+            document = _load(Document, row["payload"])
+        if job.version_id is not None:
+            row = cls._get_row(
+                connection,
+                table="document_versions",
+                id_column="version_id",
+                scope_id=scope_id,
+                entity_id=job.version_id,
+                include_deleted=False,
+                entity_name="version",
+            )
+            version = _load(DocumentVersion, row["payload"])
+        if document is not None and source is not None:
+            if document.source_id != source.source_id:
+                raise RepositoryConflictError("import job source/document chain conflicts")
+        if version is not None and document is not None:
+            if version.document_id != document.document_id:
+                raise RepositoryConflictError("import job document/version chain conflicts")
+        if version is not None and blob is not None:
+            if (
+                version.blob_id != blob.blob_id
+                or version.content_sha256 != blob.content_sha256
+            ):
+                raise RepositoryConflictError("import job blob/version chain conflicts")
+
+    async def create_import_job(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        job: ImportJob,
+        *,
+        correlation_id: str = "ingestion",
+    ) -> ImportJob:
+        if job.scope_id != scope.scope_id:
+            raise RepositoryAccessError("import job belongs to another scope")
+        if (
+            job.status is not ImportJobStatus.PENDING
+            or job.index_status is not ImportIndexStatus.NOT_REQUESTED
+        ):
+            raise InvalidTransitionError("new import job must start pending")
+
+        def operation() -> ImportJob:
+            connection = self.database.connect()
+            try:
+                self._begin(connection)
+                self._prepare(connection, access, scope)
+                self._validate_import_job_references(
+                    connection, scope.scope_id, job
+                )
+                cursor = connection.execute(
+                    "INSERT OR IGNORE INTO import_jobs "
+                    "(scope_id, job_id, input_kind, input_ref, content_sha256, "
+                    "parser_name, parser_version, chunk_config_sha256, status, "
+                    "index_status, attempt_count, blob_id, source_id, document_id, "
+                    "version_id, updated_at, payload) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        scope.scope_id,
+                        job.job_id,
+                        job.input_kind.value,
+                        job.input_ref,
+                        job.content_sha256,
+                        job.parser_name,
+                        job.parser_version,
+                        job.chunk_config_sha256,
+                        job.status.value,
+                        job.index_status.value,
+                        job.attempt_count,
+                        job.blob_id,
+                        job.source_id,
+                        job.document_id,
+                        job.version_id,
+                        job.updated_at.isoformat(),
+                        _dump(job),
+                    ),
+                )
+                row = connection.execute(
+                    "SELECT payload FROM import_jobs "
+                    "WHERE scope_id = ? AND job_id = ?",
+                    (scope.scope_id, job.job_id),
+                ).fetchone()
+                if row is None:
+                    raise RepositoryConflictError("import job identity conflicts")
+                stored = _load(ImportJob, row["payload"])
+                if cursor.rowcount == 1:
+                    self._record_created(
+                        connection,
+                        scope.scope_id,
+                        "import_job",
+                        job.job_id,
+                        correlation_id,
+                        after_status=f"{job.status.value}:{job.index_status.value}",
+                    )
+                connection.commit()
+                return stored
+            except sqlite3.IntegrityError as exc:
+                connection.rollback()
+                raise RepositoryConflictError("import job constraint conflict") from exc
+            except BaseException:
+                connection.rollback()
+                raise
+            finally:
+                connection.close()
+
+        return await self._run(operation)
+
+    async def get_import_job(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        job_id: str,
+    ) -> ImportJob:
+        def operation() -> ImportJob:
+            connection = self.database.connect()
+            try:
+                self._prepare(connection, access, scope)
+                row = self._get_import_job_row(connection, scope.scope_id, job_id)
+                return _load(ImportJob, row["payload"])
+            finally:
+                connection.close()
+
+        return await self._run(operation)
+
+    async def list_import_jobs(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        status: ImportJobStatus | None = None,
+        index_status: ImportIndexStatus | None = None,
+    ) -> list[ImportJob]:
+        clauses: list[str] = []
+        parameters: list[object] = []
+        if status is not None:
+            clauses.append("status = ?")
+            parameters.append(status.value)
+        if index_status is not None:
+            clauses.append("index_status = ?")
+            parameters.append(index_status.value)
+        return await self._list_models(
+            access,
+            scope,
+            table="import_jobs",
+            model_type=ImportJob,
+            clauses=clauses,
+            parameters=parameters,
+            order_by="job_id",
+        )
+
+    async def transition_import_job(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        job_id: str,
+        *,
+        expected_status: ImportJobStatus,
+        status: ImportJobStatus,
+        expected_index_status: ImportIndexStatus | None = None,
+        index_status: ImportIndexStatus | None = None,
+        error: ImportJobError | None = None,
+        blob_id: str | None = None,
+        source_id: str | None = None,
+        document_id: str | None = None,
+        version_id: str | None = None,
+        actor_type: str,
+        reason: str,
+        correlation_id: str,
+    ) -> ImportJob:
+        if index_status is not None and expected_index_status is None:
+            raise RepositoryConflictError(
+                "index transition requires expected_index_status CAS"
+            )
+
+        def operation() -> ImportJob:
+            connection = self.database.connect()
+            try:
+                self._begin(connection)
+                self._prepare(connection, access, scope)
+                row = self._get_import_job_row(connection, scope.scope_id, job_id)
+                current = _load(ImportJob, row["payload"])
+                if current.status is not expected_status or (
+                    expected_index_status is not None
+                    and current.index_status is not expected_index_status
+                ):
+                    raise RepositoryConflictError("import job CAS precondition failed")
+                if (
+                    current.status is status
+                    and (index_status is None or current.index_status is index_status)
+                    and error is None
+                    and all(
+                        value is None
+                        for value in (blob_id, source_id, document_id, version_id)
+                    )
+                ):
+                    connection.commit()
+                    return current
+                try:
+                    updated = current.transition(
+                        status=status,
+                        index_status=index_status,
+                        error=error,
+                        blob_id=blob_id,
+                        source_id=source_id,
+                        document_id=document_id,
+                        version_id=version_id,
+                    )
+                except ValueError as exc:
+                    raise InvalidTransitionError(str(exc)) from exc
+                self._validate_import_job_references(
+                    connection, scope.scope_id, updated
+                )
+                cursor = connection.execute(
+                    "UPDATE import_jobs SET status = ?, index_status = ?, "
+                    "attempt_count = ?, blob_id = ?, source_id = ?, document_id = ?, "
+                    "version_id = ?, updated_at = ?, payload = ? "
+                    "WHERE scope_id = ? AND job_id = ? AND status = ? "
+                    "AND index_status = ?",
+                    (
+                        updated.status.value,
+                        updated.index_status.value,
+                        updated.attempt_count,
+                        updated.blob_id,
+                        updated.source_id,
+                        updated.document_id,
+                        updated.version_id,
+                        updated.updated_at.isoformat(),
+                        _dump(updated),
+                        scope.scope_id,
+                        job_id,
+                        current.status.value,
+                        current.index_status.value,
+                    ),
+                )
+                if cursor.rowcount != 1:
+                    raise RepositoryConflictError("import job CAS update failed")
+                self._insert_audit(
+                    connection,
+                    AuditEvent(
+                        scope_id=scope.scope_id,
+                        entity_type="import_job",
+                        entity_id=job_id,
+                        action="state_changed",
+                        actor_type=actor_type,
+                        reason=reason,
+                        before_status=(
+                            f"{current.status.value}:{current.index_status.value}"
+                        ),
+                        after_status=(
+                            f"{updated.status.value}:{updated.index_status.value}"
+                        ),
+                        correlation_id=correlation_id,
+                    ),
+                )
+                connection.commit()
+                return updated
+            except sqlite3.IntegrityError as exc:
+                connection.rollback()
+                raise RepositoryConflictError("import job constraint conflict") from exc
+            except BaseException:
+                connection.rollback()
+                raise
+            finally:
+                connection.close()
+
+        return await self._run(operation)
 
     async def soft_delete(
         self,

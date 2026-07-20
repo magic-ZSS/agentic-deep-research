@@ -15,6 +15,12 @@ from open_deep_research.evidence.models import (
     Requirement,
     RequirementStatus,
 )
+from open_deep_research.knowledge.ingestion.models import (
+    ImportIndexStatus,
+    ImportJob,
+    ImportJobError,
+    ImportJobStatus,
+)
 from open_deep_research.knowledge.models import (
     AuthorityClass,
     Chunk,
@@ -130,6 +136,15 @@ class DocumentRepository(Protocol):
         include_deleted: bool = False,
     ) -> Source: ...
 
+    async def list_sources(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        kind: SourceKind | None = None,
+        include_deleted: bool = False,
+    ) -> list[Source]: ...
+
     async def upsert_document(
         self,
         access: KnowledgeAccessContext,
@@ -150,6 +165,28 @@ class DocumentRepository(Protocol):
         *,
         include_deleted: bool = False,
     ) -> Document: ...
+
+    async def list_documents(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        source_id: str | None = None,
+        include_deleted: bool = False,
+    ) -> list[Document]: ...
+
+    async def get_content_blob_metadata(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        blob_id: str,
+    ) -> ContentBlob: ...
+
+    async def list_content_blob_metadata(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+    ) -> list[ContentBlob]: ...
 
     async def add_version(
         self,
@@ -186,6 +223,14 @@ class DocumentRepository(Protocol):
         include_deleted: bool = False,
     ) -> list[DocumentVersion]: ...
 
+    async def list_versions_for_scope(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        include_deleted: bool = False,
+    ) -> list[DocumentVersion]: ...
+
     async def find_by_content_hash(
         self,
         access: KnowledgeAccessContext,
@@ -213,6 +258,15 @@ class DocumentRepository(Protocol):
         *,
         include_deleted: bool = False,
     ) -> Chunk: ...
+
+    async def list_chunks_for_version(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        version_id: str,
+        *,
+        include_deleted: bool = False,
+    ) -> list[Chunk]: ...
 
     async def soft_delete(
         self,
@@ -362,11 +416,61 @@ class AuditRepository(Protocol):
 
 
 @runtime_checkable
+class ImportJobRepository(Protocol):
+    """Durable, retryable import jobs with compare-and-swap transitions."""
+
+    async def create_import_job(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        job: ImportJob,
+        *,
+        correlation_id: str = "ingestion",
+    ) -> ImportJob: ...
+
+    async def get_import_job(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        job_id: str,
+    ) -> ImportJob: ...
+
+    async def list_import_jobs(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        *,
+        status: ImportJobStatus | None = None,
+        index_status: ImportIndexStatus | None = None,
+    ) -> list[ImportJob]: ...
+
+    async def transition_import_job(
+        self,
+        access: KnowledgeAccessContext,
+        scope: KnowledgeScope,
+        job_id: str,
+        *,
+        expected_status: ImportJobStatus,
+        status: ImportJobStatus,
+        expected_index_status: ImportIndexStatus | None = None,
+        index_status: ImportIndexStatus | None = None,
+        error: ImportJobError | None = None,
+        blob_id: str | None = None,
+        source_id: str | None = None,
+        document_id: str | None = None,
+        version_id: str | None = None,
+        actor_type: str,
+        reason: str,
+        correlation_id: str,
+    ) -> ImportJob: ...
+
+@runtime_checkable
 class KnowledgeEvidenceRepository(
     DocumentRepository,
     EvidenceRepository,
     RequirementRepository,
     AuditRepository,
+    ImportJobRepository,
     Protocol,
 ):
     """Aggregate contract shared by InMemory and SQLite backends."""
