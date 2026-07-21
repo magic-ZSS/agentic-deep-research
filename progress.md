@@ -4,9 +4,9 @@
 
 **最后更新：** 2026-07-21
 
-**当前功能：** `phase-6-citation-validation-001`
+**当前功能：** `phase-7-evaluation-showcase-001`
 
-**状态：** completed（阶段 6 已收口；阶段 7 未开始）
+**状态：** in-progress（离线 smoke 已完成；等待 full evaluation 费用授权）
 
 ## 阶段门禁
 
@@ -14,6 +14,23 @@
 - 开始阶段 6 前运行 `scripts/validate_phase.py --phase 5`，退出码 0；T5-1 至 T5-16 全部 PASS。
 - 阶段 6 最终运行 `scripts/validate_phase.py --phase 6`，退出码 0；T6-1 至 T6-18 全部 PASS。
 - 未下载 STORM、OpenFactVerification 或 FIRE；未调用真实模型、Web、LangSmith、Deep Research Bench 或 LLM Judge。
+
+## 阶段 7 离线交付（2026-07-21）
+
+- `tests/baseline/cases.jsonl` 继续作为唯一 prompt/Requirement 来源；`goldens.v1.jsonl` 仅保存 supplemental full-eval 字段。
+- 固定五组公平消融 manifest，并用实际 `get_all_tools` registry 校验 variant-specific expected tools。
+- 实现版本化 Experiment/Metric/Telemetry/Artifact schema、trace adapter、DeepEval lazy full metrics、自定义 Citation/Source/Memory/Cost 指标和只读统一 scorer。
+- smoke runner 生成 45 条结构记录及 `runs.jsonl`、`report.json`、`report.md`、`experiment.json`、`manifest.json`；README 表格由机器 report 生成。
+- 无网络 evaluation suite：57 passed、1 deselected；生命周期/Memory 回归：25 passed；新增范围 Ruff 和 8-file 增量 Mypy 通过。
+- `validate_phase --phase 7`：T7-1/2/5/7/8/10-17 PASS；T7-3/4/6/9 缺少用户授权 live/full evidence，按设计 FAIL，退出码 1。
+- 完整 `mypy src/open_deep_research/evaluation` 仍被 Phase 0 既有 typing 与跨模块历史错误阻塞（138 errors）；未以新增阶段结果冒充通过。
+
+## Full 授权点
+
+- 固定子集：`simple-001`、`medium-001`、`complex-001`。
+- 五 variants × 3 repeats = 45 主研究运行；`complex-001` 的 baseline/agentic/full 各增加 3 次 warm，共 54 次研究运行。
+- 模型：研究链 GPT-4.1（summarization/judge 为 GPT-4.1 mini）；7 个 DeepEval metric；预计 756–972 次 Judge 模型调用、540–2700 次研究链模型调用、54–810 Tavily basic credits。
+- 估算总费用 USD 30–100。该区间依赖实际 token/工具循环，不是保证价格；用户授权前不得安装 DeepEval 或启动 full。
 
 ## 阶段 6 交付
 
@@ -56,4 +73,4 @@
 
 ## 下一步
 
-阶段 6 已满足完成定义并停止。只有用户明确要求阶段 7，并重新核验本页 T6 evidence 后，才可执行 `doc/development_plan/phase_7_evaluation_and_showcase.md`。
+阶段 7 保持 `in-progress`。等待用户明确批准上述 full 配置与费用上限；未批准不得运行、不得把 T7-3/4/6/9 标为通过。

@@ -127,6 +127,14 @@
       "dependencies": ["phase-5-memory-system-001"],
       "status": "completed",
       "evidence": "2026-07-21 开始前 scripts/validate_phase.py --phase 5 退出码 0，T5-1 至 T5-16 全部 PASS。Phase 6 最终离线 unit 20 passed、integration 9 passed、阶段 3/5 回归 35 passed；scripts/validate_report.py 合法 fixture 退出码 0；scripts/validate_phase.py --phase 6 退出码 0，T6-1 至 T6-18 全部 PASS（内部 29 tests）；Ruff、Mypy（18 source files）和 git diff --check 均退出码 0。未调用真实模型、Web、LangSmith、Deep Research Bench 或 LLM Judge。"
+    },
+    {
+      "id": "phase-7-evaluation-showcase-001",
+      "name": "建立完整评测、消融与可复现展示",
+      "description": "执行开发计划阶段 7：统一 canonical dataset/golden overlay、五组公平消融、DeepEval adapter、自定义治理指标、smoke/full runner、机器报告、成本门禁和 README 展示。",
+      "dependencies": ["phase-6-citation-validation-001"],
+      "status": "in-progress",
+      "evidence": "2026-07-21 阶段 6 门禁 scripts/validate_phase.py --phase 6 退出码 0，T6-1 至 T6-18 全部 PASS。阶段 7 无网络 evaluation suite 57 passed、1 deselected；知识生命周期/Memory 回归 25 passed；新增范围 Ruff 通过，增量 Mypy 8 source files 通过。smoke 生成 9 cases x 5 variants = 45 records，JSONL/JSON/Markdown/README/manifest SHA-256 一致。scripts/validate_phase.py --phase 7 按设计退出码 1：T7-1/2/5/7/8/10-17 PASS，T7-3/4/6/9 因尚无用户授权的 live/full evidence FAIL。未安装 DeepEval、未调用项目研究模型/Web搜索/Tavily/LangSmith/LLM Judge；仅查询官方公开定价用于授权前预算。等待用户批准 3 cases、5 variants、3 repeats 加 cold/warm（54 research runs）及 USD 30-100 预算区间。"
     }
   ]
 }

@@ -1,0 +1,192 @@
+{
+  "schema_version": "1.0",
+  "mode": "smoke",
+  "experiment_id": "a15ae705ce2c1fdfd94b",
+  "run_count": 45,
+  "aggregates": [
+    {
+      "variant_id": "agentic_rag",
+      "difficulty": "complex",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    },
+    {
+      "variant_id": "agentic_rag",
+      "difficulty": "medium",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    },
+    {
+      "variant_id": "agentic_rag",
+      "difficulty": "simple",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    },
+    {
+      "variant_id": "baseline",
+      "difficulty": "complex",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    },
+    {
+      "variant_id": "baseline",
+      "difficulty": "medium",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    },
+    {
+      "variant_id": "baseline",
+      "difficulty": "simple",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    },
+    {
+      "variant_id": "citation_validator",
+      "difficulty": "complex",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    },
+    {
+      "variant_id": "citation_validator",
+      "difficulty": "medium",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    },
+    {
+      "variant_id": "citation_validator",
+      "difficulty": "simple",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    },
+    {
+      "variant_id": "memory",
+      "difficulty": "complex",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    },
+    {
+      "variant_id": "memory",
+      "difficulty": "medium",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    },
+    {
+      "variant_id": "memory",
+      "difficulty": "simple",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    },
+    {
+      "variant_id": "paperqa",
+      "difficulty": "complex",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    },
+    {
+      "variant_id": "paperqa",
+      "difficulty": "medium",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    },
+    {
+      "variant_id": "paperqa",
+      "difficulty": "simple",
+      "runs": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci95": 0.0
+    }
+  ],
+  "limitations": [
+    "Smoke records validate schemas and governance invariants only.",
+    "Smoke records do not establish live quality, citation uplift, or cost savings."
+  ]
+}

@@ -3,16 +3,24 @@
 ## 当前目标
 
 - `phase-0-baseline-references-001` 至 `phase-6-citation-validation-001` 均为 `completed`。
-- 阶段 6 于 2026-07-21 收口；T6-1 至 T6-18 均有确定性离线 evidence。
-- 阶段 7 尚未开始，不得自动执行完整 DeepEval、LLM Judge 或展示改造。
+- `phase-7-evaluation-showcase-001` 为 `in-progress`：离线 smoke/报告已完成，等待 full 费用授权。
+- 不得自动安装 DeepEval、运行模型/Tavily/LLM Judge、push 或发布。
 
 ## 恢复入口
 
 1. 读取 `AGENTS.md`、`feature_list.json`、`progress.md` 和本文件。
 2. 读取 `doc/development_plan/{README,architecture_target,reference_repositories,execution_protocol}.md`。
-3. 若用户明确要求阶段 7，再读取 `phase_7_evaluation_and_showcase.md`。
+3. 读取 `phase_7_evaluation_and_showcase.md` 和 `tests/evaluation/full_plan.v1.json`。
 4. 先运行 `git status --short` 并保留用户改动。
-5. 进入阶段 7 前必须运行 `conda run --no-capture-output -n open-deep-research python scripts/validate_phase.py --phase 6`，要求 T6-1～T6-18 全部 PASS。
+5. 阶段 6 门禁已复核通过；不要重复执行付费任务。
+
+## 阶段 7 恢复点
+
+- 离线 evaluation suite：57 passed、1 deselected；生命周期/Memory 回归：25 passed。
+- smoke artifact：45 records，manifest 校验通过，README 由机器 JSON 驱动。
+- 当前 T7：T7-1/2/5/7/8/10-17 PASS；T7-3/4/6/9 等待 live/full，validator 退出码 1 是预期状态。
+- full 计划：3 cases、5 variants、3 repeats，加 9 次 warm，共 54 research runs；GPT-4.1/GPT-4.1 mini；估算 USD 30–100。
+- 用户若明确授权费用上限，再申请安装 `deepeval==4.1.1` 所需网络权限并实现/运行授权 full 路径；否则保持 `in-progress`。
 
 ## 阶段 6 核心契约
 
@@ -38,4 +46,4 @@
 
 ## 下一步
 
-等待用户明确下达阶段 7 指令。收到后先复核阶段 6 门禁；未通过必须停止。不得自动开始阶段 7。
+等待用户对 `tests/evaluation/full_plan.v1.json` 的 case、模型、调用量和费用上限作出明确授权。未授权不得继续 full。

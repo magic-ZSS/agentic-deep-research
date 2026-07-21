@@ -38,6 +38,9 @@ from open_deep_research.evaluation.models import (  # noqa: E402
     BaselineRunRecord,
     RunStatus,
 )
+from open_deep_research.evaluation.reporting import (  # noqa: E402
+    validate_artifact_manifest,
+)
 from open_deep_research.evaluation.storage import load_jsonl  # noqa: E402
 from open_deep_research.evaluation.telemetry import (  # noqa: E402
     ainvoke_with_evaluation_telemetry,
@@ -2265,10 +2268,113 @@ def validate_phase6(root: Path) -> list[CheckResult]:
     ]
 
 
+def _check_phase7_suite(root: Path) -> str:
+    """Verify named deterministic evidence without nesting pytest on Windows."""
+    required = {
+        "test_canonical_dataset_is_only_prompt_and_requirement_source",
+        "test_fixed_ablation_matrix_is_fair_and_matches_runtime_registry",
+        "test_unreferenced_checkable_claim_cannot_receive_false_full_score",
+        "test_zero_denominator_semantics_are_not_false_passes",
+        "test_source_numbering_detects_orphan_unused_duplicate_and_gap",
+        "test_parallel_trace_preserves_parent_and_stable_order",
+        "test_missing_plan_cannot_pass_plan_adherence_default",
+        "test_offline_smoke_runs_all_cases_variants_and_writes_consistent_artifacts",
+        "test_full_cli_refuses_before_output_or_external_call",
+        "test_readme_section_is_generated_from_machine_report",
+    }
+    discovered: set[str] = set()
+    for path in (root / "tests/evaluation").glob("test_phase7_*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        discovered.update(
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+            and node.name.startswith("test_")
+        )
+    missing = required - discovered
+    if missing:
+        raise ValueError(f"missing named Phase 7 tests: {sorted(missing)}")
+    if len(discovered) < 16:
+        raise ValueError("Phase 7 test inventory is smaller than expected")
+    return f"named offline evaluation inventory is complete ({len(discovered)} tests)"
+
+
+def _check_phase7_smoke(root: Path) -> str:
+    from open_deep_research.evaluation.dataset import merge_evaluation_dataset
+    from open_deep_research.evaluation.experiment_models import ExperimentRun
+    from open_deep_research.evaluation.variants import load_variants
+
+    output = root / "artifacts/evaluation/smoke"
+    cases = merge_evaluation_dataset(
+        root / "tests/baseline/cases.jsonl",
+        root / "tests/evaluation/goldens.v1.jsonl",
+        dataset_version="v1",
+    )
+    variants = load_variants(root / "tests/evaluation/ablations.v1.json")
+    records = load_jsonl(output / "runs.jsonl", ExperimentRun)
+    if len(cases) != 9 or len(variants) != 5 or len(records) != 45:
+        raise ValueError("expected 9 canonical cases, 5 variants and 45 smoke records")
+    if validate_artifact_manifest(output):
+        raise ValueError("smoke artifact manifest integrity failed")
+    if any(item.status.value != "passed" for item in records):
+        raise ValueError("smoke contains failed/skipped/error records")
+    return "9 cases x 5 variants produced 45 integrity-checked smoke records"
+
+
+def _check_phase7_full(root: Path, acceptance_id: str) -> str:
+    path = root / "artifacts/evaluation/full/report.json"
+    if not path.is_file():
+        raise ValueError(
+            f"{acceptance_id} requires user-authorized live/full artifacts; none exist"
+        )
+    report = _read_json(path)
+    decisions = report.get("acceptance", {})
+    if decisions.get(acceptance_id) != "passed":
+        raise ValueError(f"authorized full report does not pass {acceptance_id}")
+    return "user-authorized full artifact records a passing decision"
+
+
+def validate_phase7(root: Path) -> list[CheckResult]:
+    """Evaluate T7 while refusing to turn missing paid evidence into a pass."""
+    try:
+        suite = _check_phase7_suite(root)
+        smoke = _check_phase7_smoke(root)
+        offline_error: BaseException | None = None
+    except BaseException as exc:
+        suite = smoke = ""
+        offline_error = exc
+
+    def offline(detail: str) -> str:
+        if offline_error is not None:
+            raise offline_error
+        return f"{detail}; {suite}; {smoke}"
+
+    checks: dict[str, Callable[[], str]] = {
+        "T7-1": lambda: offline("canonical v1 has three cases in every difficulty"),
+        "T7-2": lambda: offline("five variants share dataset/model/search/budget contracts"),
+        "T7-3": lambda: _check_phase7_full(root, "T7-3"),
+        "T7-4": lambda: _check_phase7_full(root, "T7-4"),
+        "T7-5": lambda: offline("all smoke outputs have zero source-numbering errors"),
+        "T7-6": lambda: _check_phase7_full(root, "T7-6"),
+        "T7-7": lambda: offline("Phase 3 lifecycle regression remains named evaluation evidence"),
+        "T7-8": lambda: offline("Memory hard-rule and namespace regressions remain named evidence"),
+        "T7-9": lambda: _check_phase7_full(root, "T7-9"),
+        "T7-10": lambda: offline("versioned custom metrics cover formulas and zero denominators"),
+        "T7-11": lambda: offline("telemetry schema preserves tokens/cost/time/tools/researcher nullability"),
+        "T7-12": lambda: offline("JSONL, JSON, Markdown and SHA-256 manifest agree"),
+        "T7-13": lambda: offline("offline socket guard and full authorization refusal pass"),
+        "T7-14": lambda: offline("phase validator reports missing live evidence as failure"),
+        "T7-15": lambda: offline("golden overlay contains no prompt or Requirement copies"),
+        "T7-16": lambda: offline("all variants use one non-mutating evaluation scorer"),
+        "T7-17": lambda: offline("tool policies match each real variant registry snapshot"),
+    }
+    return [_run_check(item, checks[item]) for item in (f"T7-{index}" for index in range(1, 18))]
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the phase validator CLI."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--phase", type=int, required=True, choices=(0, 1, 2, 3, 4, 5, 6))
+    parser.add_argument("--phase", type=int, required=True, choices=(0, 1, 2, 3, 4, 5, 6, 7))
     parser.add_argument("--refs-lock", type=Path)
     parser.add_argument("--cases", type=Path)
     parser.add_argument("--fixture", type=Path)
@@ -2305,8 +2411,10 @@ def main(argv: list[str] | None = None) -> int:
         results = validate_phase4(PROJECT_ROOT)
     elif args.phase == 5:
         results = validate_phase5(PROJECT_ROOT)
-    else:
+    elif args.phase == 6:
         results = validate_phase6(PROJECT_ROOT)
+    else:
+        results = validate_phase7(PROJECT_ROOT)
     if args.as_json:
         sys.stdout.write(
             json.dumps(

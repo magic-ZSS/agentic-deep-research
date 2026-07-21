@@ -1,0 +1,198 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "a15ae705ce2c1fdfd94b",
+  "mode": "smoke",
+  "dataset_version": "v1",
+  "canonical_cases": "tests/baseline/cases.jsonl",
+  "golden_overlay": "tests/evaluation/goldens.v1.jsonl",
+  "variants": [
+    {
+      "variant_id": "baseline",
+      "feature_flags": {
+        "enable_knowledge_base": false,
+        "enable_paperqa_retrieval": false,
+        "enable_knowledge_tools": false,
+        "enable_agentic_rag": false,
+        "enable_knowledge_writeback": false,
+        "enable_memory": false,
+        "enable_memory_writes": false,
+        "citation_validation_mode": "off"
+      },
+      "dataset_version": "v1",
+      "model_settings": {
+        "summarization_model": "openai:gpt-4.1-mini",
+        "research_model": "openai:gpt-4.1",
+        "compression_model": "openai:gpt-4.1",
+        "final_report_model": "openai:gpt-4.1",
+        "judge_model": "openai:gpt-4.1-mini"
+      },
+      "search_config": {
+        "provider": "tavily",
+        "max_queries_per_call": 3,
+        "max_results_per_query": 3
+      },
+      "budget": {
+        "max_researcher_iterations": 5,
+        "max_react_tool_calls": 5,
+        "timeout_seconds": 900
+      },
+      "available_tools": [
+        "ResearchComplete",
+        "think_tool",
+        "tavily_search"
+      ]
+    },
+    {
+      "variant_id": "paperqa",
+      "feature_flags": {
+        "enable_knowledge_base": true,
+        "enable_paperqa_retrieval": true,
+        "enable_knowledge_tools": true,
+        "enable_agentic_rag": false,
+        "enable_knowledge_writeback": false,
+        "enable_memory": false,
+        "enable_memory_writes": false,
+        "citation_validation_mode": "off"
+      },
+      "dataset_version": "v1",
+      "model_settings": {
+        "summarization_model": "openai:gpt-4.1-mini",
+        "research_model": "openai:gpt-4.1",
+        "compression_model": "openai:gpt-4.1",
+        "final_report_model": "openai:gpt-4.1",
+        "judge_model": "openai:gpt-4.1-mini"
+      },
+      "search_config": {
+        "provider": "tavily",
+        "max_queries_per_call": 3,
+        "max_results_per_query": 3
+      },
+      "budget": {
+        "max_researcher_iterations": 5,
+        "max_react_tool_calls": 5,
+        "timeout_seconds": 900
+      },
+      "available_tools": [
+        "ResearchComplete",
+        "think_tool",
+        "tavily_search",
+        "knowledge_search",
+        "knowledge_read"
+      ]
+    },
+    {
+      "variant_id": "agentic_rag",
+      "feature_flags": {
+        "enable_knowledge_base": true,
+        "enable_paperqa_retrieval": true,
+        "enable_knowledge_tools": true,
+        "enable_agentic_rag": true,
+        "enable_knowledge_writeback": true,
+        "enable_memory": false,
+        "enable_memory_writes": false,
+        "citation_validation_mode": "off"
+      },
+      "dataset_version": "v1",
+      "model_settings": {
+        "summarization_model": "openai:gpt-4.1-mini",
+        "research_model": "openai:gpt-4.1",
+        "compression_model": "openai:gpt-4.1",
+        "final_report_model": "openai:gpt-4.1",
+        "judge_model": "openai:gpt-4.1-mini"
+      },
+      "search_config": {
+        "provider": "tavily",
+        "max_queries_per_call": 3,
+        "max_results_per_query": 3
+      },
+      "budget": {
+        "max_researcher_iterations": 5,
+        "max_react_tool_calls": 5,
+        "timeout_seconds": 900
+      },
+      "available_tools": [
+        "ResearchComplete",
+        "think_tool",
+        "governed_retrieval"
+      ]
+    },
+    {
+      "variant_id": "memory",
+      "feature_flags": {
+        "enable_knowledge_base": true,
+        "enable_paperqa_retrieval": true,
+        "enable_knowledge_tools": true,
+        "enable_agentic_rag": true,
+        "enable_knowledge_writeback": true,
+        "enable_memory": true,
+        "enable_memory_writes": true,
+        "citation_validation_mode": "off"
+      },
+      "dataset_version": "v1",
+      "model_settings": {
+        "summarization_model": "openai:gpt-4.1-mini",
+        "research_model": "openai:gpt-4.1",
+        "compression_model": "openai:gpt-4.1",
+        "final_report_model": "openai:gpt-4.1",
+        "judge_model": "openai:gpt-4.1-mini"
+      },
+      "search_config": {
+        "provider": "tavily",
+        "max_queries_per_call": 3,
+        "max_results_per_query": 3
+      },
+      "budget": {
+        "max_researcher_iterations": 5,
+        "max_react_tool_calls": 5,
+        "timeout_seconds": 900
+      },
+      "available_tools": [
+        "ResearchComplete",
+        "think_tool",
+        "governed_retrieval"
+      ]
+    },
+    {
+      "variant_id": "citation_validator",
+      "feature_flags": {
+        "enable_knowledge_base": true,
+        "enable_paperqa_retrieval": true,
+        "enable_knowledge_tools": true,
+        "enable_agentic_rag": true,
+        "enable_knowledge_writeback": true,
+        "enable_memory": true,
+        "enable_memory_writes": true,
+        "citation_validation_mode": "enforce"
+      },
+      "dataset_version": "v1",
+      "model_settings": {
+        "summarization_model": "openai:gpt-4.1-mini",
+        "research_model": "openai:gpt-4.1",
+        "compression_model": "openai:gpt-4.1",
+        "final_report_model": "openai:gpt-4.1",
+        "judge_model": "openai:gpt-4.1-mini"
+      },
+      "search_config": {
+        "provider": "tavily",
+        "max_queries_per_call": 3,
+        "max_results_per_query": 3
+      },
+      "budget": {
+        "max_researcher_iterations": 5,
+        "max_react_tool_calls": 5,
+        "timeout_seconds": 900
+      },
+      "available_tools": [
+        "ResearchComplete",
+        "think_tool",
+        "governed_retrieval"
+      ]
+    }
+  ],
+  "scorer_version": "evaluation-claim-scorer-v1",
+  "claims": {
+    "live_quality": false,
+    "citation_uplift": false,
+    "web_or_token_reduction": false
+  }
+}

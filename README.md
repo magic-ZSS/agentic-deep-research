@@ -147,3 +147,19 @@ The `src/legacy/` folder contains two earlier implementations that provide alter
 - **Parallel Processing**: Multiple researchers work simultaneously
 - **Speed Optimized**: Faster report generation through concurrency
 - **MCP Support**: Extensive Model Context Protocol integration
+
+<!-- phase7-eval:start -->
+### Evidence-governed evaluation (generated)
+
+Latest committed artifact mode: `smoke`. Smoke validates contracts only; it is not evidence of live quality uplift or cost savings.
+
+| Variant | Runs | Contract passes |
+|---|---:|---:|
+| agentic_rag | 9 | 9 |
+| baseline | 9 | 9 |
+| citation_validator | 9 | 9 |
+| memory | 9 | 9 |
+| paperqa | 9 | 9 |
+
+See `docs/evaluation.md` and `artifacts/evaluation/smoke/manifest.json` for reproducibility and limitations.
+<!-- phase7-eval:end -->

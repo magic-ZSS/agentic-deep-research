@@ -87,7 +87,7 @@ def to_deepeval_case(case: BaselineCase, run: BaselineRunRecord) -> Any:
 
     try:
         with _guarded_deepeval_import():
-            from deepeval.test_case import LLMTestCase
+            from deepeval.test_case import LLMTestCase  # type: ignore[import-not-found]
 
             return LLMTestCase(
                 input=case.prompt,
