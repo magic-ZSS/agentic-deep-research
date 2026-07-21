@@ -81,3 +81,12 @@
 - Windows 示例固定 `@modelcontextprotocol/server-filesystem@2026.1.14`；许可证证据与参考 commit 见 `doc/reference/refs.lock.json`，部署/ACL 说明见 `docs/mcp_windows.md`。
 
 证据：`src/open_deep_research/mcp/`、`src/open_deep_research/mcp_servers/`、`tests/security/mcp/`、`tests/integration/mcp/`、`config/examples/mcp.windows.example.json`。
+
+## 8) 阶段 5 LangGraph / LangMem 集成
+
+- 固定 `langgraph-checkpoint-sqlite==3.1.0`；只通过 managed `from_conn_string` context 使用异步 Saver/Store，SQLite Store 不启用 vector index。
+- 固定可选 `langmem==0.0.30`；不暴露 manage/store side effect，adapter 仅把 extraction 结果转为 `MemoryWriteProposal`。
+- Checkpoint serializer 禁止 pickle fallback，并使用 msgpack 安全 allowlist。
+- Knowledge MCP 在真实 `MemoryRecall` 与可信 `RuntimeIdentity` 都存在时才注册只读 `memory_search`。
+
+证据：`pyproject.toml`、`src/open_deep_research/runtime/persistence.py`、`src/open_deep_research/memory/langmem_adapter.py`、`src/open_deep_research/mcp_servers/knowledge_server.py`。

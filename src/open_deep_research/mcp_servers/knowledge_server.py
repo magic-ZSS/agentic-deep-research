@@ -34,6 +34,12 @@ def create_knowledge_server(service: KnowledgeMCPService) -> FastMCP:
     async def kb_search_past_queries(query: str, limit: int = 10) -> dict:
         return await service.kb_search_past_queries(query, limit=limit)
 
+    if service.memory_recall is not None and service.context.runtime_identity is not None:
+        @server.tool(annotations=read_annotations)
+        async def memory_search(query: str, limit: int = 5) -> dict:
+            """Search authorized active memories without accepting a namespace."""
+            return await service.memory_search(query, limit=limit)
+
     @server.tool(annotations=proposal_annotations)
     async def kb_propose_ingest(artifact_id: str, reason: str) -> dict:
         return await service.kb_propose_ingest(artifact_id, reason=reason)

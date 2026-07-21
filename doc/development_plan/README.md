@@ -41,8 +41,8 @@
 | 1 | [知识与证据模型](phase_1_knowledge_evidence_models.md) | 领域模型、InMemory/SQLite Repository、版本/去重/Reducer | `completed` |
 | 2 | [文档导入与 PaperQA2](phase_2_document_ingestion_and_paperqa.md) | 四类导入、PaperQA2 Adapter、可定位检索工具 | `completed` |
 | 3 | [Agentic RAG 生命周期](phase_3_agentic_rag_lifecycle.md) | 本地优先、覆盖判断、候选验证、状态转换和审计 | `completed` |
-| 4 | [MCP 集成](phase_4_mcp_integration.md) | 受限 Filesystem MCP、proposal-only Knowledge MCP、Windows 安全 | `not-started` |
-| 5 | [分层记忆](phase_5_memory_system.md) | Checkpoint、Namespace、五类记忆和 Memory Write Gate | `not-started` |
+| 4 | [MCP 集成](phase_4_mcp_integration.md) | 受限 Filesystem MCP、proposal-only Knowledge MCP、Windows 安全 | `completed` |
+| 5 | [分层记忆](phase_5_memory_system.md) | Checkpoint、Namespace、五类记忆和 Memory Write Gate | `completed` |
 | 6 | [引用验证与修复](phase_6_citation_validation.md) | 原子 Claim、蕴含/时效/权威验证、局部修复、来源注册表 | `not-started` |
 | 7 | [完整评测与展示](phase_7_evaluation_and_showcase.md) | DeepEval 回归、消融实验、机器报告和 README 展示 | `not-started` |
 

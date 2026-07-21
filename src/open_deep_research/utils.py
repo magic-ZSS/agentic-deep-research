@@ -780,6 +780,10 @@ async def get_all_tools(config: RunnableConfig):
         from open_deep_research.mcp_servers.tools import KNOWLEDGE_MCP_TOOLS
 
         tools.extend(KNOWLEDGE_MCP_TOOLS)
+        if configurable.enable_memory:
+            from open_deep_research.tools.memory import MEMORY_TOOLS
+
+            tools.extend(MEMORY_TOOLS)
 
     if configurable.enable_filesystem_mcp:
         from open_deep_research.mcp.tools import FILESYSTEM_MCP_TOOLS

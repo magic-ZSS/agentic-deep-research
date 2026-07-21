@@ -93,3 +93,13 @@ messages
 - 非 Agentic Researcher 可按开关获得受限 MCP tools；Agentic 路径仍只有 `governed_retrieval`，不因阶段 4 重新开放旁路。
 
 证据：`src/open_deep_research/mcp/`、`src/open_deep_research/mcp_servers/`、`src/open_deep_research/utils.py`、`tests/integration/mcp/`。
+
+## 9) 阶段 5：Checkpoint 与 Memory 边界
+
+- 模块级 `deep_researcher` 继续作为默认关闭的兼容导出；`runtime.graph_factory.open_deep_research_graph` 仅在 managed async lifespan 内为 root builder 注入 checkpointer/store。
+- `AsyncSqliteSaver` 与 `AsyncSqliteStore` 在同一 `AsyncExitStack` 内完成 setup/关闭；Checkpoint、Store、Knowledge、Run Evidence 与长期 Memory 使用不同 SQLite 文件。
+- Working Memory 保存在 checkpoint state；长期 Episodic/Semantic/Procedural/Preference 通过 `MemoryRepository`，不得经 LangGraph raw Store 或 Agent 工具直接写入。
+- Namespace 由可信 `RuntimeIdentity` 生成；长期写入必须经过 proposal 和七项 Gate，Semantic recall 会再次核验 Evidence。
+- `memory_search` 是只读能力，不接受 Namespace 参数；LangMem adapter 只输出 proposal，不持有 Store。
+
+证据：`src/open_deep_research/runtime/`、`src/open_deep_research/memory/`、`src/open_deep_research/tools/memory.py`、`tests/integration/checkpoint/`、`tests/integration/memory/`。

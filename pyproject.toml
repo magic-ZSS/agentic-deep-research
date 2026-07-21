@@ -57,6 +57,10 @@ knowledge = [
     "fhlmi==0.45.0",
     "litellm==1.82.4",
 ]
+memory = [
+    "langgraph-checkpoint-sqlite==3.1.0",
+    "langmem==0.0.30",
+]
 
 [build-system]
 requires = ["setuptools>=73.0.0", "wheel"]
@@ -79,6 +83,8 @@ packages = [
     "open_deep_research.tools",
     "open_deep_research.mcp",
     "open_deep_research.mcp_servers",
+    "open_deep_research.runtime",
+    "open_deep_research.memory",
     "legacy",
     "tests",
 ]

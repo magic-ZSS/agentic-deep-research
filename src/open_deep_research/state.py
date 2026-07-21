@@ -101,6 +101,10 @@ class AgentState(MessagesState):
     research_run_id: Optional[str]
     requirement_set: Optional[dict[str, Any]]
     research_gaps: Annotated[list[str], override_reducer] = []
+    memory_ids: Annotated[list[str], stable_id_reducer] = []
+    memory_proposal_ids: Annotated[list[str], stable_id_reducer] = []
+    working_memory_summary: Optional[str]
+    run_evidence_retention_status: Optional[str]
     final_report: str
 
 class SupervisorState(TypedDict):

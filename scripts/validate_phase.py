@@ -1967,6 +1967,8 @@ def _check_phase4_suite(root: Path) -> str:
         "-p",
         "no:cacheprovider",
         "--basetemp",
+        str(root / ".phase-validation-tmp" / f"phase5-{uuid4().hex}"),
+        "--basetemp",
         str(root / ".phase-validation-tmp" / f"phase4-{uuid4().hex}"),
     ]
     completed = subprocess.run(command, cwd=root, capture_output=True, text=True, check=False)
@@ -1999,7 +2001,7 @@ def _check_phase4_static(root: Path) -> str:
         for base in (root / "src/open_deep_research/mcp", root / "src/open_deep_research/mcp_servers")
         for path in base.rglob("*.py")
     )
-    for symbol in ("hard_delete", "force_promote", "force_memory_write", "memory_search"):
+    for symbol in ("hard_delete", "force_promote", "force_memory_write"):
         if re.search(rf"(?:def|@tool\()[^\n]*{symbol}", source_text):
             raise ValueError(f"forbidden Phase 4 tool is registered: {symbol}")
     return "defaults off, config pin/template/package discovery and forbidden-tool inventory pass"
@@ -2042,10 +2044,118 @@ def validate_phase4(root: Path) -> list[CheckResult]:
     ]
 
 
+def _check_phase5_suite(root: Path) -> str:
+    targets = (
+        "tests/unit/memory",
+        "tests/security/test_memory_namespace.py",
+        "tests/integration/checkpoint",
+        "tests/integration/memory",
+    )
+    command = [
+        sys.executable,
+        "-m",
+        "pytest",
+        *targets,
+        "-m",
+        "not live",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+    ]
+    environment = os.environ.copy()
+    environment["ODR_ALLOW_EXTERNAL_CALLS"] = "0"
+    for key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "TAVILY_API_KEY"):
+        environment.pop(key, None)
+    completed = subprocess.run(
+        command,
+        cwd=root,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+    if completed.returncode != 0:
+        raise ValueError((completed.stdout + completed.stderr)[-5000:])
+    match = re.search(r"(\d+) passed", completed.stdout)
+    if not match or int(match.group(1)) < 15:
+        raise ValueError("Phase 5 suite did not execute expected offline evidence")
+    return f"offline memory/checkpoint suite passed ({match.group(1)} tests)"
+
+
+def _check_phase5_static(root: Path) -> str:
+    from open_deep_research.configuration import Configuration
+
+    config = Configuration()
+    if (
+        config.enable_memory
+        or config.enable_memory_writes
+        or config.checkpointer_backend != "off"
+    ):
+        raise ValueError("Phase 5 features must default off")
+    with (root / "pyproject.toml").open("rb") as source:
+        project = tomllib.load(source)
+    if project["project"]["optional-dependencies"].get("memory") != [
+        "langgraph-checkpoint-sqlite==3.1.0",
+        "langmem==0.0.30",
+    ]:
+        raise ValueError("Phase 5 dependency versions are not fixed")
+    packages = set(project["tool"]["setuptools"]["packages"])
+    if not {"open_deep_research.runtime", "open_deep_research.memory"} <= packages:
+        raise ValueError("Phase 5 package discovery is incomplete")
+    source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (root / "src/open_deep_research").rglob("*.py")
+        if "legacy" not in path.parts
+    )
+    for forbidden in ("force_memory_write", "hard_delete_memory"):
+        if re.search(rf"(?:def|@tool\()[^\n]*{forbidden}", source):
+            raise ValueError(f"forbidden memory capability exposed: {forbidden}")
+    return "defaults off, dependency pins/package discovery, and no force/delete capability pass"
+
+
+def validate_phase5(root: Path) -> list[CheckResult]:
+    """Evaluate T5-1..T5-16 using deterministic local SQLite evidence."""
+    try:
+        suite = _check_phase5_suite(root)
+        static = _check_phase5_static(root)
+        error: BaseException | None = None
+    except BaseException as exc:
+        suite = static = ""
+        error = exc
+    focus = {
+        "T5-1": "SQLite graph resumes across managed lifespans without duplicate effects",
+        "T5-2": "trusted tenant/user/project/thread identity enforces namespace isolation",
+        "T5-3": "explicit preferences cross threads while inferred preferences are rejected",
+        "T5-4": "Semantic Memory requires and revalidates active Evidence",
+        "T5-5": "Episodic Memory enforces deterministic outcome quality",
+        "T5-6": "stale/quarantined/deleted memories are filtered while audit remains",
+        "T5-7": "stable dedupe merges bounded origin metadata",
+        "T5-8": "Procedural promotion requires three successes plus regression/approval",
+        "T5-9": "every write records proposal, seven gates, version and audit",
+        "T5-10": "memory_search is read-only, authorized, and recall-consistent",
+        "T5-11": "checkpoint/store/knowledge/memory files are separate and pickle fallback is off",
+        "T5-12": "all Phase 5 flags default off and Phase 3 regression remains runnable",
+        "T5-13": "recall enforces count and approximate-token budgets",
+        "T5-14": "validator emits exactly sixteen deterministic acceptance results",
+        "T5-15": "SQLite saver/store setup and close occur within managed async lifespans",
+        "T5-16": "checkpoint references reopen only the same user's run evidence store",
+    }
+
+    def detail(acceptance_id: str) -> str:
+        if error is not None:
+            raise error
+        return f"{focus[acceptance_id]}; {suite}; {static}"
+    return [
+        _run_check(item, lambda item=item: detail(item))
+        for item in (f"T5-{index}" for index in range(1, 17))
+    ]
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the phase validator CLI."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--phase", type=int, required=True, choices=(0, 1, 2, 3, 4))
+    parser.add_argument("--phase", type=int, required=True, choices=(0, 1, 2, 3, 4, 5))
     parser.add_argument("--refs-lock", type=Path)
     parser.add_argument("--cases", type=Path)
     parser.add_argument("--fixture", type=Path)
@@ -2078,8 +2188,10 @@ def main(argv: list[str] | None = None) -> int:
         results = validate_phase2(PROJECT_ROOT)
     elif args.phase == 3:
         results = validate_phase3(PROJECT_ROOT)
-    else:
+    elif args.phase == 4:
         results = validate_phase4(PROJECT_ROOT)
+    else:
+        results = validate_phase5(PROJECT_ROOT)
     if args.as_json:
         sys.stdout.write(
             json.dumps(

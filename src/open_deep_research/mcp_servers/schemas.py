@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from open_deep_research.knowledge.models import KnowledgeAccessContext, KnowledgeScope
+from open_deep_research.runtime.identity import RuntimeIdentity
 
 
 class MCPBoundaryModel(BaseModel):
@@ -18,6 +19,7 @@ class KnowledgeMCPContext(MCPBoundaryModel):
     scope: KnowledgeScope
     actor: str = Field(min_length=1)
     run_id: str | None = None
+    runtime_identity: RuntimeIdentity | None = None
 
 
 class KnowledgeProposalView(MCPBoundaryModel):
@@ -26,4 +28,3 @@ class KnowledgeProposalView(MCPBoundaryModel):
     target_id: str
     status: str
     request_id: str
-

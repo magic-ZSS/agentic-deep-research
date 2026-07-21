@@ -1,137 +1,41 @@
 # 会话交接
 
-## 当前目标（Current Objective）
+## 当前目标
 
-- `phase-0-baseline-references-001` 至 `phase-4-mcp-integration-001` 均已完成。
-- 阶段 4 于 2026-07-21 收口；T4-1 至 T4-16 全部有确定性离线测试 evidence，固定版本 Windows stdio smoke 通过。
-- 阶段 5 尚未开始；下一会话必须先重新核验阶段 4 状态和 T4 evidence，不能直接绕过门禁。
+- `phase-0-baseline-references-001` 至 `phase-5-memory-system-001` 均为 `completed`。
+- 阶段 5 于 2026-07-21 收口；T5-1 至 T5-16 均有确定性离线 evidence。
+- 阶段 6 尚未开始，不得自动实现 Citation Validator 或报告修复。
 
-## 阶段 4 交付物
+## 恢复入口
 
-- 多 MCP schema/client/registry/auth 边界：`src/open_deep_research/mcp/{config,client,tool_registry,auth,errors}.py`。
-- Allowed Roots、只读 filesystem、exclusive staging、去敏审计：`src/open_deep_research/mcp/{filesystem_policy,filesystem_adapter,staging,audit,tools}.py`。
-- Knowledge MCP：`src/open_deep_research/mcp_servers/`；可信 scope、read tools 和 pending-only proposal tools。
-- Windows 配置/说明：`config/examples/mcp.windows.example.json`、`docs/mcp_windows.md`、`scripts/validate_mcp_config.py`。
-- 验收：`scripts/validate_phase.py --phase 4` 与 `tests/{unit,security,integration}/mcp/`。
+1. 读取 `AGENTS.md`、`feature_list.json`、`progress.md`、本文件。
+2. 读取 `doc/development_plan/{README,architecture_target,reference_repositories,execution_protocol}.md`。
+3. 若用户明确要求阶段 6，再读取 `phase_6_citation_validation.md`。
+4. 先运行 `git status --short` 并保留用户改动。
+5. 进入阶段 6 前必须运行 `conda run --no-capture-output -n open-deep-research python scripts/validate_phase.py --phase 5`，要求 T5-1～T5-16 全部 PASS。
 
-## 阶段 4 已验证状态
+## 阶段 5 核心契约
 
-- T4 validator：退出码 0，T4-1 至 T4-16 全部 PASS，内部 `30 passed`。
-- 单元/安全：`21 passed, 0 skipped`；离线集成：`9 passed`。
-- Windows stdio：固定 `@modelcontextprotocol/server-filesystem@2026.1.14`，`1 passed`。
-- 配置 validator、compileall、JSON parse、git diff check 均退出码 0；Phase 3 最终回归 `103 passed`。
-- `ruff`/`mypy` 未安装；未运行任何模型/Web/付费评测。
+- `open_deep_research.runtime.persistence.persistence_lifespan` 拥有 saver/store；禁止返回离开 context 的可用裸连接。
+- `open_deep_research.runtime.graph_factory.open_deep_research_graph` 在 lifespan 内编译 root builder；旧 `deep_researcher` export 继续兼容默认关闭路径。
+- Namespace 只由 `RuntimeIdentity` 生成；Memory tool 不接受 tenant/user/project/namespace 参数。
+- Working Memory 为 checkpoint state；Episodic/Semantic/Procedural/Preference 为长期 Memory。
+- 长期写入一律 proposal → 七项 Gate → decision/audit；Agent 没有 raw put/delete/force 工具。
+- Semantic recall 必须重新验证 Evidence；Procedural 最少三次成功且需 regression/approval；Preference 仅接受明确 statement ref。
+- `memory_search` 只读且仅在能力 ready、配置启用时注册。
+- checkpoint、checkpoint store、knowledge、run evidence、memory 使用不同 SQLite 文件；serializer 禁用 pickle fallback。
 
-## 阶段 4 关键契约
+## 已验证命令
 
-- 两个新开关默认关闭；旧单 HTTP `mcp_config` 自动映射，命名 server 单点失败有结构化诊断且不移除健康工具。
-- Agentic RAG 仍只有 governed retrieval 边界；Phase 4 MCP 工具不在该提前返回路径中形成 Web 旁路。
-- 空/无效 roots 不回退 cwd；只读 root 无写 API；staging 只有 exclusive create，路径/类型/quota/并发失败不覆盖且不留 partial。
-- Knowledge identity 来自可信 runtime，不接受模型自报 namespace；所有 `kb_propose_*` 仅为 pending proposal/audit。
-- 工具/结果/审计不得包含 Allowed Root、internal storage ref、数据库或 blob 路径；只公开稳定 ID 和 `root://` locator。
-
-## 阶段 3 交付物
-
-- Requirement/coverage/completion：`src/open_deep_research/research/`。
-- run-scoped evidence：`src/open_deep_research/evidence/run_store.py`。
-- 共享预算、Web adapter、orchestrator/runtime：`src/open_deep_research/knowledge/retrieval/`。
-- 统一候选 Gate：`src/open_deep_research/knowledge/validation/`。
-- 六态生命周期/proposal：`src/open_deep_research/knowledge/lifecycle/`。
-- schema v3：`src/open_deep_research/storage/migrations/v3.py` 与 InMemory/SQLite Repository 扩展。
-- 唯一 Agentic 工具入口：`src/open_deep_research/tools/governed_retrieval.py`。
-- 最小路由/状态/prompt/恢复修复：`configuration.py`、`state.py`、`utils.py`、`prompts.py`、`deep_researcher.py`。
-- 验收：`scripts/validate_phase.py --phase 3`、`tests/unit/{research,evidence,knowledge,tools}` 与 `tests/integration/agentic_rag/`。
-
-## 阶段 3 已验证状态
-
-- 开始前 `scripts/validate_phase.py --phase 2`：退出码 0，内部 `83 passed`，T2-1 至 T2-15 全部 PASS。
-- 最终阶段 3 映射 suite：退出码 0，`103 passed, 0 skipped, 30 warnings`；T3-1 至 T3-20 的直接测试均通过。
-- knowledge/legacy 回归：退出码 0，`19 passed`；图治理+validator 自测：退出码 0，`18 passed`；missing-only orchestrator：退出码 0，`11 passed`。
-- `python -m compileall -q src scripts tests`、`git diff --check`：退出码 0。
-- 较早聚合 `scripts/validate_phase.py --phase 3` 运行退出码 0（内部 `101 passed`，T3-1 至 T3-20 PASS）。最终两项测试/映射修订后的首次重跑暴露并已修复 validator 中误置的 `basetemp` 定义；修复后 pytest 完成功能测试，但 Windows 工具沙箱在 basetemp session-finish 遇到 `WinError 5`。沙箱外重跑申请因执行额度被系统拒绝，因此未获得新的干净 wrapper 退出码；最终 103 项映射 suite 和 validator 自测均另行退出码 0。不得把 NameError/ACL 失败描述为 wrapper 通过或伪造结果。
-- `ruff`、`mypy` 未安装；未调用真实模型、Web、MCP、LangSmith 或 LLM Judge。
-
-## 阶段 3 关键契约
-
-- brief 先生成稳定 `RequirementSet`；active Evidence 对当前 Requirement 重跑 Gate。必需 gap 未覆盖且预算未耗尽时不能完成，blocked/预算耗尽时必须输出明确 gap。
-- 同轮 `ConductResearch + ResearchComplete` 和 Researcher tool+complete 都先执行工具，再重算 coverage；一个并行任务失败不得吞掉成功结果。
-- Agentic 开启后没有 Web 旁路：Tavily 只经 governed adapter，MCP 不绑定，当前 OpenAI/Anthropic provider-native 搜索 fail closed。本地足够时 Web 调用严格为 0，不足时只查 missing aspects。
-- 本地 candidate 与 Web candidate 经过同一 ValidationGate。Web evidence 先进入 scope+run 隔离的 `RunEvidenceStore`；writeback 关闭时 canonical Repository 零新增，另一 run 不可见。
-- canonical 生命周期只有六态和明确允许边；所有失效/隔离/替代/删除均为 proposal+soft transition，并追加 audit；无 hard delete API。
-- legacy augmentation 仅返回 active+validated knowledge 并保留旧 Web；所有知识开关关闭时工具清单和图路径回到 baseline。
-- compression token-limit 分支使用配置的 compression model 真正重试；think/error/limit ToolMessage 只进诊断 trace，不进结构化证据或 Writer 引用输入。
-
-## 阶段 2 交付物（历史）
-
-- 导入模型/服务：`src/open_deep_research/knowledge/ingestion/`。
-- 四类 parser：`src/open_deep_research/knowledge/ingestion/parsers/`。
-- ImportJob migration/Repository：`src/open_deep_research/storage/migrations/v2.py` 及 knowledge repositories。
-- 检索边界：`src/open_deep_research/knowledge/retrieval/`。
-- PaperQA 隔离层：`src/open_deep_research/knowledge/paperqa_adapter.py`。
-- 管理 inspection contract：`src/open_deep_research/tools/knowledge.py`。
-- CLI：`scripts/ingest_knowledge.py`、`scripts/search_knowledge.py`。
-- 依赖门禁：`scripts/check_phase2_dependencies.py`、`doc/development_plan/phase_2_dependency_matrix.md`。
-- 阶段验收：`scripts/validate_phase.py --phase 2`。
-- fixtures/tests：`tests/fixtures/knowledge/`、`tests/unit/knowledge/`、`tests/unit/tools/test_knowledge_tools.py`、`tests/integration/knowledge/`、`tests/integration/storage/test_phase2_repository_contract.py`。
-
-## 已验证状态
-
-- `scripts/validate_phase.py --phase 2`：退出码 0；内部 `83 passed, 0 skipped`，T2-1 至 T2-15 全部 PASS。
-- 四格式本地 CLI 在 `artifacts/phase2/final-cli-20260721-c/` 完成 dry-run、candidate 导入、Repository/PaperQA inspection 与 active-only 空结果验证；不匹配 scope 的历史查询导入会以 `missing_scope` 拒绝。
-- `scripts/validate_phase.py --phase 1`：退出码 0，T1-1 至 T1-16 全部 PASS。
-- `scripts/validate_phase.py --phase 0`：退出码 0，T0-1 至 T0-12 全部 PASS。
-- 全量离线 pytest：退出码 0，`147 passed, 1 skipped, 30 warnings`；唯一 skip 为未安装的可选 DeepEval adapter。
-- 既有 Researcher 限制测试：退出码 0，`7 passed`。
-- dependency smoke、`pip check`、compileall、`git diff --check`、`git diff --check HEAD^`：退出码均为 0；当前工作树和阶段整体差异均无 whitespace error。
-- legacy 只做 collect：退出码 0，收集 1 项；未修改或执行 legacy 测试正文。
-- `ruff`、`mypy` 在目标 conda 缺失，退出码 1；没有伪报通过。
-- 未调用真实模型、远程 embedding、Web、LangSmith、Deep Research Bench 或 LLM Judge。
-
-## 固定依赖与参考
-
-- Python：`3.11.15`，Windows AMD64。
-- `paper-qa==2026.3.18`
-- `paper-qa-pypdf==2026.3.18`
-- `tantivy==0.26.0`
-- `fhaviary==0.34.0`
-- `fhlmi==0.45.0`
-- `litellm==1.82.4`
-- PaperQA 参考提交：`d7675d7b7eddeb3535e8c260399c5bbeeb818c50`。
-
-## 关键契约
-
-- Repository/ContentBlob 是唯一权威存储；PaperQA 是从 scope-aware records 重建的派生检索状态。
-- 导入只接受调用方提供的本地 bytes，不打开 `input_ref`、不抓取 URL；CLI 只遍历显式 root，并拒绝 symlink/path escape。
-- 新 Version 固定为 `candidate`，新 Evidence 固定为 `pending`；index ready 不等于 active，不可引用。
-- Candidate 只能由可信 inspection capability 显式查看；生产 Researcher 没有绑定 `knowledge_search/read`。
-- scope/filter/as_of/lifecycle 在 backend 前后程序化执行；PaperQA 返回 ID 不能成为 canonical ID。
-- `paperqa.ask`、`Docs.aquery`、answer API 和 Agent loop 禁止；只允许 raw text retrieval。contextual provider 必须注入并受并发/timeout/token 限制。
-- 关闭 `enable_knowledge_base`、`enable_paperqa_retrieval` 和 contextual 开关后，不导入 PaperQA、不创建存储或索引，旧图保持不变。
-- `notes`、`raw_notes`、`compressed_research` 兼容路径未改变。
-
-## 环境缺口与风险
-
-- Windows pytest 沙箱临时目录可能在 session-finish 触发 `WinError 5`；使用唯一 `--basetemp=.phase-validation-tmp/<run-id>`，必要时按审批在沙箱外运行。不要擅自删除旧受限目录。
-- `ruff`/`mypy` 未安装；后续若需要补齐静态检查，应先取得用户依赖安装授权。
-- Agentic run budget 由 scope+run 共享、原子扣减且失败也计数；调整默认预算必须同时复验并发和成本门禁。
-- 当前 deterministic Gate 是保守的第一版；新增 provider 或更复杂的权威/时效策略必须继续走同一 contract，不能增加旁路或 prompt-only 判断。
-- 当前 PaperQA inspection 每次从 Repository rehydrate，安全但可能较慢；未来可信 manifest 不能替代权威 Repository。
-- deterministic query embedding 当前会计算两次；无外部成本，但未来换模型时需控制计费。
-- `packaging==25.0`、`click==8.4.2` 是安装 knowledge extra 后的解析结果；当前 `pip check`/全量回归通过。
-- 许可证边界见 `doc/development_plan/phase_2_dependency_matrix.md`，尤其既有 PyMuPDF 的 AGPL/商业双许可证风险。
-
-## 恢复时必读
-
-1. `AGENTS.md`
-2. `feature_list.json`
-3. `progress.md`
-4. `session-handoff.md`
-5. `doc/development_plan/README.md`
-6. `doc/development_plan/architecture_target.md`
-7. `doc/development_plan/reference_repositories.md`
-8. `doc/development_plan/execution_protocol.md`
-9. 用户明确指定的阶段文档；若执行下一阶段，则为 `doc/development_plan/phase_5_memory_system.md`
+- `scripts/validate_phase.py --phase 4`：退出码 0，T4 全 PASS。
+- 阶段 5 unit/security/integration：21 passed。
+- `scripts/resume_research.py --self-test`：退出码 0。
+- `scripts/validate_phase.py --phase 5`：退出码 0，T5-1～T5-16 全 PASS。
+- 阶段 3/baseline 回归：30 passed。
+- Phase 4 MCP 回归：30 passed、1 skipped（显式 Windows stdio marker）。
+- Ruff 阶段范围、mypy 隔离阶段范围、compileall、`git diff --check`：通过。
+- 未调用远程模型、Web、LangSmith、LLM Judge。
 
 ## 下一步
 
-等待用户明确下达阶段 5 指令。收到后先确认 `phase-4-mcp-integration-001=completed`，并运行/核验阶段 4 验收及固定 Windows stdio/安全证据；门禁未通过必须停止。不得自动实现阶段 5 或更后阶段。
+等待用户明确下达阶段 6 指令。收到后先复核阶段 5 门禁；未通过必须停止。不得自动开始阶段 6。

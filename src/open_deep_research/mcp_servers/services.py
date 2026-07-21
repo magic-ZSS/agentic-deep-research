@@ -22,6 +22,8 @@ from open_deep_research.mcp_servers.schemas import (
     KnowledgeMCPContext,
     KnowledgeProposalView,
 )
+from open_deep_research.memory.models import MemoryType
+from open_deep_research.memory.recall import MemoryRecall
 
 
 class KnowledgeMCPService:
@@ -34,12 +36,31 @@ class KnowledgeMCPService:
         repository: KnowledgeEvidenceRepository,
         context: KnowledgeMCPContext,
         staging: ExclusiveCreateStaging | None = None,
+        memory_recall: MemoryRecall | None = None,
     ) -> None:
         self.retriever = retriever
         self.repository = repository
         self.context = context
         self.lifecycle = KnowledgeLifecycleService(repository)
         self.staging = staging
+        self.memory_recall = memory_recall
+
+    async def memory_search(self, query: str, *, limit: int = 5) -> dict:
+        """Search active memories under the trusted runtime namespace only."""
+        if self.memory_recall is None or self.context.runtime_identity is None:
+            raise PermissionError("memory search capability is disabled")
+        result = await self.memory_recall.search(
+            query,
+            self.context.runtime_identity,
+            memory_types=(
+                MemoryType.EPISODIC,
+                MemoryType.SEMANTIC,
+                MemoryType.PROCEDURAL,
+                MemoryType.PREFERENCE,
+            ),
+            limit=limit,
+        )
+        return result.model_dump(mode="json")
 
     async def kb_search(
         self,
@@ -134,4 +155,3 @@ class KnowledgeMCPService:
             target_type=LifecycleTargetType.DOCUMENT_VERSION,
             reason=reason,
         )
-

@@ -96,3 +96,13 @@ python tests/extract_langsmith_data.py --project-name "YOUR_EXPERIMENT_NAME" --m
 - `tests/security/mcp/`
 - `tests/integration/mcp/`
 - `scripts/validate_phase.py`
+
+## 7) 阶段 5 离线验证
+
+- `tests/unit/memory/`：五类 schema、七项 Gate、type promotion policy、dedupe、recall/token budget、SQLite rehydrate、LangMem proposal-only boundary。
+- `tests/security/test_memory_namespace.py`：可信 Namespace 与伪造用户隔离。
+- `tests/integration/checkpoint/`：SQLite 跨 lifespan resume、thread 隔离、正常/异常/取消关闭。
+- `tests/integration/memory/`：跨 Thread preference、只读 MCP、Semantic Evidence 失效、checkpoint 引用恢复 RunEvidenceStore。
+- `scripts/validate_phase.py --phase 5`：T5-1 至 T5-16 确定性映射；不读取 API key，不调用远程模型。
+
+证据：上述测试目录、`scripts/resume_research.py`、`progress.md`。

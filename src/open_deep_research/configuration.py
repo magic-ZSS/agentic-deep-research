@@ -357,6 +357,21 @@ class Configuration(BaseModel):
     enable_filesystem_mcp: bool = False
     enable_knowledge_mcp: bool = False
 
+    # Phase 5 persistence and long-term memory are opt-in. Checkpoint, memory,
+    # knowledge, and transient evidence files must remain physically separate.
+    enable_memory: bool = False
+    enable_memory_writes: bool = False
+    checkpointer_backend: Literal["off", "memory", "sqlite"] = "off"
+    checkpoint_db_path: str = "data/checkpoints/checkpoints.db"
+    checkpoint_store_db_path: str = "data/checkpoints/store.db"
+    memory_repository_backend: Literal["memory", "sqlite"] = "sqlite"
+    memory_db_path: str = "data/memory/memory.db"
+    memory_recall_limit: int = Field(default=5, ge=1, le=20)
+    memory_recall_token_budget: int = Field(default=800, ge=64, le=8000)
+    memory_min_importance: float = Field(default=0.5, ge=0, le=1)
+    memory_episodic_score_threshold: float = Field(default=0.75, ge=0, le=1)
+    memory_procedural_min_successes: int = Field(default=3, ge=3, le=100)
+
     # 配置传给 MCP 工具的额外提示词。
     mcp_prompt: Optional[str] = Field(
         default=None,
@@ -398,6 +413,18 @@ class Configuration(BaseModel):
                 "run evidence SQLite storage must be isolated from the canonical "
                 "knowledge database"
             )
+        persistence_paths = [
+            self.knowledge_db_path,
+            self.run_evidence_db_path,
+            self.checkpoint_db_path,
+            self.checkpoint_store_db_path,
+            self.memory_db_path,
+        ]
+        normalized = [os.path.normcase(os.path.abspath(path)) for path in persistence_paths]
+        if len(normalized) != len(set(normalized)):
+            raise ValueError("knowledge, run evidence, checkpoint/store, and memory SQLite files must be separate")
+        if self.enable_memory_writes and not self.enable_memory:
+            raise ValueError("enable_memory_writes requires enable_memory")
         return self
 
 

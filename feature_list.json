@@ -111,6 +111,14 @@
       "dependencies": ["phase-3-agentic-rag-lifecycle-001"],
       "status": "completed",
       "evidence": "2026-07-21 阶段 3 前置门禁直接 suite 103 passed；Phase 4 单元/安全测试 21 passed、0 skipped，离线集成 9 passed；固定 @modelcontextprotocol/server-filesystem@2026.1.14 Windows stdio handshake/tools-list/read smoke 1 passed；scripts/validate_mcp_config.py 退出码 0；scripts/validate_phase.py --phase 4 退出码 0，T4-1 至 T4-16 全部 PASS，内部 30 passed。Phase 3 首轮回归因新增合法 propose_ingest 枚举导致旧精确集合断言 1 failed/102 passed，更新该契约测试后复验通过。compileall/git diff --check 通过；ruff/mypy 在目标 conda 环境未安装（退出码 1），未伪报。全部文件测试使用 pytest 临时 roots，未调用模型、Web、LangSmith、LLM Judge 或用户真实文件。"
+    },
+    {
+      "id": "phase-5-memory-system-001",
+      "name": "实现分层记忆与可恢复运行状态",
+      "description": "执行开发计划阶段 5：managed SQLite checkpointer/store、可信 RuntimeIdentity/Namespace、五类 Memory、Repository、七项 Write Gate、受控 recall、只读 memory_search 与 RunEvidenceStore 引用恢复；不实现阶段 6 引用验证。",
+      "dependencies": ["phase-4-mcp-integration-001"],
+      "status": "completed",
+      "evidence": "2026-07-21 开始前 scripts/validate_phase.py --phase 4 退出码 0，T4-1 至 T4-16 全部 PASS。固定并安装 langgraph-checkpoint-sqlite==3.1.0、langmem==0.0.30；阶段 5 单元/安全/集成套件 21 passed；scripts/resume_research.py --self-test 使用真实 SQLite 跨 lifespan 恢复并退出码 0；scripts/validate_phase.py --phase 5 退出码 0，T5-1 至 T5-16 全部 PASS；阶段 3/baseline 回归 30 passed；Phase 4 MCP 回归 30 passed、1 skipped（显式 Windows stdio marker）；Ruff 精确范围通过；mypy 阶段 5 隔离范围 13 source files 通过；compileall 与 git diff --check 通过。未调用远程模型、Web、LangSmith 或 LLM Judge。"
     }
   ]
 }
