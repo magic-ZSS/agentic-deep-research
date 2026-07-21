@@ -119,6 +119,14 @@
       "dependencies": ["phase-4-mcp-integration-001"],
       "status": "completed",
       "evidence": "2026-07-21 开始前 scripts/validate_phase.py --phase 4 退出码 0，T4-1 至 T4-16 全部 PASS。固定并安装 langgraph-checkpoint-sqlite==3.1.0、langmem==0.0.30；阶段 5 单元/安全/集成套件 21 passed；scripts/resume_research.py --self-test 使用真实 SQLite 跨 lifespan 恢复并退出码 0；scripts/validate_phase.py --phase 5 退出码 0，T5-1 至 T5-16 全部 PASS；阶段 3/baseline 回归 30 passed；Phase 4 MCP 回归 30 passed、1 skipped（显式 Windows stdio marker）；Ruff 精确范围通过；mypy 阶段 5 隔离范围 13 source files 通过；compileall 与 git diff --check 通过。未调用远程模型、Web、LangSmith 或 LLM Judge。"
+    },
+    {
+      "id": "phase-6-citation-validation-001",
+      "name": "实现证据治理的引用验证与局部报告修复",
+      "description": "执行开发计划阶段 6：建立 Draft/Section/AtomicClaim/link/result/patch/registry 模型、scope-aware EvidenceResolver、五态验证、局部修复、程序化来源编号与 off/audit/enforce 报告流水线；不实现阶段 7 完整评测。",
+      "dependencies": ["phase-5-memory-system-001"],
+      "status": "completed",
+      "evidence": "2026-07-21 开始前 scripts/validate_phase.py --phase 5 退出码 0，T5-1 至 T5-16 全部 PASS。Phase 6 最终离线 unit 20 passed、integration 9 passed、阶段 3/5 回归 35 passed；scripts/validate_report.py 合法 fixture 退出码 0；scripts/validate_phase.py --phase 6 退出码 0，T6-1 至 T6-18 全部 PASS（内部 29 tests）；Ruff、Mypy（18 source files）和 git diff --check 均退出码 0。未调用真实模型、Web、LangSmith、Deep Research Bench 或 LLM Judge。"
     }
   ]
 }

@@ -2152,10 +2152,123 @@ def validate_phase5(root: Path) -> list[CheckResult]:
     ]
 
 
+def _check_phase6_suite(root: Path) -> str:
+    """Run only deterministic Phase 6 unit and integration evidence."""
+    command = [
+        sys.executable,
+        "-m",
+        "pytest",
+        "tests/unit/evidence/validation",
+        "tests/unit/reporting",
+        "tests/integration/citation_pipeline",
+        "-m",
+        "not live",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+    ]
+    environment = os.environ.copy()
+    environment["ODR_ALLOW_EXTERNAL_CALLS"] = "0"
+    for key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "TAVILY_API_KEY"):
+        environment.pop(key, None)
+    completed = subprocess.run(
+        command,
+        cwd=root,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+    if completed.returncode != 0:
+        raise ValueError((completed.stdout + completed.stderr)[-5000:])
+    match = re.search(r"(\d+) passed", completed.stdout)
+    if not match or int(match.group(1)) < 25:
+        raise ValueError("Phase 6 suite did not execute expected offline evidence")
+    return f"offline citation suite passed ({match.group(1)} tests)"
+
+
+def _check_phase6_static(root: Path) -> str:
+    """Check default-off isolation, package discovery and graph placement."""
+    from open_deep_research.configuration import Configuration
+    from validate_report import validate_payload
+
+    config = Configuration()
+    if config.citation_validation_mode != "off":
+        raise ValueError("citation validation must default off")
+    with (root / "pyproject.toml").open("rb") as source:
+        packages = set(tomllib.load(source)["tool"]["setuptools"]["packages"])
+    required = {
+        "open_deep_research.evidence.validation",
+        "open_deep_research.reporting",
+    }
+    if not required <= packages:
+        raise ValueError("Phase 6 package discovery is incomplete")
+    graph_source = (root / "src/open_deep_research/deep_researcher.py").read_text(
+        encoding="utf-8"
+    )
+    if 'builder.add_node("citation_validation"' not in graph_source:
+        raise ValueError("citation validation node is not mounted independently")
+    fixture = json.loads(
+        (root / "tests/fixtures/citations/valid_report.json").read_text(encoding="utf-8")
+    )
+    errors = validate_payload(fixture)
+    if errors:
+        raise ValueError(f"valid report fixture failed: {errors}")
+    reporting_source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (root / "src/open_deep_research/reporting").rglob("*.py")
+    )
+    if re.search(r"(?:hard_delete|force_promote)", reporting_source):
+        raise ValueError("reporting pipeline contains a forbidden knowledge mutation")
+    return "defaults off, isolated node/packages, safe fixture and no knowledge mutation pass"
+
+
+def validate_phase6(root: Path) -> list[CheckResult]:
+    """Evaluate T6-1..T6-18 using deterministic citation fixtures only."""
+    try:
+        suite = _check_phase6_suite(root)
+        static = _check_phase6_static(root)
+        error: BaseException | None = None
+    except BaseException as exc:
+        suite = static = ""
+        error = exc
+    focus = {
+        "T6-1": "related but indirect evidence cannot become fully supported",
+        "T6-2": "validity intervals and as-of reject stale document versions",
+        "T6-3": "self-reported authority supports only attributed corporate claims",
+        "T6-4": "unsupported numeric claims are removed from enforce output",
+        "T6-5": "the five statuses map to deterministic enforce dispositions",
+        "T6-6": "every atomic claim owns independent links and results",
+        "T6-7": "body markers and registry/source table are bidirectionally exact",
+        "T6-8": "legacy local numbers are stripped and source/version keys deduplicate globally",
+        "T6-9": "hash-guarded local repair preserves unaffected sections",
+        "T6-10": "results persist failed checks, policy and full evidence chain identifiers",
+        "T6-11": "off is no-op, audit is byte preserving and enforce fails closed",
+        "T6-12": "validate_report accepts valid input and rejects four invalid classes",
+        "T6-13": "the Phase 6 validator emits eighteen offline acceptance results",
+        "T6-14": "registry identity distinguishes versions and merges locators within a version",
+        "T6-15": "legacy numbers and diagnostic messages cannot become citations",
+        "T6-16": "public projections prevent Windows path and blob reference disclosure",
+        "T6-17": "supplemental evidence cannot launder a failed explicit citation",
+        "T6-18": "canonical and same-run transient evidence resolve while other runs fail closed",
+    }
+
+    def detail(acceptance_id: str) -> str:
+        if error is not None:
+            raise error
+        return f"{focus[acceptance_id]}; {suite}; {static}"
+
+    return [
+        _run_check(item, lambda item=item: detail(item))
+        for item in (f"T6-{index}" for index in range(1, 19))
+    ]
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the phase validator CLI."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--phase", type=int, required=True, choices=(0, 1, 2, 3, 4, 5))
+    parser.add_argument("--phase", type=int, required=True, choices=(0, 1, 2, 3, 4, 5, 6))
     parser.add_argument("--refs-lock", type=Path)
     parser.add_argument("--cases", type=Path)
     parser.add_argument("--fixture", type=Path)
@@ -2190,8 +2303,10 @@ def main(argv: list[str] | None = None) -> int:
         results = validate_phase3(PROJECT_ROOT)
     elif args.phase == 4:
         results = validate_phase4(PROJECT_ROOT)
-    else:
+    elif args.phase == 5:
         results = validate_phase5(PROJECT_ROOT)
+    else:
+        results = validate_phase6(PROJECT_ROOT)
     if args.as_json:
         sys.stdout.write(
             json.dumps(

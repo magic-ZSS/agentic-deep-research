@@ -105,6 +105,11 @@ class AgentState(MessagesState):
     memory_proposal_ids: Annotated[list[str], stable_id_reducer] = []
     working_memory_summary: Optional[str]
     run_evidence_retention_status: Optional[str]
+    citation_claim_ids: Annotated[list[str], stable_id_reducer] = []
+    citation_validation_result_ids: Annotated[list[str], stable_id_reducer] = []
+    citation_registry_keys: Annotated[list[str], stable_id_reducer] = []
+    citation_validation_artifact: Optional[dict[str, Any]]
+    citation_validation_error: Optional[str]
     final_report: str
 
 class SupervisorState(TypedDict):

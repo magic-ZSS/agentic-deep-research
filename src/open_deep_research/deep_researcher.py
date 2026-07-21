@@ -38,6 +38,7 @@ from open_deep_research.research import (
     RequirementMaterializer,
     RequirementSet,
 )
+from open_deep_research.reporting.pipeline import citation_validation_node
 from open_deep_research.state import (
     AgentInputState,
     AgentState,
@@ -1086,11 +1087,13 @@ deep_researcher_builder.add_node("clarify_with_user", clarify_with_user)        
 deep_researcher_builder.add_node("write_research_brief", write_research_brief)     # Research planning phase
 deep_researcher_builder.add_node("research_supervisor", supervisor_subgraph)       # Research execution phase
 deep_researcher_builder.add_node("final_report_generation", final_report_generation)  # Report generation phase
+deep_researcher_builder.add_node("citation_validation", citation_validation_node)  # Optional report governance
 
 # Define main workflow edges for sequential execution
 deep_researcher_builder.add_edge(START, "clarify_with_user")                       # Entry point
 deep_researcher_builder.add_edge("research_supervisor", "final_report_generation") # Research to report
-deep_researcher_builder.add_edge("final_report_generation", END)                   # Final exit point
+deep_researcher_builder.add_edge("final_report_generation", "citation_validation") # Draft to optional validation
+deep_researcher_builder.add_edge("citation_validation", END)                       # Final exit point
 
 # Compile the complete deep researcher workflow
 deep_researcher = deep_researcher_builder.compile()

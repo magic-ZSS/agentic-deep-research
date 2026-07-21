@@ -372,6 +372,22 @@ class Configuration(BaseModel):
     memory_episodic_score_threshold: float = Field(default=0.75, ge=0, le=1)
     memory_procedural_min_successes: int = Field(default=3, ge=3, le=100)
 
+    # Phase 6 report governance remains opt-in. ``off`` preserves the legacy
+    # Writer bytes; audit records artifacts, and enforce fails closed.
+    citation_validation_mode: Literal["off", "audit", "enforce"] = "off"
+    citation_policy_version: str = "citation-policy-v1"
+    citation_min_entailment: float = Field(default=0.75, ge=0, le=1)
+    citation_require_temporal_validity: bool = True
+    citation_min_source_authority: Literal[
+        "unknown", "self_reported", "secondary", "primary", "official"
+    ] = "secondary"
+    citation_unsupported_action: Literal["remove", "mark"] = "remove"
+    claim_extraction_model: Optional[str] = None
+    citation_entailment_model: Optional[str] = None
+    report_repair_model: Optional[str] = None
+    citation_model_timeout_seconds: float = Field(default=30.0, ge=1, le=300)
+    citation_model_token_limit: int = Field(default=4000, ge=256, le=20000)
+
     # 配置传给 MCP 工具的额外提示词。
     mcp_prompt: Optional[str] = Field(
         default=None,
@@ -425,6 +441,8 @@ class Configuration(BaseModel):
             raise ValueError("knowledge, run evidence, checkpoint/store, and memory SQLite files must be separate")
         if self.enable_memory_writes and not self.enable_memory:
             raise ValueError("enable_memory_writes requires enable_memory")
+        if not self.citation_policy_version.strip():
+            raise ValueError("citation_policy_version cannot be blank")
         return self
 
 

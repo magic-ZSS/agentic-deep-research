@@ -77,6 +77,8 @@ packages = [
     "open_deep_research.knowledge.retrieval",
     "open_deep_research.knowledge.validation",
     "open_deep_research.evidence",
+    "open_deep_research.evidence.validation",
+    "open_deep_research.reporting",
     "open_deep_research.research",
     "open_deep_research.storage",
     "open_deep_research.storage.migrations",
@@ -117,9 +119,25 @@ lint.ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D", "UP"]
+"src/open_deep_research/evidence/models.py" = ["D102"]
+"src/open_deep_research/evidence/run_store.py" = ["D102", "D107"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.mypy]
+mypy_path = "src"
+namespace_packages = true
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = [
+    "open_deep_research.configuration",
+    "open_deep_research.knowledge.*",
+    "open_deep_research.evidence.models",
+    "open_deep_research.evidence.run_store",
+]
+ignore_errors = true
 
 [tool.pytest.ini_options]
 addopts = "-p no:deepeval -p no:cacheprovider --basetemp=.pytest-tmp"

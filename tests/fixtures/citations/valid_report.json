@@ -1,0 +1,19 @@
+{
+  "final_report": "# Finding\nSupported fact.[1]\n\n### Sources\n\n[1] Example source — https://example.test/source — page:2",
+  "mode": "enforce",
+  "claims": [
+    {"claim_id": "claim-1"}
+  ],
+  "results": [
+    {
+      "claim_id": "claim-1",
+      "status": "fully_supported",
+      "links": [
+        {"accepted": true, "temporal_status": "current"}
+      ]
+    }
+  ],
+  "registry": [
+    {"display_number": 1, "source_id": "src-1", "version_id": "ver-1"}
+  ]
+}
