@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-9a3d98efb4049fc3e57c5c885c1e08cc",
+  "metric_name": "contextual_recall",
+  "duration_ms": 6117.070499996771,
+  "result": {
+    "metric_name": "contextual_recall",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The score is 0.00 because the expected output requests specific constraints (Python 3.11+, conda, LangGraph entry, offline-versus-paid test) that are largely absent from the nodes in retrieval context; while Source 5 and Source 6 touch on Python and conda respectively, they fail to provide the critical LangGraph or testing constraint details required.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 10417,
+    "output_tokens": 204,
+    "total_tokens": 10621
+  }
+}

@@ -242,6 +242,53 @@ def _usage_from_message(message: Any) -> JudgeTokenUsage | None:
     return JudgeTokenUsage(input_tokens=input_tokens, output_tokens=output_tokens)
 
 
+def _usage_from_exception(error: BaseException) -> JudgeTokenUsage | None:
+    """Recover provider-reported usage from a failed completion when available.
+
+    OpenAI-compatible clients attach the terminal completion to errors such as
+    ``LengthFinishReasonError``.  Treating that known usage as unknown would
+    conservatively charge the whole reservation and permanently obscure the
+    actual cost.  This remains duck-typed so importing the optional OpenAI SDK
+    is not required by offline evaluation paths.
+    """
+    completion = getattr(error, "completion", None)
+    usage = (
+        completion.get("usage")
+        if isinstance(completion, Mapping)
+        else getattr(completion, "usage", None)
+    )
+    if usage is None:
+        return None
+
+    def value(name: str) -> Any:
+        if isinstance(usage, Mapping):
+            return usage.get(name)
+        return getattr(usage, name, None)
+
+    input_tokens = value("prompt_tokens")
+    output_tokens = value("completion_tokens")
+    total_tokens = value("total_tokens")
+    if (
+        isinstance(input_tokens, bool)
+        or isinstance(output_tokens, bool)
+        or not isinstance(input_tokens, int)
+        or not isinstance(output_tokens, int)
+        or input_tokens < 0
+        or output_tokens < 0
+    ):
+        return None
+    if total_tokens is not None and (
+        isinstance(total_tokens, bool)
+        or not isinstance(total_tokens, int)
+        or total_tokens != input_tokens + output_tokens
+    ):
+        return None
+    return JudgeTokenUsage(
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+    )
+
+
 def _serialized_schema_size(schema: type[BaseModel] | None) -> int:
     """Return a conservative byte-based token bound for an injected JSON schema."""
     if schema is None:
@@ -354,7 +401,10 @@ class QwenJudgeAdapter:
         if reservation.settled:
             return
         try:
-            reservation.settle(None, error_type=type(error).__name__)
+            reservation.settle(
+                _usage_from_exception(error),
+                error_type=type(error).__name__,
+            )
         except BaseException as settlement_error:
             error.add_note(
                 "judge reservation settlement also failed: "

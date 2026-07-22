@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-9a3d98efb4049fc3e57c5c885c1e08cc",
+  "metric_name": "step_efficiency",
+  "duration_ms": 5242.637500006822,
+  "result": {
+    "metric_name": "step_efficiency",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The agent performed three redundant web searches for generic Python packaging information instead of recognizing the lack of filesystem access tools. It failed to identify that the task required reading local files which were unavailable, resulting in multiple unnecessary retriever calls and reasoning loops without completing the task.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 28575,
+    "output_tokens": 132,
+    "total_tokens": 28707
+  }
+}

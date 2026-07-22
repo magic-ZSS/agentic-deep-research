@@ -67,6 +67,18 @@ def test_budget_manifest_drift_fails_before_dispatch():
         validate_calibration_matrix(
             changed, variants(), ["baseline", "citation_validator"]
         )
+    changed = copy.deepcopy(plan())
+    changed["runtime_limits"]["claim_scorer_batch_size"] = 7
+    with pytest.raises(CalibrationConfigurationError, match="batch"):
+        validate_calibration_matrix(
+            changed, variants(), ["baseline", "citation_validator"]
+        )
+    changed = copy.deepcopy(plan())
+    changed["runtime_limits"]["claim_scorer_max_provider_calls"] = 23
+    with pytest.raises(CalibrationConfigurationError, match="provider-call ceiling"):
+        validate_calibration_matrix(
+            changed, variants(), ["baseline", "citation_validator"]
+        )
 
 
 def test_variant_config_is_path_isolated_and_contains_no_credentials(tmp_path):

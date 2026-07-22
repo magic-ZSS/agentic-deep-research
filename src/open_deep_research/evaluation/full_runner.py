@@ -76,7 +76,9 @@ from open_deep_research.evaluation.claim_scorer import (
     CLAIM_SCORER_STEP_NAME,
     CLAIM_SCORER_VERSION,
     ClaimCitationScorer,
+    ClaimScorerError,
     ClaimScorerResult,
+    validate_claim_scorer_coverage,
 )
 from open_deep_research.evaluation.custom_metrics import (
     cost_completeness_metric,
@@ -1262,7 +1264,6 @@ async def _run_full_matrix_locked(
                 output=output,
                 stopped_reason=stop,
             )
-        store.assert_resumable()
         case = case_by_id[definition.case_id]
         variant = variant_by_id[definition.variant_id]
         runtime_dir = runtime_root / run_id
@@ -1446,6 +1447,16 @@ async def _run_full_matrix_locked(
             )
 
         try:
+            # Coverage is project-owned and free to validate. Do it before any
+            # of the seven DeepEval judge calls so an unsupported report shape
+            # cannot consume judge tokens and only then fail in the scorer.
+            validate_claim_scorer_coverage(
+                observation.output,
+                batch_size=plan["runtime_limits"]["claim_scorer_batch_size"],
+                max_provider_calls=plan["runtime_limits"][
+                    "claim_scorer_max_provider_calls"
+                ],
+            )
             metric_calls = metric_factory(
                 case=case,
                 variant=variant,
@@ -1506,7 +1517,11 @@ async def _run_full_matrix_locked(
                 error_fingerprint=str(failure.trace["error_fingerprint"]),
             )
             await _track(tracking, "run", failure.model_dump(mode="json"))
-            stop = _failure_circuit_reason(records, plan)
+            stop = (
+                f"judge:{CLAIM_SCORER_STEP_NAME}:{type(error).__name__}"
+                if isinstance(error, ClaimScorerError)
+                else _failure_circuit_reason(records, plan)
+            )
             _persist_summary(
                 output=output,
                 identity=identity,
@@ -1936,7 +1951,7 @@ async def _run_full_matrix_locked(
             await _track(tracking, "run", failure.model_dump(mode="json"))
             stop = (
                 f"judge:{CLAIM_SCORER_STEP_NAME}:{type(claim_error).__name__}"
-                if isinstance(claim_error, LiveTokenBudgetError)
+                if isinstance(claim_error, LiveTokenBudgetError | ClaimScorerError)
                 else _dispatch_stop_reason(ledger, plan)
                 or _failure_circuit_reason(records, plan)
             )

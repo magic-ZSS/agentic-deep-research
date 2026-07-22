@@ -439,11 +439,16 @@ class CalibrationResumeSummary(_StrictModel):
     can_resume: bool
 
     def assert_resumable(self) -> None:
-        """Fail closed rather than repeating an interrupted or unmetered call."""
-        unsafe = [*self.blocked_in_flight_step_ids, *self.unknown_usage_step_ids]
+        """Fail closed rather than extending an irrecoverable paid experiment."""
+        unsafe = [
+            *self.terminal_noncompleted_run_ids,
+            *self.blocked_in_flight_step_ids,
+            *self.unknown_usage_step_ids,
+        ]
         if unsafe:
             raise CalibrationInFlightError(
-                "calibration journal contains unsafe paid steps: " + ", ".join(unsafe)
+                "calibration journal contains unsafe paid runs or steps: "
+                + ", ".join(unsafe)
             )
 
 
@@ -931,7 +936,7 @@ class CalibrationJournalStore:
             pending_step_ids=sorted(set(pending_steps)),
             blocked_in_flight_step_ids=blocked,
             unknown_usage_step_ids=unknown,
-            can_resume=not blocked and not unknown,
+            can_resume=not terminal_noncompleted and not blocked and not unknown,
         )
 
     def should_skip_run(self, run_id: str) -> bool:

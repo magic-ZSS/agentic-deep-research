@@ -16,23 +16,27 @@
 
 ## 阶段 7 恢复点
 
+- 2026-07-23 终端失败已定位：`artifacts/evaluation/calibration-current/` 为 2 completed + 1 terminal failed + 3 pending，账本 committed 973,999 Token，其中 unknown charged 30,852；`evaluation-claim-scorer-v3` 对 36 Claim 的单次结构化输出触发 `LengthFinishReasonError`。该目录保持原样，绝对不得 `--resume`。
+- 修复为 `evaluation-claim-scorer-v4`：每批 6 Claim，仅返回 global ordinal/分类；文本与 citation IDs 留在本地；Tavily/governed evidence 仅按 canonical URL/Evidence ID 绑定。22 provider-call/132-candidate 硬上限和报告结构在 7 个 Judge 前无模型检查。
+- Qwen 异常 completion usage 可精确结算，真正未知才 fail closed；Claim coverage/response 错误立即停止。terminal failed journal 令 core direct resume 和 wrapper 都在任何新付费调用前拒绝。
+- Windows 首次运行默认新目录 `artifacts/evaluation/calibration-v4`；命令仍为 `.\scripts\run_phase7_full.cmd -ConfirmCost`。只有确认 run 间健康中断才增加 `-ResumeCalibration`，已有失败/停止目录不会自动恢复。
+- 本次最终离线聚焦回归 `95 passed`；费用安全快速回归 `6 passed`；Ruff、compileall、PowerShell parse 与隔离 Mypy 3 source files 通过。smoke 为 45 records、scorer v4、source snapshot `c5b0341cdf83...`。没有调用 Qwen、Tavily、DeepEval Judge 或 LangSmith。
 - 2026-07-23 已修复现有 `open-deep-research` 环境的依赖冲突：Python 3.11.15、`deepeval==4.1.1`、`click==8.3.1`、`huggingface-hub==1.4.1`，`pip check` 与真实评测 import smoke 均通过。
 - 一键入口现默认使用 `open-deep-research`；新增 Git 状态预检，未提交评测源码会被清晰列出并以退出码4停止，不再产生路径乱码 traceback。相关离线回归13 passed，Ruff、compileall与PowerShell parse通过。
 - 2026-07-22 离线精确套件共 169 passed：core 131、full runner 14、strict validator 4、其余 Phase 7 contracts 20；新增范围 Ruff 与 compileall 通过。
-- Windows 入口已收口为 `.\scripts\run_phase7_full.cmd -ConfirmCost`：自动执行环境/source门禁、smoke、最多300万Token calibration、只读投影、`FULL`二次确认、54-run full、报告与验收；中断后重复同一命令会对固定目录使用`--resume`，不会循环自动重试。
+- Windows 入口已收口为 `.\scripts\run_phase7_full.cmd -ConfirmCost`：自动执行环境/source门禁、smoke、最多300万Token calibration、只读投影、`FULL`二次确认、54-run full、报告与验收；恢复必须显式 `-ResumeCalibration` 并通过本地安全检查，不会循环自动重试。
 - 一键入口聚焦离线回归 `30 passed`，PowerShell parse通过；缺少`-ConfirmCost`时退出码2且不读取conda/调用外部服务，缺失评测环境时不创建付费输出；Ruff和compileall通过。
 - `validate_phase --phase 7` 当前按设计仅 T7-3/4/6/9 FAIL（缺少真实 full artifact），其余验收 PASS；Phase 7 因此保持 `in-progress`。
 - smoke artifact：45 records，manifest 校验通过，README 由机器 JSON 驱动。
-- smoke artifact 已离线刷新为统一 `evaluation-claim-scorer-v3`，并记录生成时 `HEAD`、绑定按限定文件路径/bytes 计算的评测源码快照 `8d7d2e2be7c9...`；validator 会拒绝旧 scorer、不完整矩阵或源码内容漂移。
+- smoke artifact 已离线刷新为统一 `evaluation-claim-scorer-v4`，并记录生成时 `HEAD`、绑定按限定文件路径/bytes 计算的评测源码快照 `c5b0341cdf83...`；validator 会拒绝旧 scorer、不完整矩阵或源码内容漂移。
 - source snapshot 的内容 hash 在相同源码提交前后稳定，且排除 docs/status/artifacts，因而结果提交不会造成自引用；dirty-source smoke 在源码提交后须重建，paid calibration/full 始终要求相关源码 clean。新增收口聚焦回归 53 passed，精确 Ruff、隔离 Mypy 与 compileall 通过。
 - 新增 read-only `--preflight-only`：完成新 calibration 后先输出实测 projection和调用区间，再等待用户单独授权 full；该路径不会调用图、模型、搜索、Judge或LangSmith，也不会写 output。
 - `scripts/render_eval_report.py` 现在可直接渲染 full rich report 和机器驱动 README 表格；不要对 full 目录运行仅适用于 smoke 的 `scripts/compare_ablations.py`。
-- full runner 固定 45 main + 9 warm；每 run 依次持久化 research、7 个 DeepEval metric、独立 v3 claim scorer与终态，恢复不会重放 terminal step。
+- full runner 固定 45 main + 9 warm；每 run 依次持久化 research、7 个 DeepEval metric、独立 v4 claim scorer 与终态。completed step 不重放，terminal failed run 禁止自动恢复。
 - 反浪费门禁：3600 万停派、4200 万硬限、单 run 80 万；跨进程 lease、逐 run 对账、unknown usage、异常 reservation、连续失败、重复错误签名、失败率、失败/retry Token与校准投影均可熔断。
 - 本地 artifact 是权威；`--tracking langsmith` 只镜像去敏元数据和指标，失败记本地 tracking error，不重跑研究。
-- 真实入口要求 clean evaluation source 与 `open-deep-research-eval` Python 3.11 独立环境；当前 Windows 开发环境另有系统策略阻止 `uuid_utils` 原生 DLL 的已知缺口。
-- 独立评测环境目前只有配置与 fake/offline 门禁证据，尚未实际新建并运行真实 `pip check`/import smoke；这是下一次付费授权前必须消除的环境风险。
-- 既有 calibration 是 3/6、632,627 Token 的 stopped diagnostic，保持原样且不得 `--resume`；新的 calibration 必须使用新 output 和新的明确费用授权。
+- 真实入口要求 clean evaluation source，并默认使用已验证的 `open-deep-research` Python 3.11 conda 环境；环境中的 `pip check` 与 import smoke 已通过。全目录 pytest 仍可能受 Windows `uuid_utils` DLL 策略影响，但付费入口会在外部调用前 fail closed。
+- 既有 `artifacts/evaluation/calibration/` 是 3/6、632,627 Token 的旧 stopped diagnostic；`calibration-current` 是 973,999 Token 的 terminal failure diagnostic。两者均保持原样且不得恢复；新的 calibration 使用 `calibration-v4`。
 
 ## 阶段 6 核心契约
 
@@ -58,4 +62,4 @@
 
 ## 下一步
 
-当前环境已经修复。先审阅并提交入口列出的评测相关文件，使 clean-source gate 可验证固定 commit；随后统一执行 `.\scripts\run_phase7_full.cmd -ConfirmCost`。脚本先运行新的最多300万Token calibration并展示投影，只有输入`FULL`才启动主矩阵；完成前Phase 7保持`in-progress`。
+先审阅并提交当前评测修复，使 clean-source gate 可验证固定 commit；随后首次执行 `.\scripts\run_phase7_full.cmd -ConfirmCost`，默认写入新的 `calibration-v4`。只有健康中断才增加 `-ResumeCalibration`，绝不能恢复 `calibration-current`。脚本先运行新的最多 300 万 Token calibration 并展示投影，只有输入 `FULL` 才启动主矩阵；完成前 Phase 7 保持 `in-progress`。

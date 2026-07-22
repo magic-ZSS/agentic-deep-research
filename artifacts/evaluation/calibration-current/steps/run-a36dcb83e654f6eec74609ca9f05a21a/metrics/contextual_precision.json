@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-a36dcb83e654f6eec74609ca9f05a21a",
+  "metric_name": "contextual_precision",
+  "duration_ms": 33673.09660000319,
+  "result": {
+    "metric_name": "contextual_precision",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.8206400785553033,
+    "threshold": 0.5,
+    "status": "passed",
+    "reason": "The score is 0.82 because the retrieval ranking is largely effective, placing highly relevant nodes addressing 'concurrency risks' and 'non-invasive telemetry' at the top positions (first node through fifth node). However, the score is not higher due to the presence of irrelevant nodes interspersed among later relevant results; specifically, the sixth node is identified as a 'brief forum post' lacking substantive information, and the eleventh node is a 'marketing page' that fails to address specific architectural risks, which disrupts the ideal continuous ranking of relevant content.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 18435,
+    "output_tokens": 1847,
+    "total_tokens": 20282
+  }
+}

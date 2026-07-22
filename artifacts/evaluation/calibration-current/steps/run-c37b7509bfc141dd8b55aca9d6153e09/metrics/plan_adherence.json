@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-c37b7509bfc141dd8b55aca9d6153e09",
+  "metric_name": "plan_adherence",
+  "duration_ms": 5942.218700001831,
+  "result": {
+    "metric_name": "plan_adherence",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The agent failed to execute any of the three planned verification steps (Python version, main entry point, test entry point). The trace consists entirely of failed tool calls and internal reflections, with no evidence of file inspection or fact retrieval.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 12091,
+    "output_tokens": 193,
+    "total_tokens": 12284
+  }
+}

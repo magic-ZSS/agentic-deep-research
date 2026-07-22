@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-c37b7509bfc141dd8b55aca9d6153e09",
+  "metric_name": "tool_correctness",
+  "duration_ms": 2735.2009000023827,
+  "result": {
+    "metric_name": "tool_correctness",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.5,
+    "threshold": 0.5,
+    "status": "passed",
+    "reason": "[\n\t Tool Calling Reason: All expected tools ['governed_retrieval'] were called (order not considered).\n\t Tool Selection Reason: The agent correctly identified that it needed to retrieve information about project files (README, pyproject.toml, etc.) and used the only available retrieval tool, `governed_retrieval`. However, the agent failed to adapt its strategy after repeated errors, continuing to misuse the tool with incorrect parameters instead of recognizing it might be unsuitable for local file inspection or finding an alternative approach. The selection was logically aligned with the goal but practically ineffective due to persistent misapplication.\n]\n",
+    "deterministic": false,
+    "judge_model": null,
+    "estimated_cost_usd": null,
+    "input_tokens": 3015,
+    "output_tokens": 114,
+    "total_tokens": 3129
+  }
+}

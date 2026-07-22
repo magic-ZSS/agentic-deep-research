@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-a36dcb83e654f6eec74609ca9f05a21a",
+  "metric_name": "claim_citation_scorer",
+  "status": "error",
+  "run_terminal_status": "failed",
+  "duration_ms": 35798.756600008346,
+  "input_tokens": null,
+  "output_tokens": null,
+  "total_tokens": null,
+  "error_fingerprint": "d8d6d7084deb441abe74730c18f5833c86ec2511c459d3324e804f6b2be0e1cb"
+}

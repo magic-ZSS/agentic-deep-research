@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-c37b7509bfc141dd8b55aca9d6153e09",
+  "metric_name": "task_completion",
+  "duration_ms": 6989.536599998246,
+  "result": {
+    "metric_name": "task_completion",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The actual outcome failed to achieve the task entirely. The system encountered technical errors with its tools and did not provide the requested information (Python version constraints, main entry point, or test entry point). Instead of determining the minimal steps, it only generated a plan stating that verification is needed, without performing the verification or providing the facts.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 4652,
+    "output_tokens": 319,
+    "total_tokens": 4971
+  }
+}

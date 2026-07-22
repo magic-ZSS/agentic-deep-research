@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-9a3d98efb4049fc3e57c5c885c1e08cc",
+  "metric_name": "contextual_precision",
+  "duration_ms": 22547.609799992642,
+  "result": {
+    "metric_name": "contextual_precision",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The score is 0.00 because the retrieval system failed to identify any relevant information for the specific project constraints and steps. Every node in the retrieval contexts, from the first node describing general file listing methods to the last node discussing README tutorials, consists of irrelevant nodes that lack the required LangGraph-specific details.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 11447,
+    "output_tokens": 1204,
+    "total_tokens": 12651
+  }
+}

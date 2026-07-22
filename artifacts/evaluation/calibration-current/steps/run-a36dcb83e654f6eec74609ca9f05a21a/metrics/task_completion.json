@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-a36dcb83e654f6eec74609ca9f05a21a",
+  "metric_name": "task_completion",
+  "duration_ms": 11633.20389999717,
+  "result": {
+    "metric_name": "task_completion",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.1,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The actual outcome describes the internal execution steps of an agent (searching, thinking) but fails to provide the required final output. The task explicitly demands a detailed evaluation of risks and a proposed telemetry scheme with specific design points (metrics, access methods, formats). Instead, the system only generated a 'research_plan' containing a Chinese text string that merely restated the requirements, without actually performing the evaluation or proposing the solution.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 21809,
+    "output_tokens": 528,
+    "total_tokens": 22337
+  }
+}

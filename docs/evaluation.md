@@ -8,7 +8,7 @@
 .\scripts\run_phase7_full.cmd -ConfirmCost
 ```
 
-该命令既是首次启动命令，也是中断后的恢复命令。脚本会自动串联 smoke、最多 300 万 Token 的 calibration、只读投影、人工 `FULL` 确认、固定 54-run 消融、报告和验收；默认只写本地 artifact。完整参数、依赖锁定和手动排错路径见 [`phase7-local-full-evaluation.md`](phase7-local-full-evaluation.md)。
+该命令是首次启动命令。脚本会自动串联 smoke、最多 300 万 Token 的 calibration、只读投影、人工 `FULL` 确认、固定 54-run 消融、报告和验收；默认只写本地 artifact。只有经过本地检查确认健康的中断状态才可增加 `-ResumeCalibration`，`stopped`、`fail_closed`、未知 usage 或 identity 不一致的目录必须保留并改用新的 `-CalibrationOutput`。完整参数、依赖锁定和手动排错路径见 [`phase7-local-full-evaluation.md`](phase7-local-full-evaluation.md)。
 
 阶段 7 只把 `tests/baseline/cases.jsonl` 作为 case ID、prompt、difficulty、Requirement 与预算的权威来源。`tests/evaluation/goldens.v1.jsonl` 只能补充参考答案、来源、时间上下文、Memory setup 与 variant-specific tool policy；加载器会拒绝重复 prompt/Requirement、未知 case 和版本漂移。
 
@@ -32,7 +32,7 @@ Smoke 的 45 条记录仅证明 9 个 canonical case、5 个 variant、配置公
 
 Calibration/full 必须同时满足 `ODR_EVAL_MODE=full`、`RUN_FULL_EVAL=1`、`--confirm-cost` 和显式 `--max-total-tokens`。Full 还要求 `--repeats 3`，且必须先有通过熔断与投影门禁的 calibration artifact。DeepEval/Confident 上传默认关闭；LangSmith `tests/run_evaluate.py` 是另一条有成本的历史路径，不属于本地默认验收。
 
-五组 variant 使用同一数据、模型、Tavily 限制和运行预算；每组从相同只读知识快照开始，允许写回或 Memory 的组使用独立 clone。所有输出由相同 `evaluation-claim-scorer-v3` 只读评分；它作为第 8 个 Judge/scorer 步骤独立计量、落盘和恢复，Tool Correctness 使用该 variant 的实际工具 registry。
+五组 variant 使用同一数据、模型、Tavily 限制和运行预算；每组从相同只读知识快照开始，允许写回或 Memory 的组使用独立 clone。所有输出由相同 `evaluation-claim-scorer-v4` 只读评分；它把项目确定性拆出的 Claim 按 6 条分批，模型只返回全局 ordinal 与分类，不能回写 Claim 文本或 citation IDs。它仍作为第 8 个 Judge/scorer journal 步骤统一计量、落盘和恢复，Tool Correctness 使用该 variant 的实际工具 registry。
 
 机器产物包括 `runs.jsonl`、`report.json`、`report.md`、`experiment.json`、`budget.json`、`journal.json` 和 `manifest.json`。本地产物是验收权威；LangSmith 只是默认关闭的去敏镜像。未知 token 或成本写 `null`，skip/error 原样保留且不计 pass。
 
@@ -47,3 +47,9 @@ Calibration/full 必须同时满足 `ODR_EVAL_MODE=full`、`RUN_FULL_EVAL=1`、`
 这次结果是 stopped diagnostic，不是 full evidence：simple 的两个已完成 variant 都未达到任务完成要求，medium baseline 在 Judge 前停止，complex 未运行；不能据此判断质量提升、cold/warm 收益或 T7-3/T7-4/T7-6/T7-9。simple case 要求读取本项目文件，而当前生产 Researcher registry 没有 Filesystem 工具，这是后续应回到数据集/工具资格边界处理的业务缺口，不能在 Phase 7 中偷偷修改研究逻辑。
 
 Qwen 的美元价格未配置，因此 `estimated_cost_usd` 保持 `null`，不会猜测价格或写成 0。已修正后续 `cost_field_integrity` 契约，使“价格表未知且 cost 为 null”与“价格已知但漏算”明确区分；既有 calibration 原始结果不回写。当前 artifact 位于 `artifacts/evaluation/calibration/`，已经 fail closed，且源码身份随后发生变化，不得自动 `--resume`。任何后续付费运行都需要新的明确授权；完整五组矩阵仍未授权。
+
+## 2026-07-23 `calibration-current` 失败与修复
+
+后续实验 `artifacts/evaluation/calibration-current/` 在完成 2 个 run、并把第 3 个 run 写成 terminal error 后停止。账本共结算 973,999 Token，其中实际 input 857,144、实际 output 86,003，另因旧适配器未读取异常所带 usage 而保守计入 unknown 30,852；`fail_closed_reason=model_call_error:LengthFinishReasonError`。失败发生在 `medium-001/baseline` 的 `claim_citation_scorer`：36 个候选 Claim 被一次性要求在 2,048 output-token 上限内连同原文和 citation IDs 完整回传，结构化输出被截断。剩余 3 个 calibration run 没有派发。
+
+修复后的 `evaluation-claim-scorer-v4` 不再让模型回显项目已经确定的文本和引用，按 6 条确定性分批且每批只携带相关 source registry；Tavily 与 governed retrieval 只按显式 canonical URL/Evidence ID 绑定，歧义来源保持未绑定。单 run 最多允许 22 个 scorer provider call（即 132 个候选 Claim），报告结构和该上限都在 7 个 DeepEval Judge 之前做无模型 preflight。若供应商异常的 completion 中存在完整 usage，账本会精确结算但仍保持错误熔断；usage 确实缺失时才按 unknown fail closed。旧 `calibration-current` 的 terminal journal、账本与实验 identity 均不可改写或恢复；一键入口默认改用新的 `artifacts/evaluation/calibration-v4`，已有目录必须显式请求并通过安全检查才允许 resume。本次修复只运行离线测试，没有再次调用 Qwen、Tavily、DeepEval Judge 或 LangSmith。

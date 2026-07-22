@@ -8,6 +8,7 @@ import subprocess
 import sys
 import types
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
@@ -31,6 +32,7 @@ except ImportError:
 from open_deep_research.evaluation.calibration_runner import ResearchObservation
 from open_deep_research.evaluation.claim_scorer import (
     CLAIM_SCORER_VERSION,
+    ClaimScorerResponseError,
     ClaimScorerResult,
     ClaimSourceAuthority,
     ClaimValidationStatus,
@@ -739,6 +741,140 @@ async def test_one_technical_failure_cannot_be_hidden_by_later_successes(
         (Path(outcome.output_dir) / "report.json").read_text(encoding="utf-8")
     )
     assert report["claims"]["full_matrix_complete"] is False
+
+
+@pytest.mark.asyncio
+async def test_claim_coverage_preflight_stops_before_any_full_judge(tmp_path: Path):
+    fake = FakeFullExecutors()
+
+    async def unsupported_layout_research(**kwargs):
+        observation = await fake.research(**kwargs)
+        return replace(
+            observation,
+            output=(
+                "# Result\n<table><tr><td>Supported [1]</td>"
+                "<td>Official</td></tr></table>\n\n"
+                "## Sources\n[1] Official fixture"
+            ),
+        )
+
+    outcome = await run_full_matrix(
+        project_root=ROOT,
+        output_dir=tmp_path / "coverage-preflight",
+        research_executor=unsupported_layout_research,
+        metric_factory=fake.metrics,
+        claim_scorer_factory=fake.claim_scorer,
+        calibration_projection=PROJECTION,
+        provenance="fake",
+        require_deepeval=False,
+        environment=ENV,
+    )
+
+    assert outcome.status == "stopped"
+    assert outcome.completed_runs == 1
+    assert outcome.stopped_reason == (
+        "judge:claim_citation_scorer:ClaimScorerCoverageError"
+    )
+    assert len(fake.research_calls) == 1
+    assert fake.metric_calls == []
+    assert fake.claim_calls == []
+
+
+@pytest.mark.asyncio
+async def test_claim_call_ceiling_preflight_stops_before_any_full_judge(
+    tmp_path: Path,
+):
+    fake = FakeFullExecutors()
+
+    async def oversized_research(**kwargs):
+        observation = await fake.research(**kwargs)
+        return replace(
+            observation,
+            output="\n".join(f"Claim {ordinal}." for ordinal in range(133)),
+        )
+
+    outcome = await run_full_matrix(
+        project_root=ROOT,
+        output_dir=tmp_path / "call-ceiling-preflight",
+        research_executor=oversized_research,
+        metric_factory=fake.metrics,
+        claim_scorer_factory=fake.claim_scorer,
+        calibration_projection=PROJECTION,
+        provenance="fake",
+        require_deepeval=False,
+        environment=ENV,
+    )
+
+    assert outcome.status == "stopped"
+    assert outcome.completed_runs == 1
+    assert outcome.stopped_reason == (
+        "judge:claim_citation_scorer:ClaimScorerCoverageError"
+    )
+    assert len(fake.research_calls) == 1
+    assert fake.metric_calls == []
+    assert fake.claim_calls == []
+
+
+@pytest.mark.asyncio
+async def test_claim_response_error_stops_full_before_next_run(tmp_path: Path):
+    fake = FakeFullExecutors()
+
+    def invalid_claim_scorer(**kwargs):
+        delegate = fake.claim_scorer(**kwargs)
+
+        class InvalidClaimScorer:
+            async def score(self, *, prompt, report, retrieval_context):
+                await delegate.score(
+                    prompt=prompt,
+                    report=report,
+                    retrieval_context=retrieval_context,
+                )
+                raise ClaimScorerResponseError("judge ordinal does not match")
+
+        return InvalidClaimScorer()
+
+    outcome = await run_full_matrix(
+        project_root=ROOT,
+        output_dir=tmp_path / "claim-response-error",
+        research_executor=fake.research,
+        metric_factory=fake.metrics,
+        claim_scorer_factory=invalid_claim_scorer,
+        calibration_projection=PROJECTION,
+        provenance="fake",
+        require_deepeval=False,
+        environment=ENV,
+    )
+
+    assert outcome.status == "stopped"
+    assert outcome.completed_runs == 1
+    assert outcome.stopped_reason == (
+        "judge:claim_citation_scorer:ClaimScorerResponseError"
+    )
+    assert len(fake.research_calls) == 1
+    assert len(fake.metric_calls) == 7
+    assert len(fake.claim_calls) == 1
+    budget = json.loads(
+        (Path(outcome.output_dir) / "budget.json").read_text(encoding="utf-8")
+    )["ledger"]
+    assert budget["fail_closed"] is False
+    assert budget["error_count"] == 0
+
+    with pytest.raises(FullRunnerError, match="unsafe paid-step state"):
+        await run_full_matrix(
+            project_root=ROOT,
+            output_dir=Path(outcome.output_dir),
+            resume=True,
+            research_executor=fake.research,
+            metric_factory=fake.metrics,
+            claim_scorer_factory=invalid_claim_scorer,
+            calibration_projection=PROJECTION,
+            provenance="fake",
+            require_deepeval=False,
+            environment=ENV,
+        )
+    assert len(fake.research_calls) == 1
+    assert len(fake.metric_calls) == 7
+    assert len(fake.claim_calls) == 1
 
 
 @pytest.mark.asyncio

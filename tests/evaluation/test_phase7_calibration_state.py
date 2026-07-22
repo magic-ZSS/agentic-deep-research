@@ -207,6 +207,29 @@ def test_unknown_terminal_usage_fails_closed_and_cannot_be_counted_as_zero(tmp_p
         store.assert_resumable()
 
 
+def test_terminal_noncompleted_run_blocks_all_automatic_resume(tmp_path):
+    _, store = _store(tmp_path, metrics=("faithfulness",))
+    plan = store.load().runs[0]
+    fingerprint = "a" * 64
+    store.start_research(plan.run_id)
+    store.complete_research(
+        plan.run_id,
+        **_known_usage(),
+        error_fingerprint=fingerprint,
+    )
+    store.complete_run(
+        plan.run_id,
+        status="failed",
+        error_fingerprint=fingerprint,
+    )
+
+    summary = store.resume_summary()
+    assert summary.can_resume is False
+    assert summary.terminal_noncompleted_run_ids == [plan.run_id]
+    with pytest.raises(CalibrationInFlightError, match=plan.run_id):
+        store.assert_resumable()
+
+
 def test_journal_schema_rejects_secrets_endpoints_and_free_form_payloads(tmp_path):
     with pytest.raises(ValueError, match="secret or endpoint"):
         _identity(model_ids={"judge": "https://private.example/v1"})

@@ -47,7 +47,9 @@
     "research_model_max_tokens": 8192,
     "compression_model_max_tokens": 8192,
     "final_report_model_max_tokens": 8192,
-    "judge_model_max_tokens": 2048
+    "judge_model_max_tokens": 2048,
+    "claim_scorer_batch_size": 6,
+    "claim_scorer_max_provider_calls": 22
   },
   "token_budget": {
     "estimated_total_tokens": {"lower": 22000000, "upper": 38000000},
@@ -83,8 +85,9 @@
   },
   "judge_metrics_per_run": 7,
   "claim_scorer_steps_per_run": 1,
+  "estimated_claim_scorer_provider_calls_per_run": {"lower": 1, "upper": 22},
   "paid_judge_steps_per_run": 8,
-  "estimated_judge_model_calls": {"lower": 810, "upper": 1026},
+  "estimated_judge_model_calls": {"lower": 810, "upper": 2160},
   "estimated_research_model_calls": {"lower": 540, "upper": 2700},
   "estimated_tavily_basic_credits": {"lower": 54, "upper": 810},
   "authorization_required": true,
@@ -101,6 +104,7 @@
     "Token estimates are not guarantees because graph call counts and prompt sizes are data-dependent.",
     "Checkpoint after every run; resume skips stable completed run IDs and never repeats a successful paid run.",
     "Stop on repeated error signatures, excessive failure rate, unknown usage, soft limit, or hard token limit.",
+    "The v4 claim scorer is one journal step but may use deterministic six-claim provider batches; calibration measures its real token usage before full authorization.",
     "Local artifacts are authoritative; optional LangSmith tracking is a best-effort sanitized mirror and is excluded from token/cost comparisons.",
     "Deep Research Bench, Confident upload, priority processing, and Batch API are not included."
   ]

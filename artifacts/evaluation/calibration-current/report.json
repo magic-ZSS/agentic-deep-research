@@ -1,0 +1,140 @@
+{
+  "schema_version": "1.0",
+  "mode": "calibration",
+  "experiment_id": "cal-611ce9d8ecbc615694bf449d138cfd57",
+  "run_count": 3,
+  "aggregates": [
+    {
+      "variant_id": "baseline",
+      "difficulty": "medium",
+      "runs": 1,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 1,
+      "mean": null,
+      "std": null,
+      "ci95": null
+    },
+    {
+      "variant_id": "baseline",
+      "difficulty": "simple",
+      "runs": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "mean": null,
+      "std": null,
+      "ci95": null
+    },
+    {
+      "variant_id": "citation_validator",
+      "difficulty": "simple",
+      "runs": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "mean": null,
+      "std": null,
+      "ci95": null
+    }
+  ],
+  "limitations": [
+    "Calibration covers two variants and one repeat; it is not full-matrix uplift evidence.",
+    "No cold/warm conclusion or Phase 7 completion claim is permitted from this artifact.",
+    "Unknown dollar pricing remains null rather than being reported as zero."
+  ],
+  "provenance": "live",
+  "calibration_status": "stopped",
+  "planned_runs": 6,
+  "completed_run_records": 3,
+  "token_budget": {
+    "schema_version": "1.1",
+    "revision": 314,
+    "hard_token_limit": 3000000,
+    "per_run_token_limit": 800000,
+    "committed_tokens": 973999,
+    "active_reserved_tokens": 0,
+    "accounted_tokens": 973999,
+    "remaining_tokens": 2026001,
+    "actual_input_tokens": 857144,
+    "actual_output_tokens": 86003,
+    "unknown_charged_tokens": 30852,
+    "unknown_usage": true,
+    "fail_closed": true,
+    "fail_closed_reason": "model_call_error:LengthFinishReasonError",
+    "error_count": 1,
+    "dispatched_calls": 157,
+    "settled_calls": 157,
+    "error_calls": 1,
+    "active_calls": 0,
+    "categories": {
+      "research": {
+        "committed_tokens": 560572,
+        "actual_input_tokens": 488508,
+        "actual_output_tokens": 72064,
+        "active_reserved_tokens": 0,
+        "dispatched_calls": 106,
+        "settled_calls": 106,
+        "error_calls": 0,
+        "active_calls": 0
+      },
+      "judge": {
+        "committed_tokens": 413427,
+        "actual_input_tokens": 368636,
+        "actual_output_tokens": 13939,
+        "active_reserved_tokens": 0,
+        "dispatched_calls": 51,
+        "settled_calls": 51,
+        "error_calls": 1,
+        "active_calls": 0
+      },
+      "retry": {
+        "committed_tokens": 0,
+        "actual_input_tokens": 0,
+        "actual_output_tokens": 0,
+        "active_reserved_tokens": 0,
+        "dispatched_calls": 0,
+        "settled_calls": 0,
+        "error_calls": 0,
+        "active_calls": 0
+      }
+    },
+    "runs": {
+      "run-9a3d98efb4049fc3e57c5c885c1e08cc": {
+        "committed_tokens": 317003,
+        "active_reserved_tokens": 0,
+        "accounted_tokens": 317003,
+        "remaining_tokens": 482997,
+        "dispatched_calls": 51,
+        "settled_calls": 51,
+        "error_calls": 0,
+        "active_calls": 0
+      },
+      "run-a36dcb83e654f6eec74609ca9f05a21a": {
+        "committed_tokens": 533190,
+        "active_reserved_tokens": 0,
+        "accounted_tokens": 533190,
+        "remaining_tokens": 266810,
+        "dispatched_calls": 63,
+        "settled_calls": 63,
+        "error_calls": 1,
+        "active_calls": 0
+      },
+      "run-c37b7509bfc141dd8b55aca9d6153e09": {
+        "committed_tokens": 123806,
+        "active_reserved_tokens": 0,
+        "accounted_tokens": 123806,
+        "remaining_tokens": 676194,
+        "dispatched_calls": 43,
+        "settled_calls": 43,
+        "error_calls": 0,
+        "active_calls": 0
+      }
+    },
+    "active_reservations": []
+  },
+  "stopped_reason": "judge:claim_citation_scorer:LengthFinishReasonError"
+}

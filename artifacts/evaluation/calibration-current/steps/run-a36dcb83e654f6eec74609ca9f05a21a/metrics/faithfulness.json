@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-a36dcb83e654f6eec74609ca9f05a21a",
+  "metric_name": "faithfulness",
+  "duration_ms": 53962.14929998678,
+  "result": {
+    "metric_name": "faithfulness",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.9714285714285714,
+    "threshold": 0.5,
+    "status": "passed",
+    "reason": "The score is 0.97 because the actual output incorrectly attributes the 41% to 86% failure rate range specifically to 'coordination failure and state corruption rates,' whereas the retrieval context identifies these as contributors to the overall documented failure rates, not the specific metrics holding that range.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 21583,
+    "output_tokens": 4099,
+    "total_tokens": 25682
+  }
+}

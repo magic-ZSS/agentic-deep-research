@@ -46,6 +46,7 @@ from open_deep_research.evaluation.claim_scorer import (
     ClaimCitationScorer,
     ClaimScorerResult,
     build_live_qwen_claim_scorer,
+    validate_claim_scorer_coverage,
 )
 from open_deep_research.evaluation.custom_metrics import (
     SCORER_VERSION,
@@ -596,6 +597,10 @@ def build_live_claim_scorer(
         ),
         max_output_tokens=plan["runtime_limits"]["judge_model_max_tokens"],
         timeout_seconds=60,
+        batch_size=plan["runtime_limits"]["claim_scorer_batch_size"],
+        max_provider_calls=plan["runtime_limits"][
+            "claim_scorer_max_provider_calls"
+        ],
     )
 
 
@@ -1712,6 +1717,16 @@ async def _run_calibration_locked(
                 )
 
         try:
+            # Reject unsupported report shapes before constructing or dispatching
+            # any of the seven paid DeepEval judge metrics. The scorer repeats
+            # this deterministic projection later as its own integrity check.
+            validate_claim_scorer_coverage(
+                observation.output,
+                batch_size=plan["runtime_limits"]["claim_scorer_batch_size"],
+                max_provider_calls=plan["runtime_limits"][
+                    "claim_scorer_max_provider_calls"
+                ],
+            )
             metric_calls = metric_factory(
                 case=case,
                 variant=variant,

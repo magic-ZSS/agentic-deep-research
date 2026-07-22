@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "cal-611ce9d8ecbc615694bf449d138cfd57",
+  "mode": "calibration",
+  "status": "stopped",
+  "dataset_version": "v1",
+  "case_ids": [
+    "simple-001",
+    "medium-001",
+    "complex-001"
+  ],
+  "variants": [
+    "baseline",
+    "citation_validator"
+  ],
+  "repeats": 1,
+  "planned_runs": 6,
+  "hard_token_limit": 3000000,
+  "model_ids": {
+    "compression": "openai:qwen3.7-plus",
+    "final_report": "openai:qwen3.7-plus",
+    "judge": "openai:qwen3.7-plus",
+    "protocol": "phase7-calibration-v1",
+    "provenance": "live",
+    "research": "openai:qwen3.7-plus",
+    "summarization": "openai:qwen3.7-plus"
+  },
+  "provenance": "live",
+  "plan_sha256": "3f0a6b03863c2f76d838ea261af588f597b9957bf1d6278ca313b56fe1317f64",
+  "ablation_sha256": "8e4020a458085e53b10b3a2f60f8d083c1d17ab56674e13b8f8aa314616ef68c",
+  "git_head": "42febc2c5df04b53ebec9b4b765a42a9d24fef84",
+  "dirty_diff_sha256": "5434c97ca0fd071156aedbdbc12fdb82e76ce4e85a786c8ef8fa1a1a76c2c93e",
+  "evaluation_environment": {
+    "python": "3.11",
+    "packages": {
+      "click": "8.3.1",
+      "deepeval": "4.1.1",
+      "huggingface-hub": "1.4.1"
+    },
+    "pip_check": "passed",
+    "import_smoke": [
+      "deepeval",
+      "open_deep_research.evaluation.calibration_runner"
+    ]
+  },
+  "source_attestation": {
+    "git_head": "42febc2c5df04b53ebec9b4b765a42a9d24fef84",
+    "clean": true,
+    "checked_paths": [
+      "src/open_deep_research",
+      "scripts/run_eval.py",
+      "scripts/run_phase7_full.cmd",
+      "scripts/run_phase7_full.ps1",
+      "scripts/validate_phase.py",
+      "scripts/compare_ablations.py",
+      "scripts/render_eval_report.py",
+      "tests/evaluation",
+      "tests/baseline/cases.jsonl",
+      "pyproject.toml",
+      "langgraph.json",
+      "environment.phase7.yml",
+      "constraints/evaluation-py311.txt"
+    ]
+  },
+  "claims": {
+    "full_matrix_complete": false,
+    "quality_uplift_established": false,
+    "cold_warm_established": false
+  },
+  "completed_run_records": 3,
+  "stopped_reason": "judge:claim_citation_scorer:LengthFinishReasonError",
+  "updated_at": "2026-07-22T17:07:03.131279+00:00"
+}

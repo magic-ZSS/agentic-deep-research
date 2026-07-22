@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-c37b7509bfc141dd8b55aca9d6153e09",
+  "metric_name": "claim_citation_scorer",
+  "status": "passed",
+  "duration_ms": 2937.943400000222,
+  "input_tokens": 547,
+  "output_tokens": 132,
+  "total_tokens": 679,
+  "result": {
+    "schema_version": "1.0",
+    "scorer_version": "evaluation-claim-scorer-v3",
+    "report_sha256": "4272e1040f9bd250e4082217446ad0be91ae669c444ba29a67fbe694c1ede5b9",
+    "candidate_count": 1,
+    "bound_context_count": 0,
+    "unbound_context_count": 14,
+    "coverage_complete": true,
+    "claims": [
+      {
+        "claim_id": "eval-claim-139e430ad948cbd1e30305f8",
+        "text": "py`、CI/CD 配置或 README 等），以下信息均无法提取和验证：",
+        "checkable": false,
+        "citation_ids": [],
+        "validation_status": "not_checkable",
+        "evidence_valid": false,
+        "source_authority": "unknown",
+        "correctly_qualified": false
+      }
+    ]
+  }
+}

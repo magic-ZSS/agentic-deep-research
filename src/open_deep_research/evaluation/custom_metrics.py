@@ -11,7 +11,7 @@ from open_deep_research.evaluation.experiment_models import (
     ExperimentMetricResult,
 )
 
-SCORER_VERSION = "evaluation-claim-scorer-v3"
+SCORER_VERSION = "evaluation-claim-scorer-v4"
 _CITATION = re.compile(r"\[(\d+)\]")
 _SOURCE_LINE = re.compile(r"^\s*\[(\d+)\]\s+", re.MULTILINE)
 

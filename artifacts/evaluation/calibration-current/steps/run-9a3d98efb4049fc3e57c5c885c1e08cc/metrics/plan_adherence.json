@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-9a3d98efb4049fc3e57c5c885c1e08cc",
+  "metric_name": "plan_adherence",
+  "duration_ms": 7909.8496999940835,
+  "result": {
+    "metric_name": "plan_adherence",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The agent failed to execute any of the four planned steps (determining installation commands, Python version constraints, main entry point, and test entry point). Instead of examining project files as required by the plan, the agent performed multiple extraneous web searches for generic information and concluded it lacked filesystem access, resulting in no plan steps being completed.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 42003,
+    "output_tokens": 268,
+    "total_tokens": 42271
+  }
+}

@@ -6,6 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from open_deep_research.configuration import Configuration
+from open_deep_research.evaluation.claim_scorer import (
+    DEFAULT_CLAIM_SCORER_BATCH_SIZE,
+    DEFAULT_CLAIM_SCORER_MAX_PROVIDER_CALLS,
+)
 from open_deep_research.evaluation.experiment_models import ExperimentVariant
 
 
@@ -51,6 +55,20 @@ def validate_calibration_matrix(
     if limits.get("compression_max_retries") != 1:
         raise CalibrationConfigurationError(
             "calibration compression must use exactly one attempt"
+        )
+    if (
+        limits.get("claim_scorer_batch_size")
+        != DEFAULT_CLAIM_SCORER_BATCH_SIZE
+    ):
+        raise CalibrationConfigurationError(
+            "calibration claim scorer batch size must be exactly six"
+        )
+    if (
+        limits.get("claim_scorer_max_provider_calls")
+        != DEFAULT_CLAIM_SCORER_MAX_PROVIDER_CALLS
+    ):
+        raise CalibrationConfigurationError(
+            "calibration claim scorer provider-call ceiling must be exactly 22"
         )
     for variant in variants:
         if variant.budget["max_researcher_iterations"] != limits[

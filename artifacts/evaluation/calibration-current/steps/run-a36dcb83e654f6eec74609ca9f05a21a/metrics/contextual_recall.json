@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-a36dcb83e654f6eec74609ca9f05a21a",
+  "metric_name": "contextual_recall",
+  "duration_ms": 5071.788100001868,
+  "result": {
+    "metric_name": "contextual_recall",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The score is 0.00 because the expected output consists of a topic request rather than factual content derived from the text, and key concepts like 'Supervisor to Researcher flow' are absent from all nodes in retrieval context.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 16850,
+    "output_tokens": 164,
+    "total_tokens": 17014
+  }
+}

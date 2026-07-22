@@ -11,7 +11,9 @@ param(
 
     [string]$EnvironmentName = "open-deep-research",
 
-    [string]$CalibrationOutput = "artifacts/evaluation/calibration-current",
+    [string]$CalibrationOutput = "artifacts/evaluation/calibration-v4",
+
+    [switch]$ResumeCalibration,
 
     [string]$FullOutput = "artifacts/evaluation/full"
 )
@@ -103,6 +105,120 @@ function Invoke-CheckedPython {
     }
 }
 
+function Get-CalibrationResumeInspection {
+    param(
+        [string]$Python,
+        [string]$Output
+    )
+
+    $InspectionProgram = @'
+import json
+import os
+import sys
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+from open_deep_research.evaluation.budget import load_full_plan, resolve_models
+from open_deep_research.evaluation.calibration_state import (
+    CalibrationJournalStore,
+    capture_experiment_identity,
+)
+
+root = Path.cwd().resolve()
+output = Path(sys.argv[1]).resolve()
+result = {"safe": False, "reasons": []}
+
+try:
+    required = ("experiment.json", "journal.json", "budget.json")
+    missing = [name for name in required if not (output / name).is_file()]
+    if missing:
+        result["reasons"].append("missing_resume_artifacts")
+    else:
+        experiment = json.loads((output / "experiment.json").read_text(encoding="utf-8"))
+        store = CalibrationJournalStore(output / "journal.json")
+        journal = store.load()
+        resume = store.resume_summary()
+        budget = json.loads((output / "budget.json").read_text(encoding="utf-8"))
+        ledger = budget.get("ledger", {})
+
+        if experiment.get("status") == "stopped":
+            result["reasons"].append("experiment_stopped")
+        if ledger.get("fail_closed") is not False:
+            result["reasons"].append("token_ledger_fail_closed")
+        if ledger.get("unknown_usage") is not False:
+            result["reasons"].append("token_usage_unknown")
+        if ledger.get("active_calls") != 0 or ledger.get("active_reserved_tokens") != 0:
+            result["reasons"].append("unsettled_paid_calls")
+        if resume.terminal_noncompleted_run_ids:
+            result["reasons"].append("terminal_noncompleted_runs")
+        elif not resume.can_resume:
+            result["reasons"].append("journal_not_resumable")
+        if budget.get("calibration_identity") != journal.identity.model_dump(mode="json"):
+            result["reasons"].append("budget_journal_identity_mismatch")
+
+        load_dotenv(root / ".env", override=False)
+        plan_path = root / "tests/evaluation/full_plan.v1.json"
+        ablation_path = root / "tests/evaluation/ablations.v1.json"
+        plan = load_full_plan(plan_path)
+        models = resolve_models(plan, os.environ)
+        try:
+            excluded = [output.relative_to(root).as_posix()]
+        except ValueError:
+            excluded = []
+        current = capture_experiment_identity(
+            root,
+            plan_path=plan_path,
+            ablation_path=ablation_path,
+            dataset_id="v1",
+            model_ids={
+                **models,
+                "protocol": "phase7-calibration-v1",
+                "provenance": "live",
+            },
+            exclude_untracked_paths=excluded,
+        )
+        if current != journal.identity:
+            result["reasons"].append("current_identity_mismatch")
+
+    result["reasons"] = sorted(set(result["reasons"]))
+    result["safe"] = not result["reasons"]
+except Exception as error:
+    result = {
+        "safe": False,
+        "reasons": ["resume_inspection_failed:" + type(error).__name__],
+    }
+
+print(json.dumps(result, sort_keys=True))
+'@
+
+    $PreviousErrorActionPreference = $ErrorActionPreference
+    $InspectionCode = 1
+    try {
+        $ErrorActionPreference = "Continue"
+        $InspectionLines = & $Python -c $InspectionProgram $Output 2>$null
+        $InspectionCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $PreviousErrorActionPreference
+    }
+    if ($InspectionCode -ne 0) {
+        Stop-Phase7Evaluation -Code 4 -Message (
+            "Calibration resume state could not be inspected safely. " +
+            "The existing directory was preserved; choose a fresh -CalibrationOutput."
+        )
+    }
+    try {
+        return (($InspectionLines -join [Environment]::NewLine) | ConvertFrom-Json)
+    }
+    catch {
+        Stop-Phase7Evaluation -Code 4 -Message (
+            "Calibration resume inspection returned invalid JSON. " +
+            "The existing directory was preserved; choose a fresh -CalibrationOutput."
+        )
+    }
+}
+
 function Require-CleanEvaluationSourceStatus {
     $EvaluationPaths = @(
         "src/open_deep_research",
@@ -179,6 +295,11 @@ try {
 
         $CalibrationExists = Test-Path -LiteralPath $CalibrationOutput
         $FullExists = Test-Path -LiteralPath $FullOutput
+        if ($ResumeCalibration -and -not $CalibrationExists) {
+            Stop-Phase7Evaluation -Code 3 -Message (
+                "-ResumeCalibration requires an existing -CalibrationOutput directory."
+            )
+        }
         if ($FullExists -and -not $CalibrationExists) {
             Stop-Phase7Evaluation -Code 3 -Message (
                 "The full output exists but its calibration directory is missing. " +
@@ -195,9 +316,28 @@ try {
                 "--output", "artifacts/evaluation/smoke"
             )
         }
-        else {
+        elseif ($CalibrationExists) {
+            if (-not $ResumeCalibration) {
+                Stop-Phase7Evaluation -Code 3 -Message (
+                    "CalibrationOutput already exists and was preserved. " +
+                    "After reviewing it, pass -ResumeCalibration only for a healthy " +
+                    "interrupted run; for stopped or failed state choose a fresh " +
+                    "-CalibrationOutput directory."
+                )
+            }
+            $ResumeInspection = Get-CalibrationResumeInspection `
+                -Python $PythonExe `
+                -Output $CalibrationOutput
+            if (-not $ResumeInspection.safe) {
+                $ResumeReasons = @($ResumeInspection.reasons) -join ", "
+                Stop-Phase7Evaluation -Code 4 -Message (
+                    "CalibrationOutput is not safely resumable ($ResumeReasons). " +
+                    "The existing directory was preserved. Re-run with a fresh " +
+                    "-CalibrationOutput; do not reuse or overwrite this diagnostic state."
+                )
+            }
             Write-Host (
-                "`n==> Existing paid state found; keep it and continue with resume."
+                "`n==> Existing calibration passed local resume inspection."
             ) -ForegroundColor Yellow
         }
 
@@ -211,7 +351,7 @@ try {
             "--confirm-cost",
             "--output", $CalibrationOutput
         )
-        if ($CalibrationExists) {
+        if ($CalibrationExists -and $ResumeCalibration) {
             $CalibrationArguments += "--resume"
         }
 

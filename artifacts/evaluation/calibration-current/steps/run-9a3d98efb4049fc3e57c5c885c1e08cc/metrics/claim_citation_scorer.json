@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-9a3d98efb4049fc3e57c5c885c1e08cc",
+  "metric_name": "claim_citation_scorer",
+  "status": "passed",
+  "duration_ms": 11631.495000008726,
+  "input_tokens": 959,
+  "output_tokens": 633,
+  "total_tokens": 1592,
+  "result": {
+    "schema_version": "1.0",
+    "scorer_version": "evaluation-claim-scorer-v3",
+    "report_sha256": "cee53669d6dd95478dc3f9c3b9d3fd168f36ef6674c72b33bd684d584a17fd63",
+    "candidate_count": 6,
+    "bound_context_count": 0,
+    "unbound_context_count": 4,
+    "coverage_complete": true,
+    "claims": [
+      {
+        "claim_id": "eval-claim-3c5a21c02d9c52e02322e259",
+        "text": "由于未能确定目标项目的具体名称、仓库 URL 或本地路径，且当前研究环境缺乏读取本地项目文件（如 `setup.py`、`pyproject.toml`、`environment.yml` 等）的系统权限，无法提取和验证任何关于该项目的事实信息。因此，无法提供以下所要求的内容：",
+        "checkable": false,
+        "citation_ids": [],
+        "validation_status": "not_checkable",
+        "evidence_valid": false,
+        "source_authority": "unknown",
+        "correctly_qualified": true
+      },
+      {
+        "claim_id": "eval-claim-c6058725d6ff2fa9f40ffabf",
+        "text": "**安装和运行指令**：未获取到目标项目的文档，无法提供 Windows 原生 conda 环境下的具体步骤。",
+        "checkable": false,
+        "citation_ids": [],
+        "validation_status": "not_checkable",
+        "evidence_valid": false,
+        "source_authority": "unknown",
+        "correctly_qualified": true
+      },
+      {
+        "claim_id": "eval-claim-a198e797b69b39a88f73416c",
+        "text": "**Python 版本约束**：无法读取项目配置文件，无法核实具体的 Python 版本要求。",
+        "checkable": false,
+        "citation_ids": [],
+        "validation_status": "not_checkable",
+        "evidence_valid": false,
+        "source_authority": "unknown",
+        "correctly_qualified": true
+      },
+      {
+        "claim_id": "eval-claim-fc37ba487d989621e241e14a",
+        "text": "**主程序入口点**：无法检查项目源码结构或配置声明，无法确定主入口文件。",
+        "checkable": false,
+        "citation_ids": [],
+        "validation_status": "not_checkable",
+        "evidence_valid": false,
+        "source_authority": "unknown",
+        "correctly_qualified": true
+      },
+      {
+        "claim_id": "eval-claim-230f62ccd746fdf4772d5bd3",
+        "text": "**低成本测试入口点**：未找到相关的测试或示例脚本信息，无法确定轻量级测试入口。",
+        "checkable": false,
+        "citation_ids": [],
+        "validation_status": "not_checkable",
+        "evidence_valid": false,
+        "source_authority": "unknown",
+        "correctly_qualified": true
+      },
+      {
+        "claim_id": "eval-claim-adb601a302bebb782e9fdf3a",
+        "text": "为完成此任务，需要明确指定目标项目（提供项目名称、仓库 URL 或本地路径），以便直接读取并分析其项目文件中的确切信息。",
+        "checkable": false,
+        "citation_ids": [],
+        "validation_status": "not_checkable",
+        "evidence_valid": false,
+        "source_authority": "unknown",
+        "correctly_qualified": true
+      }
+    ]
+  }
+}

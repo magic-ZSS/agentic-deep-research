@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-a36dcb83e654f6eec74609ca9f05a21a",
+  "metric_name": "step_efficiency",
+  "duration_ms": 6291.877099996782,
+  "result": {
+    "metric_name": "step_efficiency",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.25,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The agent performed three separate search rounds and two internal reflection steps to gather information that was largely available in the first search or could have been synthesized directly. The third search round specifically targeted generic OpenTelemetry implementation details (sampling, backpressure) which were speculative enrichments not strictly required to propose a high-level decoupled telemetry architecture.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 42594,
+    "output_tokens": 143,
+    "total_tokens": 42737
+  }
+}

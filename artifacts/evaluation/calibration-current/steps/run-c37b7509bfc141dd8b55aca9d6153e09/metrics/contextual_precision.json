@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-c37b7509bfc141dd8b55aca9d6153e09",
+  "metric_name": "contextual_precision",
+  "duration_ms": 15124.036299996078,
+  "result": {
+    "metric_name": "contextual_precision",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The score is 0.00 because all retrieved nodes are irrelevant to the input query. Specifically, the first node through the fourteenth node in retrieval contexts only contain error type information like 'RuntimeError' or 'ValidationError' and fail to provide any details regarding conda setup steps, Python version constraints, or project entry points.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 1658,
+    "output_tokens": 795,
+    "total_tokens": 2453
+  }
+}

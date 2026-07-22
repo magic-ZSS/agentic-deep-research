@@ -1,0 +1,1102 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "cal-611ce9d8ecbc615694bf449d138cfd57",
+  "run_id": "run-c37b7509bfc141dd8b55aca9d6153e09",
+  "variant_id": "citation_validator",
+  "case_id": "simple-001",
+  "difficulty": "simple",
+  "repeat": 1,
+  "mode": "calibration",
+  "project_commit": "42febc2c5df04b53ebec9b4b765a42a9d24fef84",
+  "dataset_version": "v1",
+  "scorer_version": "evaluation-claim-scorer-v3",
+  "output": "py`、CI/CD 配置或 README 等），以下信息均无法提取和验证：",
+  "output_sha256": "4272e1040f9bd250e4082217446ad0be91ae669c444ba29a67fbe694c1ede5b9",
+  "trace": {
+    "evaluation_provenance": "live",
+    "normalized": {
+      "plan": [
+        "我需要确定在 Windows 原生 conda 环境中运行本项目的最小步骤，具体需要核对以下三个方面：1) Python 版本约束；2) 主图入口（main entry point）；3) 低成本测试入口（low-cost test entry point）。所有陈述的事实必须能够直接由项目文件验证，不得包含推测或外部信息。"
+      ],
+      "tool_calls": [
+        {
+          "name": "governed_retrieval",
+          "input_parameters": {
+            "raw": "{'query': 'repository root project identifier files README pyproject.toml setup.py setup.cfg'}"
+          },
+          "output": {
+            "error_type": "RuntimeError"
+          },
+          "parent_id": "019f8abf-b879-7100-9ef7-f402276c5dfb"
+        },
+        {
+          "name": "governed_retrieval",
+          "input_parameters": {
+            "raw": "{'query': 'project name README pyproject.toml setup.py setup.cfg repository root identifier'}"
+          },
+          "output": {
+            "error_type": "RuntimeError"
+          },
+          "parent_id": "019f8abf-bb91-7c03-a685-1d06222d98d3"
+        },
+        {
+          "name": "governed_retrieval",
+          "input_parameters": {
+            "raw": "{'query': 'python version constraints requires-python python-requires python_requires'}"
+          },
+          "output": {
+            "error_type": "RuntimeError"
+          },
+          "parent_id": "019f8abf-bb91-7c03-a685-1d06222d98d3"
+        },
+        {
+          "name": "think_tool",
+          "input_parameters": {
+            "raw": "{'reflection': 'The governed_retrieval tool failed with \"requires a trusted RequirementSet\". This is the only retrieval tool available to me. Let me try passing a config parameter to see if that helps satisfy the RequirementSet requirement. I\\'ll also try different query formulations to see if any work.'}"
+          },
+          "output": "Reflection recorded: The governed_retrieval tool failed with \"requires a trusted RequirementSet\". This is the only retrieval tool available to me. Let me try passing a config parameter to see if that helps satisfy the RequirementSet requirement. I'll also try different query formulations to see if any work.",
+          "parent_id": "019f8abf-d396-7cb2-993d-75daa8907273"
+        },
+        {
+          "name": "think_tool",
+          "input_parameters": {
+            "raw": "{'reflection': 'The governed_retrieval tool returned an error requiring a \"trusted RequirementSet\". This suggests the tool needs specific configuration or context to work. Let me try passing metadata or tags in the config parameter to see if that helps. The task is about identifying the current project\\'s entry points and test configuration by examining local project files. Since this is a local filesystem investigation task, I should try to use the governed_retrieval tool with appropriate configuration, or see if there\\'s a way to access local files through it.'}"
+          },
+          "output": "Reflection recorded: The governed_retrieval tool returned an error requiring a \"trusted RequirementSet\". This suggests the tool needs specific configuration or context to work. Let me try passing metadata or tags in the config parameter to see if that helps. The task is about identifying the current project's entry points and test configuration by examining local project files. Since this is a local filesystem investigation task, I should try to use the governed_retrieval tool with appropriate configuration, or see if there's a way to access local files through it.",
+          "parent_id": "019f8abf-daaa-77e1-9146-67e7f9108c21"
+        },
+        {
+          "name": "governed_retrieval",
+          "input_parameters": {
+            "raw": "{'query': 'project name README pyproject.toml setup.py setup.cfg repository root identifier', 'config': '{\"configurable\": {\"requirement_set\": \"project_identification\"}}'}"
+          },
+          "output": {
+            "error_type": "ValidationError"
+          },
+          "parent_id": "019f8abf-e126-78e2-ade6-d5ccf0091c8e"
+        },
+        {
+          "name": "governed_retrieval",
+          "input_parameters": {
+            "raw": "{'query': 'project name entry point main module', 'config': '{\"metadata\": {\"task\": \"project_identification\", \"source\": \"local_filesystem\"}}'}"
+          },
+          "output": {
+            "error_type": "ValidationError"
+          },
+          "parent_id": "019f8abf-e4de-7171-b88c-63aca7f35542"
+        },
+        {
+          "name": "governed_retrieval",
+          "input_parameters": {
+            "raw": "{'query': 'project name README pyproject.toml setup.py', 'config': '{\"configurable\": {\"requirement_set\": \"project_identification_and_python_versions\"}}'}"
+          },
+          "output": {
+            "error_type": "ValidationError"
+          },
+          "parent_id": "019f8abf-f0b4-7f52-849c-6c5668104877"
+        },
+        {
+          "name": "governed_retrieval",
+          "input_parameters": {
+            "raw": "{'query': 'project name entry point main module', 'config': '{\"metadata\": {\"task\": \"project_identification\", \"source\": \"local_filesystem\"}}'}"
+          },
+          "output": {
+            "error_type": "ValidationError"
+          },
+          "parent_id": "019f8abf-f129-79b0-bd33-eba5177b6155"
+        },
+        {
+          "name": "governed_retrieval",
+          "input_parameters": {
+            "raw": "{'query': 'list top-level files and directories in current working directory'}"
+          },
+          "output": {
+            "error_type": "RuntimeError"
+          },
+          "parent_id": "019f8ac0-aa2b-7241-9f36-1c21f4c3ab2a"
+        },
+        {
+          "name": "governed_retrieval",
+          "input_parameters": {
+            "raw": "{'query': 'list files in current working directory root level project files README pyproject.toml setup.py setup.cfg'}"
+          },
+          "output": {
+            "error_type": "RuntimeError"
+          },
+          "parent_id": "019f8ac0-abce-7b11-a02d-d02e58ae1485"
+        },
+        {
+          "name": "governed_retrieval",
+          "input_parameters": {
+            "raw": "{'query': 'README pyproject.toml setup.py setup.cfg project name entry point', 'config': '{\"metadata\": {\"scope\": \"local_project\"}}'}"
+          },
+          "output": {
+            "error_type": "ValidationError"
+          },
+          "parent_id": "019f8ac0-c095-7dd1-92bc-88689b9d1624"
+        },
+        {
+          "name": "think_tool",
+          "input_parameters": {
+            "raw": "{'reflection': \"The governed_retrieval tool returned an error about requiring a trusted RequirementSet. This tool seems designed for a specific governed evidence system rather than direct file system access. However, the task explicitly asks me to inspect local project files in the current working directory. Let me try different query formulations to see if the tool can access local project files. I'll try queries that might match the governed retrieval system's expected input format.\"}"
+          },
+          "output": "Reflection recorded: The governed_retrieval tool returned an error about requiring a trusted RequirementSet. This tool seems designed for a specific governed evidence system rather than direct file system access. However, the task explicitly asks me to inspect local project files in the current working directory. Let me try different query formulations to see if the tool can access local project files. I'll try queries that might match the governed retrieval system's expected input format.",
+          "parent_id": "019f8ac0-c421-7383-a231-4850e87f37b9"
+        },
+        {
+          "name": "governed_retrieval",
+          "input_parameters": {
+            "raw": "{'query': 'README pyproject.toml setup.py setup.cfg project name entry point', 'config': '{\"metadata\": {\"scope\": \"local_project\"}}'}"
+          },
+          "output": {
+            "error_type": "ValidationError"
+          },
+          "parent_id": "019f8ac0-ca96-78d0-9a79-d2e823ea3702"
+        },
+        {
+          "name": "governed_retrieval",
+          "input_parameters": {
+            "raw": "{'query': 'README pyproject.toml setup.py project name entry point test configuration'}"
+          },
+          "output": {
+            "error_type": "RuntimeError"
+          },
+          "parent_id": "019f8ac0-d385-7c90-919a-1f882e4a712e"
+        },
+        {
+          "name": "governed_retrieval",
+          "input_parameters": {
+            "raw": "{'query': 'Python version constraints requires-python python_requires setup.py pyproject.toml'}"
+          },
+          "output": {
+            "error_type": "RuntimeError"
+          },
+          "parent_id": "019f8ac0-d866-7b43-ae7b-4645ac2a2ed0"
+        },
+        {
+          "name": "governed_retrieval",
+          "input_parameters": {
+            "raw": "{'query': 'project Python version requirements pyproject.toml setup.py README', 'config': '{\"metadata\": {\"task_type\": \"local_project_inspection\", \"scope\": \"current_directory\"}}'}"
+          },
+          "output": {
+            "error_type": "ValidationError"
+          },
+          "parent_id": "019f8ac0-f187-7610-a0da-a57947a739e6"
+        }
+      ],
+      "retrieval_context": [
+        "{'error_type': 'RuntimeError'}",
+        "{'error_type': 'RuntimeError'}",
+        "{'error_type': 'RuntimeError'}",
+        "{'error_type': 'ValidationError'}",
+        "{'error_type': 'ValidationError'}",
+        "{'error_type': 'ValidationError'}",
+        "{'error_type': 'ValidationError'}",
+        "{'error_type': 'RuntimeError'}",
+        "{'error_type': 'RuntimeError'}",
+        "{'error_type': 'ValidationError'}",
+        "{'error_type': 'ValidationError'}",
+        "{'error_type': 'RuntimeError'}",
+        "{'error_type': 'RuntimeError'}",
+        "{'error_type': 'ValidationError'}"
+      ],
+      "errors": [
+        "019f8abf-b87a-79b0-ae09-d66ed328e8e8:failed",
+        "019f8abf-bb93-76f0-9a5f-9faeab7d0b37:failed",
+        "019f8abf-bb93-76f0-9a5f-9fb5d6d85661:failed",
+        "019f8abf-e129-7413-8a36-52208eeeaf2d:failed",
+        "019f8abf-e4e0-77d2-a37e-81a0ad8674cf:failed",
+        "019f8abf-f0b6-77f0-8f2f-efe866454c24:failed",
+        "019f8abf-f12b-7120-a9eb-a955a63c98cb:failed",
+        "019f8ac0-aa2d-71d1-a391-18b7293359ac:failed",
+        "019f8ac0-abcf-78b1-99f3-ab38950c567b:failed",
+        "019f8ac0-c097-70d2-b20d-8d3f843413f2:failed",
+        "019f8ac0-ca98-7933-932a-9bef938b7938:failed",
+        "019f8ac0-d387-7000-8e6d-100c07e1954f:failed",
+        "019f8ac0-d868-7e01-9635-427943c6c721:failed",
+        "019f8ac0-f189-7f32-b711-bab88305df3b:failed"
+      ],
+      "trace_dict": {
+        "name": "open_deep_research",
+        "type": "agent",
+        "children": [
+          {
+            "name": "governed_retrieval",
+            "type": "retriever",
+            "input": {
+              "raw": "{'query': 'repository root project identifier files README pyproject.toml setup.py setup.cfg'}"
+            },
+            "output": {
+              "error_type": "RuntimeError"
+            },
+            "status": "failed",
+            "children": []
+          },
+          {
+            "name": "governed_retrieval",
+            "type": "retriever",
+            "input": {
+              "raw": "{'query': 'project name README pyproject.toml setup.py setup.cfg repository root identifier'}"
+            },
+            "output": {
+              "error_type": "RuntimeError"
+            },
+            "status": "failed",
+            "children": []
+          },
+          {
+            "name": "governed_retrieval",
+            "type": "retriever",
+            "input": {
+              "raw": "{'query': 'python version constraints requires-python python-requires python_requires'}"
+            },
+            "output": {
+              "error_type": "RuntimeError"
+            },
+            "status": "failed",
+            "children": []
+          },
+          {
+            "name": "think_tool",
+            "type": "tool",
+            "input": {
+              "raw": "{'reflection': 'The governed_retrieval tool failed with \"requires a trusted RequirementSet\". This is the only retrieval tool available to me. Let me try passing a config parameter to see if that helps satisfy the RequirementSet requirement. I\\'ll also try different query formulations to see if any work.'}"
+            },
+            "output": "Reflection recorded: The governed_retrieval tool failed with \"requires a trusted RequirementSet\". This is the only retrieval tool available to me. Let me try passing a config parameter to see if that helps satisfy the RequirementSet requirement. I'll also try different query formulations to see if any work.",
+            "status": "completed",
+            "children": []
+          },
+          {
+            "name": "think_tool",
+            "type": "tool",
+            "input": {
+              "raw": "{'reflection': 'The governed_retrieval tool returned an error requiring a \"trusted RequirementSet\". This suggests the tool needs specific configuration or context to work. Let me try passing metadata or tags in the config parameter to see if that helps. The task is about identifying the current project\\'s entry points and test configuration by examining local project files. Since this is a local filesystem investigation task, I should try to use the governed_retrieval tool with appropriate configuration, or see if there\\'s a way to access local files through it.'}"
+            },
+            "output": "Reflection recorded: The governed_retrieval tool returned an error requiring a \"trusted RequirementSet\". This suggests the tool needs specific configuration or context to work. Let me try passing metadata or tags in the config parameter to see if that helps. The task is about identifying the current project's entry points and test configuration by examining local project files. Since this is a local filesystem investigation task, I should try to use the governed_retrieval tool with appropriate configuration, or see if there's a way to access local files through it.",
+            "status": "completed",
+            "children": []
+          },
+          {
+            "name": "governed_retrieval",
+            "type": "retriever",
+            "input": {
+              "raw": "{'query': 'project name README pyproject.toml setup.py setup.cfg repository root identifier', 'config': '{\"configurable\": {\"requirement_set\": \"project_identification\"}}'}"
+            },
+            "output": {
+              "error_type": "ValidationError"
+            },
+            "status": "failed",
+            "children": []
+          },
+          {
+            "name": "governed_retrieval",
+            "type": "retriever",
+            "input": {
+              "raw": "{'query': 'project name entry point main module', 'config': '{\"metadata\": {\"task\": \"project_identification\", \"source\": \"local_filesystem\"}}'}"
+            },
+            "output": {
+              "error_type": "ValidationError"
+            },
+            "status": "failed",
+            "children": []
+          },
+          {
+            "name": "governed_retrieval",
+            "type": "retriever",
+            "input": {
+              "raw": "{'query': 'project name README pyproject.toml setup.py', 'config': '{\"configurable\": {\"requirement_set\": \"project_identification_and_python_versions\"}}'}"
+            },
+            "output": {
+              "error_type": "ValidationError"
+            },
+            "status": "failed",
+            "children": []
+          },
+          {
+            "name": "governed_retrieval",
+            "type": "retriever",
+            "input": {
+              "raw": "{'query': 'project name entry point main module', 'config': '{\"metadata\": {\"task\": \"project_identification\", \"source\": \"local_filesystem\"}}'}"
+            },
+            "output": {
+              "error_type": "ValidationError"
+            },
+            "status": "failed",
+            "children": []
+          },
+          {
+            "name": "governed_retrieval",
+            "type": "retriever",
+            "input": {
+              "raw": "{'query': 'list top-level files and directories in current working directory'}"
+            },
+            "output": {
+              "error_type": "RuntimeError"
+            },
+            "status": "failed",
+            "children": []
+          },
+          {
+            "name": "governed_retrieval",
+            "type": "retriever",
+            "input": {
+              "raw": "{'query': 'list files in current working directory root level project files README pyproject.toml setup.py setup.cfg'}"
+            },
+            "output": {
+              "error_type": "RuntimeError"
+            },
+            "status": "failed",
+            "children": []
+          },
+          {
+            "name": "governed_retrieval",
+            "type": "retriever",
+            "input": {
+              "raw": "{'query': 'README pyproject.toml setup.py setup.cfg project name entry point', 'config': '{\"metadata\": {\"scope\": \"local_project\"}}'}"
+            },
+            "output": {
+              "error_type": "ValidationError"
+            },
+            "status": "failed",
+            "children": []
+          },
+          {
+            "name": "think_tool",
+            "type": "tool",
+            "input": {
+              "raw": "{'reflection': \"The governed_retrieval tool returned an error about requiring a trusted RequirementSet. This tool seems designed for a specific governed evidence system rather than direct file system access. However, the task explicitly asks me to inspect local project files in the current working directory. Let me try different query formulations to see if the tool can access local project files. I'll try queries that might match the governed retrieval system's expected input format.\"}"
+            },
+            "output": "Reflection recorded: The governed_retrieval tool returned an error about requiring a trusted RequirementSet. This tool seems designed for a specific governed evidence system rather than direct file system access. However, the task explicitly asks me to inspect local project files in the current working directory. Let me try different query formulations to see if the tool can access local project files. I'll try queries that might match the governed retrieval system's expected input format.",
+            "status": "completed",
+            "children": []
+          },
+          {
+            "name": "governed_retrieval",
+            "type": "retriever",
+            "input": {
+              "raw": "{'query': 'README pyproject.toml setup.py setup.cfg project name entry point', 'config': '{\"metadata\": {\"scope\": \"local_project\"}}'}"
+            },
+            "output": {
+              "error_type": "ValidationError"
+            },
+            "status": "failed",
+            "children": []
+          },
+          {
+            "name": "governed_retrieval",
+            "type": "retriever",
+            "input": {
+              "raw": "{'query': 'README pyproject.toml setup.py project name entry point test configuration'}"
+            },
+            "output": {
+              "error_type": "RuntimeError"
+            },
+            "status": "failed",
+            "children": []
+          },
+          {
+            "name": "governed_retrieval",
+            "type": "retriever",
+            "input": {
+              "raw": "{'query': 'Python version constraints requires-python python_requires setup.py pyproject.toml'}"
+            },
+            "output": {
+              "error_type": "RuntimeError"
+            },
+            "status": "failed",
+            "children": []
+          },
+          {
+            "name": "governed_retrieval",
+            "type": "retriever",
+            "input": {
+              "raw": "{'query': 'project Python version requirements pyproject.toml setup.py README', 'config': '{\"metadata\": {\"task_type\": \"local_project_inspection\", \"scope\": \"current_directory\"}}'}"
+            },
+            "output": {
+              "error_type": "ValidationError"
+            },
+            "status": "failed",
+            "children": []
+          },
+          {
+            "name": "research_plan",
+            "type": "plan",
+            "input": {},
+            "output": [
+              "我需要确定在 Windows 原生 conda 环境中运行本项目的最小步骤，具体需要核对以下三个方面：1) Python 版本约束；2) 主图入口（main entry point）；3) 低成本测试入口（low-cost test entry point）。所有陈述的事实必须能够直接由项目文件验证，不得包含推测或外部信息。"
+            ],
+            "status": "completed",
+            "children": []
+          }
+        ],
+        "plan": [
+          "我需要确定在 Windows 原生 conda 环境中运行本项目的最小步骤，具体需要核对以下三个方面：1) Python 版本约束；2) 主图入口（main entry point）；3) 低成本测试入口（low-cost test entry point）。所有陈述的事实必须能够直接由项目文件验证，不得包含推测或外部信息。"
+        ]
+      }
+    },
+    "state_artifacts": {
+      "requirement_ids": [
+        "req_c7e1363c869a3a48590eac2e8d8f96570f82a05f442b1bdf22beb3a0c5303675"
+      ],
+      "source_ids": [],
+      "evidence_ids": [],
+      "run_evidence_ids": [],
+      "coverage_assessment_ids": [],
+      "retrieval_decision_ids": [],
+      "citation_validation_artifact": {
+        "schema_version": "1.0",
+        "artifact_id": "citation_artifact_31bea91688b4b09f00d4fdf3c24729a7503b44934eeed2a849a6c0c555ce1c88",
+        "mode": "enforce",
+        "draft_id": "draft_4def9f4e2655e679a967e459c29e509704eb45bbd19a10a47fb4eee0b3ddbd6a",
+        "claims": [
+          {
+            "schema_version": "1.0",
+            "claim_id": "claim_0a105c4c689e134b2701fe06910f41d67d786b25ce9f586e480444c1af009105",
+            "requirement_ids": [
+              "req_c7e1363c869a3a48590eac2e8d8f96570f82a05f442b1bdf22beb3a0c5303675"
+            ],
+            "section_id": "section_5e4f44c8ef3fe784148ffbaf99a0159fea9d1ac12342031ae168ea38a3aac507",
+            "text": "由于未提供任何项目文件、仓库内容或研究痕迹，无法确定在 Windows 原生 conda 环境中运行本项目的最小步骤。",
+            "span_start": 0,
+            "span_end": 59,
+            "claim_type": "factual",
+            "temporal_scope": null,
+            "cited_evidence_ids": [],
+            "cited_citation_keys": [],
+            "extraction_version": "deterministic-v1"
+          },
+          {
+            "schema_version": "1.0",
+            "claim_id": "claim_a44c22213e0714f4d0c5ec511e3187f62fc7c9e5f86afcca4a6b893468918af8",
+            "requirement_ids": [
+              "req_c7e1363c869a3a48590eac2e8d8f96570f82a05f442b1bdf22beb3a0c5303675"
+            ],
+            "section_id": "section_5e4f44c8ef3fe784148ffbaf99a0159fea9d1ac12342031ae168ea38a3aac507",
+            "text": "关于需要核对的三个方面，因缺少必要的源材料（如 `pyproject.",
+            "span_start": 61,
+            "span_end": 96,
+            "claim_type": "factual",
+            "temporal_scope": null,
+            "cited_evidence_ids": [],
+            "cited_citation_keys": [],
+            "extraction_version": "deterministic-v1"
+          },
+          {
+            "schema_version": "1.0",
+            "claim_id": "claim_fa1f54ec9f9e6931954060168848f9726da27ed6dc6b1409e297517118e09dce",
+            "requirement_ids": [
+              "req_c7e1363c869a3a48590eac2e8d8f96570f82a05f442b1bdf22beb3a0c5303675"
+            ],
+            "section_id": "section_5e4f44c8ef3fe784148ffbaf99a0159fea9d1ac12342031ae168ea38a3aac507",
+            "text": "toml`、`setup.",
+            "span_start": 96,
+            "span_end": 109,
+            "claim_type": "factual",
+            "temporal_scope": null,
+            "cited_evidence_ids": [],
+            "cited_citation_keys": [],
+            "extraction_version": "deterministic-v1"
+          },
+          {
+            "schema_version": "1.0",
+            "claim_id": "claim_a7ab457e944aef9a03fd66c2294aabefb5ff6d1a1eaba0c92cf0b170238a6af2",
+            "requirement_ids": [
+              "req_c7e1363c869a3a48590eac2e8d8f96570f82a05f442b1bdf22beb3a0c5303675"
+            ],
+            "section_id": "section_5e4f44c8ef3fe784148ffbaf99a0159fea9d1ac12342031ae168ea38a3aac507",
+            "text": "1.",
+            "span_start": 147,
+            "span_end": 149,
+            "claim_type": "numeric",
+            "temporal_scope": null,
+            "cited_evidence_ids": [],
+            "cited_citation_keys": [],
+            "extraction_version": "deterministic-v1"
+          },
+          {
+            "schema_version": "1.0",
+            "claim_id": "claim_1e3a2faf80070430fcfb71acab4c94d0b0352a96748adcabd9cfa6b5e764955d",
+            "requirement_ids": [
+              "req_c7e1363c869a3a48590eac2e8d8f96570f82a05f442b1bdf22beb3a0c5303675"
+            ],
+            "section_id": "section_5e4f44c8ef3fe784148ffbaf99a0159fea9d1ac12342031ae168ea38a3aac507",
+            "text": "**Python 版本约束**：无法确定。",
+            "span_start": 150,
+            "span_end": 171,
+            "claim_type": "factual",
+            "temporal_scope": null,
+            "cited_evidence_ids": [],
+            "cited_citation_keys": [],
+            "extraction_version": "deterministic-v1"
+          },
+          {
+            "schema_version": "1.0",
+            "claim_id": "claim_5fd5b926805399073429f4c6a77a6b161cefe73766cc24c9ddfb2059227bed2a",
+            "requirement_ids": [
+              "req_c7e1363c869a3a48590eac2e8d8f96570f82a05f442b1bdf22beb3a0c5303675"
+            ],
+            "section_id": "section_5e4f44c8ef3fe784148ffbaf99a0159fea9d1ac12342031ae168ea38a3aac507",
+            "text": "2.",
+            "span_start": 172,
+            "span_end": 174,
+            "claim_type": "numeric",
+            "temporal_scope": null,
+            "cited_evidence_ids": [],
+            "cited_citation_keys": [],
+            "extraction_version": "deterministic-v1"
+          },
+          {
+            "schema_version": "1.0",
+            "claim_id": "claim_1a24d0ed917c6a59fb5d41b4fc7fb83018c6dd9a98582566c2b6080f42947318",
+            "requirement_ids": [
+              "req_c7e1363c869a3a48590eac2e8d8f96570f82a05f442b1bdf22beb3a0c5303675"
+            ],
+            "section_id": "section_5e4f44c8ef3fe784148ffbaf99a0159fea9d1ac12342031ae168ea38a3aac507",
+            "text": "**主图入口（main entry point）**：无法识别。",
+            "span_start": 175,
+            "span_end": 207,
+            "claim_type": "factual",
+            "temporal_scope": null,
+            "cited_evidence_ids": [],
+            "cited_citation_keys": [],
+            "extraction_version": "deterministic-v1"
+          },
+          {
+            "schema_version": "1.0",
+            "claim_id": "claim_f13c078d681bb6350217a5c27ebedcd92cde0a90fc2909db20881dced623dd9b",
+            "requirement_ids": [
+              "req_c7e1363c869a3a48590eac2e8d8f96570f82a05f442b1bdf22beb3a0c5303675"
+            ],
+            "section_id": "section_5e4f44c8ef3fe784148ffbaf99a0159fea9d1ac12342031ae168ea38a3aac507",
+            "text": "3.",
+            "span_start": 208,
+            "span_end": 210,
+            "claim_type": "numeric",
+            "temporal_scope": null,
+            "cited_evidence_ids": [],
+            "cited_citation_keys": [],
+            "extraction_version": "deterministic-v1"
+          },
+          {
+            "schema_version": "1.0",
+            "claim_id": "claim_5bcd203dae5badaae2b3b2963452e24cf1fd37cd7b9a60d26acc8225906058f0",
+            "requirement_ids": [
+              "req_c7e1363c869a3a48590eac2e8d8f96570f82a05f442b1bdf22beb3a0c5303675"
+            ],
+            "section_id": "section_5e4f44c8ef3fe784148ffbaf99a0159fea9d1ac12342031ae168ea38a3aac507",
+            "text": "**低成本测试入口（low-cost test entry point）**：无法识别。",
+            "span_start": 211,
+            "span_end": 255,
+            "claim_type": "factual",
+            "temporal_scope": null,
+            "cited_evidence_ids": [],
+            "cited_citation_keys": [],
+            "extraction_version": "deterministic-v1"
+          },
+          {
+            "schema_version": "1.0",
+            "claim_id": "claim_b12d59943d194bb0195bb35171536395cfd246477306e04a93583b6f629ebf85",
+            "requirement_ids": [
+              "req_c7e1363c869a3a48590eac2e8d8f96570f82a05f442b1bdf22beb3a0c5303675"
+            ],
+            "section_id": "section_5e4f44c8ef3fe784148ffbaf99a0159fea9d1ac12342031ae168ea38a3aac507",
+            "text": "所有要求的任务维度均因缺少输入数据而完全未解决。",
+            "span_start": 257,
+            "span_end": 281,
+            "claim_type": "factual",
+            "temporal_scope": null,
+            "cited_evidence_ids": [],
+            "cited_citation_keys": [],
+            "extraction_version": "deterministic-v1"
+          },
+          {
+            "schema_version": "1.0",
+            "claim_id": "claim_c03094cb5acb1816f476efb3fc33cf14104844aa4e44c3072db711ee6a6cfb8a",
+            "requirement_ids": [
+              "req_c7e1363c869a3a48590eac2e8d8f96570f82a05f442b1bdf22beb3a0c5303675"
+            ],
+            "section_id": "section_5e4f44c8ef3fe784148ffbaf99a0159fea9d1ac12342031ae168ea38a3aac507",
+            "text": "如需提供准确信息，请补充相关的项目文件内容或研究痕迹。",
+            "span_start": 281,
+            "span_end": 308,
+            "claim_type": "factual",
+            "temporal_scope": null,
+            "cited_evidence_ids": [],
+            "cited_citation_keys": [],
+            "extraction_version": "deterministic-v1"
+          }
+        ],
+        "results": [
+          {
+            "schema_version": "1.0",
+            "result_id": "validation_2a9b64d0c67810513dc964fbdb0422dd52ce42d51a801da2be0951dd94cf0a57",
+            "claim_id": "claim_0a105c4c689e134b2701fe06910f41d67d786b25ce9f586e480444c1af009105",
+            "status": "unsupported",
+            "links": [],
+            "failed_checks": [
+              "no_resolvable_evidence"
+            ],
+            "required_action": "remove",
+            "confidence": 0.0,
+            "policy_version": "citation-policy-v1",
+            "audit_id": "citation_audit_2a9b64d0c67810513dc964fbdb0422dd52ce42d51a801da2be0951dd94cf0a57"
+          },
+          {
+            "schema_version": "1.0",
+            "result_id": "validation_8ac384cc8a80bf91b15fa5dd1c8a7f9d25667f278725b0e581431dedb0b084e3",
+            "claim_id": "claim_a44c22213e0714f4d0c5ec511e3187f62fc7c9e5f86afcca4a6b893468918af8",
+            "status": "unsupported",
+            "links": [],
+            "failed_checks": [
+              "no_resolvable_evidence"
+            ],
+            "required_action": "remove",
+            "confidence": 0.0,
+            "policy_version": "citation-policy-v1",
+            "audit_id": "citation_audit_8ac384cc8a80bf91b15fa5dd1c8a7f9d25667f278725b0e581431dedb0b084e3"
+          },
+          {
+            "schema_version": "1.0",
+            "result_id": "validation_b5de8c60c18342d1fb3895ec49c509878a51d527fd18b641eac1ac3d937550d1",
+            "claim_id": "claim_fa1f54ec9f9e6931954060168848f9726da27ed6dc6b1409e297517118e09dce",
+            "status": "unsupported",
+            "links": [],
+            "failed_checks": [
+              "no_resolvable_evidence"
+            ],
+            "required_action": "remove",
+            "confidence": 0.0,
+            "policy_version": "citation-policy-v1",
+            "audit_id": "citation_audit_b5de8c60c18342d1fb3895ec49c509878a51d527fd18b641eac1ac3d937550d1"
+          },
+          {
+            "schema_version": "1.0",
+            "result_id": "validation_bb1398125c26079589d9150ce1f24dafe93c6c66f1706f213ea8a288819455f6",
+            "claim_id": "claim_a7ab457e944aef9a03fd66c2294aabefb5ff6d1a1eaba0c92cf0b170238a6af2",
+            "status": "unsupported",
+            "links": [],
+            "failed_checks": [
+              "no_resolvable_evidence"
+            ],
+            "required_action": "remove",
+            "confidence": 0.0,
+            "policy_version": "citation-policy-v1",
+            "audit_id": "citation_audit_bb1398125c26079589d9150ce1f24dafe93c6c66f1706f213ea8a288819455f6"
+          },
+          {
+            "schema_version": "1.0",
+            "result_id": "validation_760cba02dca9b948f0b401d403245e57fee04292723eccba7fcc4d6161b02b51",
+            "claim_id": "claim_1e3a2faf80070430fcfb71acab4c94d0b0352a96748adcabd9cfa6b5e764955d",
+            "status": "unsupported",
+            "links": [],
+            "failed_checks": [
+              "no_resolvable_evidence"
+            ],
+            "required_action": "remove",
+            "confidence": 0.0,
+            "policy_version": "citation-policy-v1",
+            "audit_id": "citation_audit_760cba02dca9b948f0b401d403245e57fee04292723eccba7fcc4d6161b02b51"
+          },
+          {
+            "schema_version": "1.0",
+            "result_id": "validation_d3dd0f71f7767d72a51218d36a6d1363305150a7cf53f39b10263d42876fe12c",
+            "claim_id": "claim_5fd5b926805399073429f4c6a77a6b161cefe73766cc24c9ddfb2059227bed2a",
+            "status": "unsupported",
+            "links": [],
+            "failed_checks": [
+              "no_resolvable_evidence"
+            ],
+            "required_action": "remove",
+            "confidence": 0.0,
+            "policy_version": "citation-policy-v1",
+            "audit_id": "citation_audit_d3dd0f71f7767d72a51218d36a6d1363305150a7cf53f39b10263d42876fe12c"
+          },
+          {
+            "schema_version": "1.0",
+            "result_id": "validation_18b62c2fa675714a3fa30d3105326d9ea25d7054f7d24ca024707a738d1659ed",
+            "claim_id": "claim_1a24d0ed917c6a59fb5d41b4fc7fb83018c6dd9a98582566c2b6080f42947318",
+            "status": "unsupported",
+            "links": [],
+            "failed_checks": [
+              "no_resolvable_evidence"
+            ],
+            "required_action": "remove",
+            "confidence": 0.0,
+            "policy_version": "citation-policy-v1",
+            "audit_id": "citation_audit_18b62c2fa675714a3fa30d3105326d9ea25d7054f7d24ca024707a738d1659ed"
+          },
+          {
+            "schema_version": "1.0",
+            "result_id": "validation_a89ac0ddc6856ae30f71dd1acf6fbbc7f7777eb5b73a6354aab881bcf2a06c77",
+            "claim_id": "claim_f13c078d681bb6350217a5c27ebedcd92cde0a90fc2909db20881dced623dd9b",
+            "status": "unsupported",
+            "links": [],
+            "failed_checks": [
+              "no_resolvable_evidence"
+            ],
+            "required_action": "remove",
+            "confidence": 0.0,
+            "policy_version": "citation-policy-v1",
+            "audit_id": "citation_audit_a89ac0ddc6856ae30f71dd1acf6fbbc7f7777eb5b73a6354aab881bcf2a06c77"
+          },
+          {
+            "schema_version": "1.0",
+            "result_id": "validation_447c320396d7a775c0f7c52183e9d6d697274aecbb433d09e5ba6c1f8a667d6a",
+            "claim_id": "claim_5bcd203dae5badaae2b3b2963452e24cf1fd37cd7b9a60d26acc8225906058f0",
+            "status": "unsupported",
+            "links": [],
+            "failed_checks": [
+              "no_resolvable_evidence"
+            ],
+            "required_action": "remove",
+            "confidence": 0.0,
+            "policy_version": "citation-policy-v1",
+            "audit_id": "citation_audit_447c320396d7a775c0f7c52183e9d6d697274aecbb433d09e5ba6c1f8a667d6a"
+          },
+          {
+            "schema_version": "1.0",
+            "result_id": "validation_b4c605b6327c2788f7912e108b766d942a9713b78f99c0005d28613adbf236b3",
+            "claim_id": "claim_b12d59943d194bb0195bb35171536395cfd246477306e04a93583b6f629ebf85",
+            "status": "unsupported",
+            "links": [],
+            "failed_checks": [
+              "no_resolvable_evidence"
+            ],
+            "required_action": "remove",
+            "confidence": 0.0,
+            "policy_version": "citation-policy-v1",
+            "audit_id": "citation_audit_b4c605b6327c2788f7912e108b766d942a9713b78f99c0005d28613adbf236b3"
+          },
+          {
+            "schema_version": "1.0",
+            "result_id": "validation_01500f33053749ee13f93a8f3634654cc934a09b5fa1a34fd4a1a24858de2024",
+            "claim_id": "claim_c03094cb5acb1816f476efb3fc33cf14104844aa4e44c3072db711ee6a6cfb8a",
+            "status": "unsupported",
+            "links": [],
+            "failed_checks": [
+              "no_resolvable_evidence"
+            ],
+            "required_action": "remove",
+            "confidence": 0.0,
+            "policy_version": "citation-policy-v1",
+            "audit_id": "citation_audit_01500f33053749ee13f93a8f3634654cc934a09b5fa1a34fd4a1a24858de2024"
+          }
+        ],
+        "patches": [
+          {
+            "schema_version": "1.0",
+            "patch_id": "patch_6662813122b7c9a646efdab77b9e569450e4a7a436c171407aca82be0ed154e4",
+            "section_id": "section_5e4f44c8ef3fe784148ffbaf99a0159fea9d1ac12342031ae168ea38a3aac507",
+            "original_hash": "879e66e7ebe1d67724c57cf6971c2ecc2174e90a689f26390c88b1bf8d7815dc",
+            "target_claim_ids": [
+              "claim_0a105c4c689e134b2701fe06910f41d67d786b25ce9f586e480444c1af009105",
+              "claim_1a24d0ed917c6a59fb5d41b4fc7fb83018c6dd9a98582566c2b6080f42947318",
+              "claim_1e3a2faf80070430fcfb71acab4c94d0b0352a96748adcabd9cfa6b5e764955d",
+              "claim_5bcd203dae5badaae2b3b2963452e24cf1fd37cd7b9a60d26acc8225906058f0",
+              "claim_5fd5b926805399073429f4c6a77a6b161cefe73766cc24c9ddfb2059227bed2a",
+              "claim_a44c22213e0714f4d0c5ec511e3187f62fc7c9e5f86afcca4a6b893468918af8",
+              "claim_a7ab457e944aef9a03fd66c2294aabefb5ff6d1a1eaba0c92cf0b170238a6af2",
+              "claim_b12d59943d194bb0195bb35171536395cfd246477306e04a93583b6f629ebf85",
+              "claim_c03094cb5acb1816f476efb3fc33cf14104844aa4e44c3072db711ee6a6cfb8a",
+              "claim_f13c078d681bb6350217a5c27ebedcd92cde0a90fc2909db20881dced623dd9b",
+              "claim_fa1f54ec9f9e6931954060168848f9726da27ed6dc6b1409e297517118e09dce"
+            ],
+            "replacement_text": "py`、CI/CD 配置或 README 等），以下信息均无法提取和验证：",
+            "preserved_claim_ids": [],
+            "reason": "citation_validation_disposition"
+          }
+        ],
+        "registry": [],
+        "final_report_hash": "4272e1040f9bd250e4082217446ad0be91ae669c444ba29a67fbe694c1ede5b9",
+        "policy_version": "citation-policy-v1"
+      },
+      "citation_claim_ids": [
+        "claim_0a105c4c689e134b2701fe06910f41d67d786b25ce9f586e480444c1af009105",
+        "claim_1a24d0ed917c6a59fb5d41b4fc7fb83018c6dd9a98582566c2b6080f42947318",
+        "claim_1e3a2faf80070430fcfb71acab4c94d0b0352a96748adcabd9cfa6b5e764955d",
+        "claim_5bcd203dae5badaae2b3b2963452e24cf1fd37cd7b9a60d26acc8225906058f0",
+        "claim_5fd5b926805399073429f4c6a77a6b161cefe73766cc24c9ddfb2059227bed2a",
+        "claim_a44c22213e0714f4d0c5ec511e3187f62fc7c9e5f86afcca4a6b893468918af8",
+        "claim_a7ab457e944aef9a03fd66c2294aabefb5ff6d1a1eaba0c92cf0b170238a6af2",
+        "claim_b12d59943d194bb0195bb35171536395cfd246477306e04a93583b6f629ebf85",
+        "claim_c03094cb5acb1816f476efb3fc33cf14104844aa4e44c3072db711ee6a6cfb8a",
+        "claim_f13c078d681bb6350217a5c27ebedcd92cde0a90fc2909db20881dced623dd9b",
+        "claim_fa1f54ec9f9e6931954060168848f9726da27ed6dc6b1409e297517118e09dce"
+      ],
+      "citation_validation_result_ids": [
+        "validation_01500f33053749ee13f93a8f3634654cc934a09b5fa1a34fd4a1a24858de2024",
+        "validation_18b62c2fa675714a3fa30d3105326d9ea25d7054f7d24ca024707a738d1659ed",
+        "validation_2a9b64d0c67810513dc964fbdb0422dd52ce42d51a801da2be0951dd94cf0a57",
+        "validation_447c320396d7a775c0f7c52183e9d6d697274aecbb433d09e5ba6c1f8a667d6a",
+        "validation_760cba02dca9b948f0b401d403245e57fee04292723eccba7fcc4d6161b02b51",
+        "validation_8ac384cc8a80bf91b15fa5dd1c8a7f9d25667f278725b0e581431dedb0b084e3",
+        "validation_a89ac0ddc6856ae30f71dd1acf6fbbc7f7777eb5b73a6354aab881bcf2a06c77",
+        "validation_b4c605b6327c2788f7912e108b766d942a9713b78f99c0005d28613adbf236b3",
+        "validation_b5de8c60c18342d1fb3895ec49c509878a51d527fd18b641eac1ac3d937550d1",
+        "validation_bb1398125c26079589d9150ce1f24dafe93c6c66f1706f213ea8a288819455f6",
+        "validation_d3dd0f71f7767d72a51218d36a6d1363305150a7cf53f39b10263d42876fe12c"
+      ],
+      "citation_registry_keys": [],
+      "requirement_count": 1,
+      "research_brief_sha256": "f667d20755698bfc60ddbc9691048f224aa684627bcaa497479d2c06dcc180be"
+    },
+    "registry": [
+      "ResearchComplete",
+      "think_tool",
+      "governed_retrieval"
+    ],
+    "execution_success": true,
+    "evaluation_claim_results": [
+      {
+        "claim_id": "eval-claim-139e430ad948cbd1e30305f8",
+        "claim_text": "py`、CI/CD 配置或 README 等），以下信息均无法提取和验证：",
+        "checkable": false,
+        "citation_ids": [],
+        "validation_status": "not_checkable",
+        "evidence_valid": false,
+        "source_authority": "unknown",
+        "correctly_qualified": false,
+        "scorer_version": "evaluation-claim-scorer-v3"
+      }
+    ],
+    "claim_observations": [
+      {
+        "claim_id": "eval-claim-139e430ad948cbd1e30305f8",
+        "claim_text": "py`、CI/CD 配置或 README 等），以下信息均无法提取和验证：",
+        "checkable": false,
+        "citation_ids": [],
+        "validation_status": "not_checkable",
+        "evidence_valid": false,
+        "source_authority": "unknown",
+        "correctly_qualified": false,
+        "scorer_version": "evaluation-claim-scorer-v3"
+      }
+    ]
+  },
+  "retrieval_context": [
+    "{'error_type': 'RuntimeError'}",
+    "{'error_type': 'RuntimeError'}",
+    "{'error_type': 'RuntimeError'}",
+    "{'error_type': 'ValidationError'}",
+    "{'error_type': 'ValidationError'}",
+    "{'error_type': 'ValidationError'}",
+    "{'error_type': 'ValidationError'}",
+    "{'error_type': 'RuntimeError'}",
+    "{'error_type': 'RuntimeError'}",
+    "{'error_type': 'ValidationError'}",
+    "{'error_type': 'ValidationError'}",
+    "{'error_type': 'RuntimeError'}",
+    "{'error_type': 'RuntimeError'}",
+    "{'error_type': 'ValidationError'}"
+  ],
+  "telemetry": {
+    "input_tokens": 109470,
+    "output_tokens": 14336,
+    "total_tokens": 123806,
+    "research_input_tokens": 76527,
+    "research_output_tokens": 12298,
+    "research_total_tokens": 88825,
+    "judge_input_tokens": 32943,
+    "judge_output_tokens": 2038,
+    "judge_total_tokens": 34981,
+    "retry_tokens": 0,
+    "estimated_cost_usd": null,
+    "wall_time_ms": 187472.5738,
+    "research_model_calls": 26,
+    "judge_model_calls": 17,
+    "tool_calls_by_name": {
+      "governed_retrieval": 14,
+      "think_tool": 3
+    },
+    "search_calls": 0,
+    "researcher_runs": 4
+  },
+  "metric_results": [
+    {
+      "metric_name": "task_completion",
+      "metric_version": "deepeval-4.1.1",
+      "score": 0.0,
+      "threshold": 0.5,
+      "status": "failed",
+      "reason": "The actual outcome failed to achieve the task entirely. The system encountered technical errors with its tools and did not provide the requested information (Python version constraints, main entry point, or test entry point). Instead of determining the minimal steps, it only generated a plan stating that verification is needed, without performing the verification or providing the facts.",
+      "deterministic": false,
+      "judge_model": "openai:qwen3.7-plus",
+      "estimated_cost_usd": null,
+      "input_tokens": 4652,
+      "output_tokens": 319,
+      "total_tokens": 4971
+    },
+    {
+      "metric_name": "tool_correctness",
+      "metric_version": "deepeval-4.1.1",
+      "score": 0.5,
+      "threshold": 0.5,
+      "status": "passed",
+      "reason": "[\n\t Tool Calling Reason: All expected tools ['governed_retrieval'] were called (order not considered).\n\t Tool Selection Reason: The agent correctly identified that it needed to retrieve information about project files (README, pyproject.toml, etc.) and used the only available retrieval tool, `governed_retrieval`. However, the agent failed to adapt its strategy after repeated errors, continuing to misuse the tool with incorrect parameters instead of recognizing it might be unsuitable for local file inspection or finding an alternative approach. The selection was logically aligned with the goal but practically ineffective due to persistent misapplication.\n]\n",
+      "deterministic": false,
+      "judge_model": null,
+      "estimated_cost_usd": null,
+      "input_tokens": 3015,
+      "output_tokens": 114,
+      "total_tokens": 3129
+    },
+    {
+      "metric_name": "step_efficiency",
+      "metric_version": "deepeval-4.1.1",
+      "score": 0.0,
+      "threshold": 0.5,
+      "status": "failed",
+      "reason": "The agent failed to complete the task, ending with only a plan and no results. It executed 13 redundant and failing retrieval attempts and 3 unnecessary reflection steps instead of using direct file access tools.",
+      "deterministic": false,
+      "judge_model": "openai:qwen3.7-plus",
+      "estimated_cost_usd": null,
+      "input_tokens": 8655,
+      "output_tokens": 111,
+      "total_tokens": 8766
+    },
+    {
+      "metric_name": "plan_adherence",
+      "metric_version": "deepeval-4.1.1",
+      "score": 0.0,
+      "threshold": 0.5,
+      "status": "failed",
+      "reason": "The agent failed to execute any of the three planned verification steps (Python version, main entry point, test entry point). The trace consists entirely of failed tool calls and internal reflections, with no evidence of file inspection or fact retrieval.",
+      "deterministic": false,
+      "judge_model": "openai:qwen3.7-plus",
+      "estimated_cost_usd": null,
+      "input_tokens": 12091,
+      "output_tokens": 193,
+      "total_tokens": 12284
+    },
+    {
+      "metric_name": "faithfulness",
+      "metric_version": "deepeval-4.1.1",
+      "score": 1.0,
+      "threshold": 0.5,
+      "status": "passed",
+      "reason": "The score is 1.00 because there are no contradictions, indicating the actual output is perfectly faithful to the retrieval context. Great job!",
+      "deterministic": false,
+      "judge_model": "openai:qwen3.7-plus",
+      "estimated_cost_usd": null,
+      "input_tokens": 1442,
+      "output_tokens": 244,
+      "total_tokens": 1686
+    },
+    {
+      "metric_name": "contextual_precision",
+      "metric_version": "deepeval-4.1.1",
+      "score": 0.0,
+      "threshold": 0.5,
+      "status": "failed",
+      "reason": "The score is 0.00 because all retrieved nodes are irrelevant to the input query. Specifically, the first node through the fourteenth node in retrieval contexts only contain error type information like 'RuntimeError' or 'ValidationError' and fail to provide any details regarding conda setup steps, Python version constraints, or project entry points.",
+      "deterministic": false,
+      "judge_model": "openai:qwen3.7-plus",
+      "estimated_cost_usd": null,
+      "input_tokens": 1658,
+      "output_tokens": 795,
+      "total_tokens": 2453
+    },
+    {
+      "metric_name": "contextual_recall",
+      "metric_version": "deepeval-4.1.1",
+      "score": 0.0,
+      "threshold": 0.5,
+      "status": "failed",
+      "reason": "The score is 0.00 because the nodes in retrieval context contain only error type dictionaries and lack any information to support the requirements for Python 3.11+, conda, LangGraph, or test constraints mentioned in the expected output.",
+      "deterministic": false,
+      "judge_model": "openai:qwen3.7-plus",
+      "estimated_cost_usd": null,
+      "input_tokens": 883,
+      "output_tokens": 130,
+      "total_tokens": 1013
+    },
+    {
+      "metric_name": "citation_fidelity",
+      "metric_version": "1.0",
+      "score": null,
+      "threshold": 0.8,
+      "status": "not_applicable",
+      "reason": "0/0 cited checkable claims fully supported",
+      "deterministic": true,
+      "judge_model": null,
+      "estimated_cost_usd": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null
+    },
+    {
+      "metric_name": "citation_completeness",
+      "metric_version": "1.0",
+      "score": null,
+      "threshold": 0.8,
+      "status": "not_applicable",
+      "reason": "0/0 checkable claims have valid support",
+      "deterministic": true,
+      "judge_model": null,
+      "estimated_cost_usd": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null
+    },
+    {
+      "metric_name": "unsupported_claim_rate",
+      "metric_version": "1.0",
+      "score": null,
+      "threshold": 0.0,
+      "status": "not_applicable",
+      "reason": "0/0 unqualified unsupported claims",
+      "deterministic": true,
+      "judge_model": null,
+      "estimated_cost_usd": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null
+    },
+    {
+      "metric_name": "source_quality",
+      "metric_version": "1.0",
+      "score": null,
+      "threshold": 0.5,
+      "status": "not_applicable",
+      "reason": "authority-weighted mean across 0 supported claims",
+      "deterministic": true,
+      "judge_model": null,
+      "estimated_cost_usd": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null
+    },
+    {
+      "metric_name": "source_numbering_error_rate",
+      "metric_version": "1.0",
+      "score": 0.0,
+      "threshold": 0.0,
+      "status": "passed",
+      "reason": "errors=0; orphan=0; unused=0; duplicates=0; non_contiguous=0",
+      "deterministic": true,
+      "judge_model": null,
+      "estimated_cost_usd": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null
+    },
+    {
+      "metric_name": "cost_field_integrity",
+      "metric_version": "1.0",
+      "score": 1.0,
+      "threshold": 1.0,
+      "status": "passed",
+      "reason": "pricing is unavailable, so estimated cost remains null rather than zero",
+      "deterministic": true,
+      "judge_model": null,
+      "estimated_cost_usd": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null
+    }
+  ],
+  "status": "failed",
+  "error": null,
+  "started_at": "2026-07-22T16:52:55.663686Z",
+  "finished_at": "2026-07-22T16:56:50.263401Z"
+}

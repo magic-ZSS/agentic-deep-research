@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-a36dcb83e654f6eec74609ca9f05a21a",
+  "metric_name": "plan_adherence",
+  "duration_ms": 12149.63890000945,
+  "result": {
+    "metric_name": "plan_adherence",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.25,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The agent executed multiple search steps (Steps 1-7) that correspond to the initial information gathering phases of the plan. However, the trace ends after the final search and a planning reflection, completely omitting the execution of the final five steps: evaluating risks, proposing the telemetry scheme, ensuring decoupling, clarifying risk manifestations, and defining design points. The agent failed to produce the required output for the majority of the plan's structural components.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 63197,
+    "output_tokens": 469,
+    "total_tokens": 63666
+  }
+}

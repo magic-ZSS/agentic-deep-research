@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import sys
 import types
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -23,6 +25,7 @@ except ImportError:
     sys.modules["uuid_utils"] = uuid_utils
     sys.modules["uuid_utils.compat"] = uuid_compat
 
+import open_deep_research.evaluation.calibration_runner as calibration_runner
 from open_deep_research.evaluation.calibration_runner import (
     CalibrationRunnerError,
     ResearchObservation,
@@ -30,6 +33,7 @@ from open_deep_research.evaluation.calibration_runner import (
     run_calibration,
 )
 from open_deep_research.evaluation.claim_scorer import (
+    ClaimScorerResponseError,
     ClaimScorerResult,
     ClaimSourceAuthority,
     ClaimValidationStatus,
@@ -52,6 +56,39 @@ ENV = {
     "COMPRESSION_MODEL": "openai:qwen3.7-plus",
     "FINAL_REPORT_MODEL": "openai:qwen3.7-plus",
 }
+
+
+def test_live_claim_scorer_factory_forwards_frozen_batch_size(monkeypatch):
+    captured = {}
+    sentinel = object()
+
+    def fake_builder(**kwargs):
+        captured.update(kwargs)
+        return sentinel
+
+    monkeypatch.setattr(
+        calibration_runner,
+        "build_live_qwen_claim_scorer",
+        fake_builder,
+    )
+    plan = json.loads(
+        (ROOT / "tests/evaluation/full_plan.v1.json").read_text(encoding="utf-8")
+    )
+
+    result = calibration_runner.build_live_claim_scorer(
+        models={"judge": "openai:qwen3.7-plus"},
+        plan=plan,
+        ledger=object(),
+        run_id="run-factory-test",
+        persist_budget=lambda _snapshot: None,
+        project_root=ROOT,
+    )
+
+    assert result is sentinel
+    assert captured["audit_model_id"] == "openai:qwen3.7-plus"
+    assert captured["max_output_tokens"] == 2048
+    assert captured["batch_size"] == 6
+    assert captured["max_provider_calls"] == 22
 
 
 class FakeExecutors:
@@ -215,6 +252,122 @@ class FakeExecutors:
 
 
 @pytest.mark.asyncio
+async def test_claim_coverage_preflight_stops_before_any_calibration_judge(
+    tmp_path: Path,
+):
+    fake = FakeExecutors()
+
+    async def unsupported_layout_research(**kwargs):
+        observation = await fake.research(**kwargs)
+        return replace(
+            observation,
+            output=(
+                "# Result\n<table><tr><td>Supported [1]</td>"
+                "<td>Official</td></tr></table>\n\n"
+                "## Sources\n[1] Official fixture"
+            ),
+        )
+
+    outcome = await run_calibration(
+        project_root=ROOT,
+        output_dir=tmp_path / "coverage-preflight",
+        dataset_version="v1",
+        variant_ids=["baseline", "citation_validator"],
+        requested_max_tokens=3_000_000,
+        research_executor=unsupported_layout_research,
+        metric_factory=fake.metrics,
+        claim_scorer_factory=fake.claim_scorer,
+        provenance="fake",
+        require_deepeval=False,
+        environment=ENV,
+    )
+
+    assert outcome.status == "stopped"
+    assert outcome.completed_runs == 1
+    assert outcome.stopped_reason == "judge_setup:ClaimScorerCoverageError"
+    assert len(fake.research_order) == 1
+    assert fake.metric_order == []
+    assert fake.claim_order == []
+
+
+@pytest.mark.asyncio
+async def test_claim_call_ceiling_preflight_stops_before_any_calibration_judge(
+    tmp_path: Path,
+):
+    fake = FakeExecutors()
+
+    async def oversized_research(**kwargs):
+        observation = await fake.research(**kwargs)
+        return replace(
+            observation,
+            output="\n".join(f"Claim {ordinal}." for ordinal in range(133)),
+        )
+
+    outcome = await run_calibration(
+        project_root=ROOT,
+        output_dir=tmp_path / "call-ceiling-preflight",
+        dataset_version="v1",
+        variant_ids=["baseline", "citation_validator"],
+        requested_max_tokens=3_000_000,
+        research_executor=oversized_research,
+        metric_factory=fake.metrics,
+        claim_scorer_factory=fake.claim_scorer,
+        provenance="fake",
+        require_deepeval=False,
+        environment=ENV,
+    )
+
+    assert outcome.status == "stopped"
+    assert outcome.completed_runs == 1
+    assert outcome.stopped_reason == "judge_setup:ClaimScorerCoverageError"
+    assert len(fake.research_order) == 1
+    assert fake.metric_order == []
+    assert fake.claim_order == []
+
+
+@pytest.mark.asyncio
+async def test_claim_response_error_stops_calibration_before_next_run(tmp_path: Path):
+    fake = FakeExecutors()
+
+    def invalid_claim_scorer(**kwargs):
+        delegate = fake.claim_scorer(**kwargs)
+
+        class InvalidClaimScorer:
+            async def score(self, *, prompt, report, retrieval_context):
+                await delegate.score(
+                    prompt=prompt,
+                    report=report,
+                    retrieval_context=retrieval_context,
+                )
+                raise ClaimScorerResponseError("judge ordinal does not match")
+
+        return InvalidClaimScorer()
+
+    outcome = await run_calibration(
+        project_root=ROOT,
+        output_dir=tmp_path / "claim-response-error",
+        dataset_version="v1",
+        variant_ids=["baseline", "citation_validator"],
+        requested_max_tokens=3_000_000,
+        research_executor=fake.research,
+        metric_factory=fake.metrics,
+        claim_scorer_factory=invalid_claim_scorer,
+        provenance="fake",
+        require_deepeval=False,
+        environment=ENV,
+    )
+
+    assert outcome.status == "stopped"
+    assert outcome.completed_runs == 1
+    assert outcome.stopped_reason == (
+        "judge:claim_citation_scorer:ClaimScorerResponseError"
+    )
+    assert len(fake.research_order) == 1
+    assert len(fake.metric_order) == 7
+    assert len(fake.claim_order) == 1
+
+
+@pytest.mark.asyncio
 async def test_fake_calibration_runs_exact_canary_then_remainder_and_checkpoints(
     tmp_path,
 ):
@@ -292,7 +445,7 @@ async def test_canary_execution_error_stops_before_remaining_paid_runs(tmp_path)
 
 
 @pytest.mark.asyncio
-async def test_safe_resume_skips_terminal_failure_and_paid_success(tmp_path):
+async def test_resume_rejects_terminal_failure_before_new_paid_call(tmp_path):
     fake = FakeExecutors(fail_research_at=2)
     output = tmp_path / "calibration"
     first = await run_calibration(
@@ -309,22 +462,21 @@ async def test_safe_resume_skips_terminal_failure_and_paid_success(tmp_path):
         environment=ENV,
     )
     assert first.status == "stopped"
-    resumed = await run_calibration(
-        project_root=ROOT,
-        output_dir=output,
-        dataset_version="v1",
-        variant_ids=["baseline", "citation_validator"],
-        requested_max_tokens=3_000_000,
-        resume=True,
-        research_executor=fake.research,
-        metric_factory=fake.metrics,
-        claim_scorer_factory=fake.claim_scorer,
-        provenance="fake",
-        require_deepeval=False,
-        environment=ENV,
-    )
-    assert resumed.status == "completed"
-    assert resumed.completed_runs == 6
+    with pytest.raises(CalibrationRunnerError, match="unsafe paid-step state"):
+        await run_calibration(
+            project_root=ROOT,
+            output_dir=output,
+            dataset_version="v1",
+            variant_ids=["baseline", "citation_validator"],
+            requested_max_tokens=3_000_000,
+            resume=True,
+            research_executor=fake.research,
+            metric_factory=fake.metrics,
+            claim_scorer_factory=fake.claim_scorer,
+            provenance="fake",
+            require_deepeval=False,
+            environment=ENV,
+        )
     assert fake.research_order.count(("simple-001", "baseline")) == 1
     assert fake.research_order.count(("simple-001", "citation_validator")) == 1
 

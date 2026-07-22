@@ -42,6 +42,8 @@ class FakeStructuredRunnable:
 
     def invoke(self, prompt):
         self.owner.prompts.append(("schema_sync", prompt))
+        if self.owner.error:
+            raise self.owner.error
         return {
             "raw": FakeMessage(content="", usage=self.owner.usage),
             "parsed": self.owner.parsed,
@@ -50,6 +52,8 @@ class FakeStructuredRunnable:
 
     async def ainvoke(self, prompt):
         self.owner.prompts.append(("schema_async", prompt))
+        if self.owner.error:
+            raise self.owner.error
         return {
             "raw": FakeMessage(content="", usage=self.owner.usage),
             "parsed": self.owner.parsed,
@@ -338,6 +342,103 @@ def test_provider_exception_is_settled_once_and_original_error_is_preserved():
     _, usage, error_type = ledger.settlements[0]
     assert usage is None
     assert error_type == "ProviderFailure"
+
+
+@pytest.mark.parametrize("async_call", [False, True])
+def test_length_error_with_completion_usage_is_settled_exactly(async_call):
+    class Usage:
+        prompt_tokens = 321
+        completion_tokens = 2048
+        total_tokens = 2369
+
+    class Completion:
+        usage = Usage()
+
+    class LengthFinishReasonError(RuntimeError):
+        def __init__(self):
+            super().__init__("truncated structured output")
+            self.completion = Completion()
+
+    failure = LengthFinishReasonError()
+    ledger = ReservationLedger()
+    adapter, _ = adapter_with_fake(
+        FakeChatModel(error=failure), ledger=ledger
+    )
+
+    with pytest.raises(LengthFinishReasonError) as exc_info:
+        if async_call:
+            asyncio.run(adapter.a_generate("too long"))
+        else:
+            adapter.generate("too long")
+
+    assert exc_info.value is failure
+    assert len(ledger.settlements) == 1
+    _, usage, error_type = ledger.settlements[0]
+    assert usage == JudgeTokenUsage(input_tokens=321, output_tokens=2048)
+    assert error_type == "LengthFinishReasonError"
+
+
+@pytest.mark.parametrize("async_call", [False, True])
+def test_structured_length_error_with_completion_usage_is_settled_exactly(
+    async_call,
+):
+    class Usage:
+        prompt_tokens = 777
+        completion_tokens = 2048
+        total_tokens = 2825
+
+    class Completion:
+        usage = Usage()
+
+    class LengthFinishReasonError(RuntimeError):
+        def __init__(self):
+            super().__init__("truncated structured output")
+            self.completion = Completion()
+
+    failure = LengthFinishReasonError()
+    ledger = ReservationLedger()
+    adapter, _ = adapter_with_fake(
+        FakeChatModel(error=failure), ledger=ledger
+    )
+
+    with pytest.raises(LengthFinishReasonError) as exc_info:
+        if async_call:
+            asyncio.run(adapter.a_generate("too long", schema=Verdict))
+        else:
+            adapter.generate("too long", schema=Verdict)
+
+    assert exc_info.value is failure
+    assert len(ledger.settlements) == 1
+    _, usage, error_type = ledger.settlements[0]
+    assert usage == JudgeTokenUsage(input_tokens=777, output_tokens=2048)
+    assert error_type == "LengthFinishReasonError"
+
+
+def test_length_error_with_invalid_completion_usage_remains_unknown():
+    class Usage:
+        prompt_tokens = 321
+        completion_tokens = 2048
+        total_tokens = 1
+
+    class Completion:
+        usage = Usage()
+
+    class LengthFinishReasonError(RuntimeError):
+        def __init__(self):
+            super().__init__("truncated structured output")
+            self.completion = Completion()
+
+    ledger = ReservationLedger()
+    adapter, _ = adapter_with_fake(
+        FakeChatModel(error=LengthFinishReasonError()), ledger=ledger
+    )
+
+    with pytest.raises(LengthFinishReasonError):
+        adapter.generate("too long")
+
+    _, usage, error_type = ledger.settlements[0]
+    assert usage is None
+    assert error_type == "LengthFinishReasonError"
 
 
 def test_deepeval_factory_is_lazy_and_preserves_audit_model_id(monkeypatch):

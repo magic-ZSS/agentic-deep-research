@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-a36dcb83e654f6eec74609ca9f05a21a",
+  "metric_name": "tool_correctness",
+  "duration_ms": 3205.4051000013715,
+  "result": {
+    "metric_name": "tool_correctness",
+    "metric_version": "deepeval-4.1.1",
+    "score": 1.0,
+    "threshold": 0.5,
+    "status": "passed",
+    "reason": "[\n\t Tool Calling Reason: All expected tools ['tavily_search'] were called (order not considered).\n\t Tool Selection Reason: The agent correctly selected `tavily_search` to gather necessary external technical knowledge regarding multi-agent risks and observability patterns, which is the primary requirement for this research task. The use of `think_tool` was appropriate for structuring the complex analysis and planning subsequent search queries. No better-suited tools were available or ignored, and all selected tools directly supported the task's goals.\n]\n",
+    "deterministic": false,
+    "judge_model": null,
+    "estimated_cost_usd": null,
+    "input_tokens": 18922,
+    "output_tokens": 95,
+    "total_tokens": 19017
+  }
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "experiment_id": "e5809896fc440297d0c3",
+  "experiment_id": "dd26238349ebafdaa1bd",
   "mode": "smoke",
   "dataset_version": "v1",
   "canonical_cases": "tests/baseline/cases.jsonl",
@@ -189,10 +189,10 @@
       ]
     }
   ],
-  "scorer_version": "evaluation-claim-scorer-v3",
+  "scorer_version": "evaluation-claim-scorer-v4",
   "source_snapshot": {
-    "git_head": "a252d03c1acead6497d1f6c224bb29105d71b91f",
-    "source_sha256": "8d7d2e2be7c967f4158c67fa5661a93481deb918216fdd016e28d78e60bebc82",
+    "git_head": "42febc2c5df04b53ebec9b4b765a42a9d24fef84",
+    "source_sha256": "c5b0341cdf8367d024e0a90c6a7a101830807e0c8b51f67551547ebd513e8941",
     "clean": false,
     "checked_paths": [
       "src/open_deep_research",
@@ -209,7 +209,7 @@
       "environment.phase7.yml",
       "constraints/evaluation-py311.txt"
     ],
-    "untracked_file_count": 3
+    "untracked_file_count": 0
   },
   "claims": {
     "live_quality": false,

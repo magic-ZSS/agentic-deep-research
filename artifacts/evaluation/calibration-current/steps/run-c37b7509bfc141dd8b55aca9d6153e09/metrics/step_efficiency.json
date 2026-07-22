@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-c37b7509bfc141dd8b55aca9d6153e09",
+  "metric_name": "step_efficiency",
+  "duration_ms": 4141.524799997569,
+  "result": {
+    "metric_name": "step_efficiency",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The agent failed to complete the task, ending with only a plan and no results. It executed 13 redundant and failing retrieval attempts and 3 unnecessary reflection steps instead of using direct file access tools.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 8655,
+    "output_tokens": 111,
+    "total_tokens": 8766
+  }
+}

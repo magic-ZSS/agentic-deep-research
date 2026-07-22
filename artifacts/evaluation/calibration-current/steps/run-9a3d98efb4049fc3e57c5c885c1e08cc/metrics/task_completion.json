@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-9a3d98efb4049fc3e57c5c885c1e08cc",
+  "metric_name": "task_completion",
+  "duration_ms": 7643.080000008922,
+  "result": {
+    "metric_name": "task_completion",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The actual outcome failed to achieve the task entirely. The system did not provide the requested minimal steps, installation commands, or execution details. Instead, it reported an inability to access the necessary local project files and only generated a plan for future research, resulting in no actionable output for the user.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 14580,
+    "output_tokens": 284,
+    "total_tokens": 14864
+  }
+}

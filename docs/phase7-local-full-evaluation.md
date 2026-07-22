@@ -16,7 +16,15 @@ conda run --no-capture-output -n open-deep-research python -m pip install -c con
 .\scripts\run_phase7_full.cmd -ConfirmCost
 ```
 
-脚本会依次完成环境与源码检查、无网络 smoke、新 6-run calibration、只读 full 投影、54-run 完整消融、报告生成和 Phase 7 验收。在 full 派发前，它会显示实测 Token 投影；输入 `FULL` 才继续，直接回车则只保留已完成的 calibration。运行中断后重复同一条命令即可从固定目录恢复，已完成的付费步骤不会自动重跑。
+脚本会依次完成环境与源码检查、无网络 smoke、新 6-run calibration、只读 full 投影、54-run 完整消融、报告生成和 Phase 7 验收。在 full 派发前，它会显示实测 Token 投影；输入 `FULL` 才继续，直接回车则只保留已完成的 calibration。
+
+恢复不是默认行为。只有确认目录是健康中断、而不是 terminal failure 后才运行：
+
+```powershell
+.\scripts\run_phase7_full.cmd -ConfirmCost -ResumeCalibration
+```
+
+脚本会在任何新付费调用前检查 journal、Token ledger、未结算调用与完整实验 identity。`stopped`、`fail_closed`、unknown usage 或 identity 不一致时会保留原目录并拒绝恢复；此时必须审阅诊断记录并指定一个尚不存在的新 `-CalibrationOutput`，不得删除或改写旧账本。
 
 只有在已经审阅投影并明确愿意跳过交互确认时，才使用：
 
@@ -67,7 +75,7 @@ python scripts/validate_phase.py --phase 7
 
 ## 2. 先生成新的完整 calibration
 
-仓库现有 `artifacts/evaluation/calibration/` 是已停止的诊断记录，只有 3/6 个 run，不能恢复，也不能授权 full。真实 full 必须使用当前源码、计划、消融配置、数据集和模型重新完成 6-run calibration，并通过 manifest、journal、Token ledger 与保守投影校验。
+仓库现有 `artifacts/evaluation/calibration/` 和 `artifacts/evaluation/calibration-current/` 都是已停止的诊断记录，不能恢复，也不能授权 full。后者因旧 v3 claim scorer 在 2,048 output-token 上限内一次回传 36 个 Claim 而触发 `LengthFinishReasonError`；其 973,999 Token 账本和 terminal journal 必须保持原样。v4 会把这 36 个 Claim 固定拆成 6 次小批 Judge，并在任何 DeepEval Judge 前执行报告结构与 132-candidate 硬上限检查。真实 full 必须由修复后的 v4 scorer 使用当前源码、计划、消融配置、数据集和模型重新完成 6-run calibration，并通过 manifest、journal、Token ledger 与保守投影校验。
 
 Calibration 本身仍需要单独费用授权。授权后使用：
 
@@ -81,7 +89,7 @@ python scripts/run_eval.py `
   --repeats 1 `
   --max-total-tokens 3000000 `
   --confirm-cost `
-  --output artifacts/evaluation/calibration-current
+  --output artifacts/evaluation/calibration-v4
 ```
 
 只有 `status=completed`、6 个 journal terminal run、每个 run 的 research + 7 个 DeepEval Judge + 独立 claim/citation scorer 共 9 个付费步骤均终态、无 in-flight/unknown usage，且“已消耗 calibration Token + p95 × 54 × 1.25”的保守投影不超过 full 上限时，full 才会放行。
@@ -98,7 +106,7 @@ python scripts/run_eval.py `
   --dataset-version v1 `
   --repeats 3 `
   --max-total-tokens 42000000 `
-  --calibration-output artifacts/evaluation/calibration-current `
+  --calibration-output artifacts/evaluation/calibration-v4 `
   --output artifacts/evaluation/full
 ```
 
@@ -118,7 +126,7 @@ python scripts/run_eval.py `
   --repeats 3 `
   --max-total-tokens 42000000 `
   --confirm-cost `
-  --calibration-output artifacts/evaluation/calibration-current `
+  --calibration-output artifacts/evaluation/calibration-v4 `
   --tracking local `
   --output artifacts/evaluation/full
 ```
@@ -138,7 +146,7 @@ python scripts/run_eval.py `
   --repeats 3 `
   --max-total-tokens 42000000 `
   --confirm-cost `
-  --calibration-output artifacts/evaluation/calibration-current `
+  --calibration-output artifacts/evaluation/calibration-v4 `
   --tracking langsmith `
   --langsmith-project phase7-local-full `
   --output artifacts/evaluation/full

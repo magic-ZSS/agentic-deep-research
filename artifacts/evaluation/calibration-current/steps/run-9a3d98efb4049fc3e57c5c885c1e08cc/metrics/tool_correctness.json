@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-9a3d98efb4049fc3e57c5c885c1e08cc",
+  "metric_name": "tool_correctness",
+  "duration_ms": 3629.9646999977995,
+  "result": {
+    "metric_name": "tool_correctness",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "[\n\t Tool Calling Reason: Incomplete tool usage: missing tools []; expected [], called ['tavily_search', 'tavily_search', 'think_tool', 'tavily_search', 'think_tool', 'tavily_search', 'think_tool', 'think_tool']. See more details above.\n\t Tool Selection Reason: The agent failed to select appropriate tools for the task, which requires inspecting local project files (e.g., `pyproject.toml`, `__main__.py`). The available toolset lacks filesystem access tools (like `read_file` or `list_dir`), yet the agent persistently used `tavily_search` to look for generic information or guess the project identity instead of recognizing the tool limitation earlier. While the agent eventually identified the missing capability via `think_tool`, the repeated mis-selection of a web search tool for a local file inspection task constitutes poor tool selection.\n]\n",
+    "deterministic": false,
+    "judge_model": null,
+    "estimated_cost_usd": null,
+    "input_tokens": 12607,
+    "output_tokens": 136,
+    "total_tokens": 12743
+  }
+}
