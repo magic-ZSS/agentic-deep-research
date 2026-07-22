@@ -2,6 +2,32 @@
 
 本地 `JSON/JSONL/Markdown/manifest` 是唯一权威结果。LangSmith 只是在显式选择后上传去敏摘要的可选镜像；上传失败会写入本地 `tracking-errors.jsonl`，不会重新运行已经付费完成的研究或 Judge 步骤。
 
+## 最快启动
+
+默认直接使用现有 `open-deep-research` 环境。如果 `pip check` 报告版本冲突，只需执行一次锁定修复：
+
+```powershell
+conda run --no-capture-output -n open-deep-research python -m pip install -c constraints/evaluation-py311.txt deepeval==4.1.1 click==8.3.1 huggingface-hub==1.4.1
+```
+
+此后在仓库根目录运行一条命令：
+
+```powershell
+.\scripts\run_phase7_full.cmd -ConfirmCost
+```
+
+脚本会依次完成环境与源码检查、无网络 smoke、新 6-run calibration、只读 full 投影、54-run 完整消融、报告生成和 Phase 7 验收。在 full 派发前，它会显示实测 Token 投影；输入 `FULL` 才继续，直接回车则只保留已完成的 calibration。运行中断后重复同一条命令即可从固定目录恢复，已完成的付费步骤不会自动重跑。
+
+只有在已经审阅投影并明确愿意跳过交互确认时，才使用：
+
+```powershell
+.\scripts\run_phase7_full.cmd -ConfirmCost -ApproveFull
+```
+
+可选 LangSmith 镜像仍需先在当前 shell 设置 `LANGSMITH_API_KEY`，再增加 `-Tracking langsmith -LangSmithProject phase7-local-full`。默认 `local` 不上传任何内容。
+
+下面各节保留手动命令，供排错、审计或单独恢复某一步使用；正常运行不需要逐条复制。
+
 ## 0. 先冻结评测源码
 
 付费入口只接受干净且固定的评测相关源码。先审阅并提交当前 Phase 7 实现，再确认：
@@ -13,20 +39,18 @@ git rev-parse HEAD
 
 生成的 smoke artifact 会同时记录生成时的 `HEAD` 和按路径/bytes 计算的评测源码快照 SHA-256；validator 会将内容 hash 与当前工作树重新比对。同一源码内容在提交前后保持相同 hash，文档、状态文件和生成 artifact 不参与快照，因此写出或提交展示结果不会改变自己的内容身份；dirty-source smoke 在源码提交后仍须重建一次，以绑定可追溯 commit。Calibration/full 更严格，相关源码有任何 staged、unstaged 或 untracked 改动都会在外部调用前拒绝。
 
-## 1. 创建独立评测环境
+## 1. 验证当前评测环境
 
-真实 full 必须使用 Python 3.11 独立 conda 环境。不要在当前开发环境中强行调和 DeepEval、Click 和 Hugging Face Hub 的冲突。
+真实 full 使用现有 `open-deep-research` conda 环境，并要求 Python 3.11 与 DeepEval、Click、Hugging Face Hub 的锁定版本完全一致。
 
 ```powershell
-conda env create -f environment.phase7.yml
-conda activate open-deep-research-eval
-python -m pip check
-python -c "import deepeval; import open_deep_research.evaluation.full_runner"
+conda run --no-capture-output -n open-deep-research python -m pip check
+conda run --no-capture-output -n open-deep-research python -c "import deepeval; import open_deep_research.evaluation.full_runner"
 ```
 
 `constraints/evaluation-py311.txt` 固定 `deepeval==4.1.1`、`click==8.3.1` 和 `huggingface-hub==1.4.1`。CLI 会再次检查 Python、上述版本、`pip check` 和实际 import smoke；任一失败都会在模型、搜索或 LangSmith 调用前停止。
 
-当前仓库已完成这套门禁的 fake/offline 测试，但尚未实际创建一个全新的独立环境并取得真实 `pip check`/import smoke 通过证据。该证据缺失时不得启动新的付费 calibration。
+2026-07-23 已在当前 `open-deep-research` 环境验证 Python 3.11.15、`deepeval==4.1.1`、`click==8.3.1`、`huggingface-hub==1.4.1`，且 `pip check` 与真实 import smoke 均通过。
 
 在新环境内先重建无网络 smoke，并确认只有尚缺 live artifact 的门禁失败：
 

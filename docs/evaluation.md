@@ -1,5 +1,15 @@
 # 本地评测与消融协议
 
+## Phase 7 一键入口
+
+完整本地评测直接使用现有 `open-deep-research` 环境，统一从以下命令启动：
+
+```powershell
+.\scripts\run_phase7_full.cmd -ConfirmCost
+```
+
+该命令既是首次启动命令，也是中断后的恢复命令。脚本会自动串联 smoke、最多 300 万 Token 的 calibration、只读投影、人工 `FULL` 确认、固定 54-run 消融、报告和验收；默认只写本地 artifact。完整参数、依赖锁定和手动排错路径见 [`phase7-local-full-evaluation.md`](phase7-local-full-evaluation.md)。
+
 阶段 7 只把 `tests/baseline/cases.jsonl` 作为 case ID、prompt、difficulty、Requirement 与预算的权威来源。`tests/evaluation/goldens.v1.jsonl` 只能补充参考答案、来源、时间上下文、Memory setup 与 variant-specific tool policy；加载器会拒绝重复 prompt/Requirement、未知 case 和版本漂移。
 
 默认 smoke 完全离线：

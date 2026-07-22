@@ -2313,6 +2313,9 @@ def _check_phase7_suite(root: Path) -> str:
         "test_readme_section_is_generated_from_machine_report",
         "test_qwen_plan_has_calibration_and_hard_token_limits",
         "test_token_ledger_stops_on_unknown_per_run_soft_and_hard_limits",
+        "test_one_click_wrapper_orders_calibration_preflight_and_full",
+        "test_one_click_wrapper_preserves_resume_and_cost_safety",
+        "test_one_click_wrapper_refuses_before_conda_without_cost_confirmation",
     }
     discovered: set[str] = set()
     for path in (root / "tests/evaluation").glob("test_phase7_*.py"):
@@ -2329,6 +2332,50 @@ def _check_phase7_suite(root: Path) -> str:
     if len(discovered) < 22:
         raise ValueError("Phase 7 test inventory is smaller than expected")
     return f"named offline evaluation inventory is complete ({len(discovered)} tests)"
+
+
+def _check_phase7_one_click_wrapper(root: Path) -> str:
+    """Verify the Windows entry keeps the paid workflow ordered and guarded."""
+    powershell_path = root / "scripts/run_phase7_full.ps1"
+    cmd_path = root / "scripts/run_phase7_full.cmd"
+    try:
+        powershell = powershell_path.read_text(encoding="ascii")
+        command = cmd_path.read_text(encoding="ascii")
+    except (OSError, UnicodeError) as exc:
+        raise ValueError("Phase 7 one-click wrappers are missing or not ASCII-safe") from exc
+
+    required = {
+        "-ConfirmCost",
+        '[string]$EnvironmentName = "open-deep-research"',
+        "Require-CleanEvaluationSourceStatus",
+        "Review and commit the listed evaluation files before a paid run.",
+        '"--mode", "calibration"',
+        '"--max-total-tokens", "3000000"',
+        '"--preflight-only"',
+        '"ready_for_separate_full_authorization"',
+        "Read-Host",
+        '"--mode", "full"',
+        '"--max-total-tokens", "42000000"',
+        '"--resume"',
+        '"--tracking", $Tracking',
+        '"scripts/validate_phase.py", "--phase", "7"',
+    }
+    missing = sorted(item for item in required if item not in powershell)
+    if missing:
+        raise ValueError(f"Phase 7 one-click wrapper is incomplete: {missing}")
+    calibration = powershell.index('"--mode", "calibration"')
+    preflight = powershell.index('"--preflight-only"')
+    full = powershell.index('"--mode", "full"', preflight + 1)
+    if not calibration < preflight < full:
+        raise ValueError("Phase 7 one-click workflow order is unsafe")
+    if any(item in powershell for item in ("Remove-Item", "Start-Sleep", "while (")):
+        raise ValueError("Phase 7 one-click wrapper contains unsafe retry/destructive logic")
+    if (
+        "powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass" not in command
+        or "%*" not in command
+    ):
+        raise ValueError("Phase 7 CMD launcher does not safely forward arguments")
+    return "one-command Windows launcher preserves authorization, projection, and resume gates"
 
 
 def _check_phase7_smoke(root: Path) -> str:
@@ -3019,17 +3066,18 @@ def validate_phase7(root: Path) -> list[CheckResult]:
     """Evaluate T7 while refusing to turn missing paid evidence into a pass."""
     try:
         suite = _check_phase7_suite(root)
+        one_click = _check_phase7_one_click_wrapper(root)
         smoke = _check_phase7_smoke(root)
         calibration = _check_phase7_calibration(root)
         offline_error: BaseException | None = None
     except BaseException as exc:
-        suite = smoke = calibration = ""
+        suite = one_click = smoke = calibration = ""
         offline_error = exc
 
     def offline(detail: str) -> str:
         if offline_error is not None:
             raise offline_error
-        return f"{detail}; {suite}; {smoke}; {calibration}"
+        return f"{detail}; {suite}; {one_click}; {smoke}; {calibration}"
 
     checks: dict[str, Callable[[], str]] = {
         "T7-1": lambda: offline("canonical v1 has three cases in every difficulty"),
@@ -3044,7 +3092,9 @@ def validate_phase7(root: Path) -> list[CheckResult]:
         "T7-10": lambda: offline("versioned custom metrics cover formulas and zero denominators"),
         "T7-11": lambda: offline("telemetry schema preserves tokens/cost/time/tools/researcher nullability"),
         "T7-12": lambda: offline("JSONL, JSON, Markdown and SHA-256 manifest agree"),
-        "T7-13": lambda: offline("offline socket guard and full authorization refusal pass"),
+        "T7-13": lambda: offline(
+            "offline socket guard, one-command wrapper, and full authorization refusal pass"
+        ),
         "T7-14": lambda: offline("phase validator reports missing live evidence as failure"),
         "T7-15": lambda: offline("golden overlay contains no prompt or Requirement copies"),
         "T7-16": lambda: offline("all variants use one non-mutating evaluation scorer"),

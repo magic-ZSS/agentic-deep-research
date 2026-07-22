@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "experiment_id": "6088b139518032413089",
+  "experiment_id": "e5809896fc440297d0c3",
   "mode": "smoke",
   "dataset_version": "v1",
   "canonical_cases": "tests/baseline/cases.jsonl",
@@ -191,12 +191,14 @@
   ],
   "scorer_version": "evaluation-claim-scorer-v3",
   "source_snapshot": {
-    "git_head": "d8be3f8fe0e6415221777d24b616cbc18be3ae15",
-    "source_sha256": "67446f46bef1838f1421c15813545682b8a358732626368d80f7251d9c4c2eef",
+    "git_head": "a252d03c1acead6497d1f6c224bb29105d71b91f",
+    "source_sha256": "8d7d2e2be7c967f4158c67fa5661a93481deb918216fdd016e28d78e60bebc82",
     "clean": false,
     "checked_paths": [
       "src/open_deep_research",
       "scripts/run_eval.py",
+      "scripts/run_phase7_full.cmd",
+      "scripts/run_phase7_full.ps1",
       "scripts/validate_phase.py",
       "scripts/compare_ablations.py",
       "scripts/render_eval_report.py",
@@ -207,7 +209,7 @@
       "environment.phase7.yml",
       "constraints/evaluation-py311.txt"
     ],
-    "untracked_file_count": 39
+    "untracked_file_count": 3
   },
   "claims": {
     "live_quality": false,

@@ -11,6 +11,8 @@ from pathlib import Path
 EVALUATION_SOURCE_PATHS: tuple[str, ...] = (
     "src/open_deep_research",
     "scripts/run_eval.py",
+    "scripts/run_phase7_full.cmd",
+    "scripts/run_phase7_full.ps1",
     "scripts/validate_phase.py",
     "scripts/compare_ablations.py",
     "scripts/render_eval_report.py",

@@ -87,6 +87,17 @@ There are two separate evaluation paths:
 - The new default for this repository is the local, resumable 54-run Phase 7 workflow documented in [docs/phase7-local-full-evaluation.md](docs/phase7-local-full-evaluation.md). Local artifacts are authoritative and LangSmith tracking is optional.
 - `tests/run_evaluate.py` below is the legacy Deep Research Bench/LangSmith workflow. It is not the Phase 7 execution engine and may incur substantial external cost.
 
+The launcher uses the existing `open-deep-research` conda environment. If its
+evaluation lock has not been applied yet, repair it once, then use the single
+run/resume command:
+
+```powershell
+conda run --no-capture-output -n open-deep-research python -m pip install -c constraints/evaluation-py311.txt deepeval==4.1.1 click==8.3.1 huggingface-hub==1.4.1
+.\scripts\run_phase7_full.cmd -ConfirmCost
+```
+
+The command performs smoke, calibration, a read-only cost projection, the fixed full ablation matrix, report rendering, and validation. It asks for `FULL` immediately before the full matrix; re-running the same command resumes the fixed artifact directories without replaying completed paid steps. See the Phase 7 guide before using `-ApproveFull` or optional LangSmith tracking.
+
 Open Deep Research is configured for evaluation with [Deep Research Bench](https://huggingface.co/spaces/Ayanami0730/DeepResearch-Leaderboard). This benchmark has 100 PhD-level research tasks (50 English, 50 Chinese), crafted by domain experts across 22 fields (e.g., Science & Tech, Business & Finance) to mirror real-world deep-research needs. It has 2 evaluation metrics, but the leaderboard is based on the RACE score. This uses LLM-as-a-judge (Gemini) to evaluate research reports against a golden set of reports compiled by experts across a set of metrics.
 
 #### Usage

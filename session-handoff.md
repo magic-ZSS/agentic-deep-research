@@ -16,10 +16,14 @@
 
 ## 阶段 7 恢复点
 
+- 2026-07-23 已修复现有 `open-deep-research` 环境的依赖冲突：Python 3.11.15、`deepeval==4.1.1`、`click==8.3.1`、`huggingface-hub==1.4.1`，`pip check` 与真实评测 import smoke 均通过。
+- 一键入口现默认使用 `open-deep-research`；新增 Git 状态预检，未提交评测源码会被清晰列出并以退出码4停止，不再产生路径乱码 traceback。相关离线回归13 passed，Ruff、compileall与PowerShell parse通过。
 - 2026-07-22 离线精确套件共 169 passed：core 131、full runner 14、strict validator 4、其余 Phase 7 contracts 20；新增范围 Ruff 与 compileall 通过。
+- Windows 入口已收口为 `.\scripts\run_phase7_full.cmd -ConfirmCost`：自动执行环境/source门禁、smoke、最多300万Token calibration、只读投影、`FULL`二次确认、54-run full、报告与验收；中断后重复同一命令会对固定目录使用`--resume`，不会循环自动重试。
+- 一键入口聚焦离线回归 `30 passed`，PowerShell parse通过；缺少`-ConfirmCost`时退出码2且不读取conda/调用外部服务，缺失评测环境时不创建付费输出；Ruff和compileall通过。
 - `validate_phase --phase 7` 当前按设计仅 T7-3/4/6/9 FAIL（缺少真实 full artifact），其余验收 PASS；Phase 7 因此保持 `in-progress`。
 - smoke artifact：45 records，manifest 校验通过，README 由机器 JSON 驱动。
-- smoke artifact 已于 2026-07-22 离线刷新为统一 `evaluation-claim-scorer-v3`，并记录生成时 `HEAD`、绑定按限定文件路径/bytes 计算的评测源码快照 `67446f46bef1...`；validator 会拒绝旧 scorer、不完整矩阵或源码内容漂移。
+- smoke artifact 已离线刷新为统一 `evaluation-claim-scorer-v3`，并记录生成时 `HEAD`、绑定按限定文件路径/bytes 计算的评测源码快照 `8d7d2e2be7c9...`；validator 会拒绝旧 scorer、不完整矩阵或源码内容漂移。
 - source snapshot 的内容 hash 在相同源码提交前后稳定，且排除 docs/status/artifacts，因而结果提交不会造成自引用；dirty-source smoke 在源码提交后须重建，paid calibration/full 始终要求相关源码 clean。新增收口聚焦回归 53 passed，精确 Ruff、隔离 Mypy 与 compileall 通过。
 - 新增 read-only `--preflight-only`：完成新 calibration 后先输出实测 projection和调用区间，再等待用户单独授权 full；该路径不会调用图、模型、搜索、Judge或LangSmith，也不会写 output。
 - `scripts/render_eval_report.py` 现在可直接渲染 full rich report 和机器驱动 README 表格；不要对 full 目录运行仅适用于 smoke 的 `scripts/compare_ablations.py`。
@@ -54,4 +58,4 @@
 
 ## 下一步
 
-先审阅并提交本轮 Phase 7 评测实现，使 clean-source gate 可验证固定 commit；随后如用户重新明确授权，再在独立评测环境运行新的最多 300 万 Token calibration。主矩阵仍需根据新 calibration 投影单独授权，完成前 Phase 7 保持 `in-progress`。
+当前环境已经修复。先审阅并提交入口列出的评测相关文件，使 clean-source gate 可验证固定 commit；随后统一执行 `.\scripts\run_phase7_full.cmd -ConfirmCost`。脚本先运行新的最多300万Token calibration并展示投影，只有输入`FULL`才启动主矩阵；完成前Phase 7保持`in-progress`。
