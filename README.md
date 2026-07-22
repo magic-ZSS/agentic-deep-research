@@ -1007,11 +1007,6 @@ For code-level risks and evidence, see [`docs/codebase/CONCERNS.md`](./docs/code
 - [ ] Persist structured traces and expose a research-cost dashboard.
 - [ ] Expand the regression set with adversarial, boundary, Chinese-domain, and repeated-run evaluations.
 
-## Project Origin and Attribution
-
-Agentic Deep Research is maintained and developed in this repository by [`magic-ZSS`](https://github.com/magic-ZSS). The project originated from LangChain’s open-source [`open_deep_research`](https://github.com/langchain-ai/open_deep_research) implementation and has been substantially redeveloped around Context Budgeting, bounded research fan-out, evidence-preserving prompts and compression, local execution, process tracing, runtime tests, codebase documentation, and evaluation methodology.
-
-Inherited portions remain subject to their original copyright notices and the MIT License. The repository history should be used to distinguish inherited code from subsequent modifications and additions.
 
 ## License
 
