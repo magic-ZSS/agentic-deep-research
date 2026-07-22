@@ -505,11 +505,7 @@ agentic-deep-research/
 - [ ] 持久化结构化 Trace 并提供研究成本 Dashboard；
 - [ ] 扩展对抗、边界、中国本土场景和多次重复运行评测集。
 
-## 项目来源与归属说明
 
-Agentic Deep Research 由 [`magic-ZSS`](https://github.com/magic-ZSS) 在本仓库中持续维护与开发。项目起源于 LangChain 开源的 [`open_deep_research`](https://github.com/langchain-ai/open_deep_research) 实现，并在此基础上围绕 Context Budgeting、受控研究 fan-out、证据保留型 Prompt 与压缩、本地运行入口、流程 Trace、运行时测试、代码库文档和评测体系进行了持续重构与扩展。
-
-继承部分继续受原版权声明和 MIT License 约束。可通过仓库提交历史区分继承代码与后续新增、修改内容。
 
 ## License
 
