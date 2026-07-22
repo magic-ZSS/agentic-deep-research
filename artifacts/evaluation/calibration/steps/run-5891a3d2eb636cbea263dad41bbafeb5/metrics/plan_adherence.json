@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-5891a3d2eb636cbea263dad41bbafeb5",
+  "metric_name": "plan_adherence",
+  "duration_ms": 6687.8298000083305,
+  "result": {
+    "metric_name": "plan_adherence",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The trace contains no executed steps corresponding to the plan's requirements: verifying Python version constraints, identifying the main entry file, or identifying a low-cost test entry. All retrieval attempts failed with errors, and the agent only performed internal reflection and replanning without extracting any factual data from project files.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 8131,
+    "output_tokens": 200,
+    "total_tokens": 8331
+  }
+}

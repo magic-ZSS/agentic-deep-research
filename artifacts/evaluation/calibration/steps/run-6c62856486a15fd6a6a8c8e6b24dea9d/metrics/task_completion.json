@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-6c62856486a15fd6a6a8c8e6b24dea9d",
+  "metric_name": "task_completion",
+  "duration_ms": 1.6187999863177538,
+  "result": {
+    "metric_name": "task_completion",
+    "metric_version": "deepeval-4.1.1",
+    "score": null,
+    "threshold": null,
+    "status": "error",
+    "reason": "LiveTokenBudgetFailClosed",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+  },
+  "error_fingerprint": "0caff312b85c939715cce072de9d75acf3451ae04b738f9affee8511d94d90f4"
+}

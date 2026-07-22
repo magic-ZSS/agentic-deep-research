@@ -7,7 +7,7 @@ import json
 import math
 import statistics
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from open_deep_research.evaluation.experiment_models import (
@@ -64,6 +64,12 @@ def aggregate_runs(runs: list[ExperimentRun]) -> dict[str, Any]:
 
 def render_markdown(report: dict[str, Any]) -> str:
     """Render a machine-result-driven table with explicit limitations."""
+    if report.get("report_kind") == "phase7_full_statistics":
+        from open_deep_research.evaluation.full_reporting import (
+            render_full_report_markdown,
+        )
+
+        return render_full_report_markdown(report)
     lines = [
         "# Evaluation report",
         "",
@@ -84,6 +90,47 @@ def render_markdown(report: dict[str, Any]) -> str:
 
 def render_readme_section(report: dict[str, Any]) -> str:
     """Render the compact README section from the same machine report."""
+    if report.get("report_kind") == "phase7_full_statistics":
+        rows = [
+            item for item in report["run_status"] if item["difficulty"] == "all"
+        ]
+        completed = report.get("completed_run_records", report.get("run_count"))
+        planned = report.get("planned_runs", report.get("run_count"))
+        lines = [
+            "<!-- phase7-eval:start -->",
+            "### Evidence-governed evaluation (generated)",
+            "",
+            "Latest source-bound local artifact mode: `full`. "
+            f"Status: `{report.get('status', 'unknown')}`; runs: "
+            f"`{completed}/{planned}`.",
+            "",
+            "| Variant | Runs | Passed | Failed | Skipped | Errors |",
+            "|---|---:|---:|---:|---:|---:|",
+        ]
+        lines.extend(
+            "| {variant_id} | {runs} | {passed} | {failed} | {skipped} | {errors} |".format(
+                **item
+            )
+            for item in rows
+        )
+        lines.extend(
+            [
+                "",
+                "| Live gate | Result |",
+                "|---|---|",
+                *[
+                    f"| {name} | {value} |"
+                    for name, value in sorted(report["acceptance"].items())
+                ],
+                "",
+                "See `docs/evaluation.md` and "
+                "`artifacts/evaluation/full/manifest.json` for reproducibility, "
+                "raw failures, costs, and limitations.",
+                "<!-- phase7-eval:end -->",
+            ]
+        )
+        return "\n".join(lines)
+
     variants = sorted({row["variant_id"] for row in report["aggregates"]})
     totals = {
         variant: {
@@ -96,7 +143,7 @@ def render_readme_section(report: dict[str, Any]) -> str:
         "<!-- phase7-eval:start -->",
         "### Evidence-governed evaluation (generated)",
         "",
-        f"Latest committed artifact mode: `{report['mode']}`. Smoke validates contracts only; it is not evidence of live quality uplift or cost savings.",
+        f"Latest source-bound local artifact mode: `{report['mode']}`. Smoke validates contracts only; it is not evidence of live quality uplift or cost savings.",
         "",
         "| Variant | Runs | Contract passes |",
         "|---|---:|---:|",
@@ -127,7 +174,7 @@ def update_readme_from_report(path: str | Path, report: dict[str, Any]) -> None:
         content = prefix + generated + suffix
     else:
         content = content.rstrip() + "\n\n" + generated + "\n"
-    target.write_text(content, encoding="utf-8")
+    target.write_bytes(content.replace("\r\n", "\n").encode("utf-8"))
 
 
 def sha256_path(path: Path) -> str:
@@ -161,9 +208,15 @@ def write_artifact_manifest(
         generated_at=datetime.now(UTC),
         files=entries,
     )
-    manifest_path.write_text(
-        json.dumps(manifest.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
+    manifest_path.write_bytes(
+        (
+            json.dumps(
+                manifest.model_dump(mode="json"),
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n"
+        ).encode("utf-8")
     )
     return manifest
 
@@ -174,12 +227,41 @@ def validate_artifact_manifest(directory: str | Path) -> list[str]:
     payload = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
     manifest = ArtifactManifest.model_validate(payload)
     errors: list[str] = []
+    listed: set[str] = set()
     for entry in manifest.files:
+        raw = entry.path
+        parsed = PurePosixPath(raw)
+        if (
+            not raw
+            or "\\" in raw
+            or parsed.is_absolute()
+            or any(part in {"", ".", ".."} or ":" in part for part in parsed.parts)
+            or parsed.as_posix() != raw
+        ):
+            errors.append(f"unsafe:{raw}")
+            continue
+        if raw in listed:
+            errors.append(f"duplicate:{raw}")
+            continue
+        listed.add(raw)
         path = root / entry.path
-        if not path.is_file():
+        if path.is_symlink():
+            errors.append(f"symlink:{entry.path}")
+        elif not path.is_file():
             errors.append(f"missing:{entry.path}")
         elif path.stat().st_size != entry.size_bytes:
             errors.append(f"size:{entry.path}")
         elif sha256_path(path) != entry.sha256:
             errors.append(f"sha256:{entry.path}")
-    return errors
+    actual: set[str] = set()
+    for path in root.rglob("*"):
+        if path == root / "manifest.json":
+            continue
+        relative = path.relative_to(root).as_posix()
+        if path.is_symlink():
+            if f"symlink:{relative}" not in errors:
+                errors.append(f"symlink:{relative}")
+        elif path.is_file():
+            actual.add(relative)
+    errors.extend(f"unlisted:{path}" for path in sorted(actual - listed))
+    return sorted(set(errors))

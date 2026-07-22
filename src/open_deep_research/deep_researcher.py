@@ -69,7 +69,7 @@ from open_deep_research.utils import (
 
 # Initialize a configurable model that we will use throughout the agent
 configurable_model = init_chat_model(
-    configurable_fields=("model", "max_tokens", "api_key"),
+    configurable_fields=("model", "max_tokens", "api_key", "max_retries"),
 )
 
 
@@ -1009,8 +1009,24 @@ async def final_report_generation(state: AgentState, config: RunnableConfig):
         item_id=next_process_id(config, "F"),
     )
     
-    # Step 3: Attempt report generation with token limit retry logic
-    max_retries = 3
+    # Step 3: Attempt report generation with token limit retry logic. Paid
+    # evaluation may explicitly reduce this internal loop to one attempt; the
+    # key is absent in normal runs, preserving the legacy four-attempt policy.
+    evaluation_attempts = (config or {}).get("configurable", {}).get(
+        "_evaluation_final_report_max_attempts"
+    )
+    if evaluation_attempts is None:
+        max_retries = 3
+    elif (
+        isinstance(evaluation_attempts, bool)
+        or not isinstance(evaluation_attempts, int)
+        or evaluation_attempts != 1
+    ):
+        raise ValueError(
+            "_evaluation_final_report_max_attempts must be exactly 1 when set"
+        )
+    else:
+        max_retries = 0
     current_retry = 0
     findings_token_limit = None
     

@@ -11,7 +11,7 @@ from open_deep_research.evaluation.experiment_models import (
     ExperimentMetricResult,
 )
 
-SCORER_VERSION = "evaluation-claim-scorer-v1"
+SCORER_VERSION = "evaluation-claim-scorer-v3"
 _CITATION = re.compile(r"\[(\d+)\]")
 _SOURCE_LINE = re.compile(r"^\s*\[(\d+)\]\s+", re.MULTILINE)
 
@@ -69,7 +69,8 @@ def score_citations(
     supported = [
         item
         for item in checkable
-        if item.evidence_valid
+        if item.citation_ids
+        and item.evidence_valid
         and item.validation_status in {"fully_supported", "partially_supported"}
     ]
     unsupported = [
@@ -170,12 +171,25 @@ def memory_reuse_metric(
     )
 
 
-def cost_completeness_metric(*, tokens: int | None, cost: float | None) -> ExperimentMetricResult:
-    """Pass when unknown measurements remain null or both known values are reported."""
-    passed = (tokens is None and cost is None) or (tokens is not None and cost is not None)
+def cost_completeness_metric(
+    *,
+    tokens: int | None,
+    cost: float | None,
+    pricing_available: bool,
+) -> ExperimentMetricResult:
+    """Require cost only when an explicit price table makes it calculable."""
+    if tokens is None:
+        passed = cost is None
+        reason = "token usage is unknown, so estimated cost must remain null"
+    elif pricing_available:
+        passed = cost is not None
+        reason = "configured pricing requires a cost estimate for known token usage"
+    else:
+        passed = cost is None
+        reason = "pricing is unavailable, so estimated cost remains null rather than zero"
     return _result(
         "cost_field_integrity",
         1.0 if passed else 0.0,
         threshold=1.0,
-        reason="unknown values remain null; known token totals include a cost estimate",
+        reason=reason,
     )

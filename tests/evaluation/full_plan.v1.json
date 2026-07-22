@@ -4,6 +4,14 @@
   "case_ids": ["simple-001", "medium-001", "complex-001"],
   "variants": ["baseline", "paperqa", "agentic_rag", "memory", "citation_validator"],
   "repeats": 3,
+  "calibration": {
+    "case_ids": ["simple-001", "medium-001", "complex-001"],
+    "variants": ["baseline", "citation_validator"],
+    "repeats": 1,
+    "research_runs": 6,
+    "hard_token_limit": 3000000,
+    "purpose": "Measure real per-run and judge usage before authorizing the main matrix."
+  },
   "research_runs": {
     "paired_main": 45,
     "additional_warm_runs": 9,
@@ -16,30 +24,84 @@
     "warm_runs": 9
   },
   "models": {
-    "summarization": "openai:gpt-4.1-mini",
-    "research": "openai:gpt-4.1",
-    "compression": "openai:gpt-4.1",
-    "final_report": "openai:gpt-4.1",
-    "judge": "openai:gpt-4.1-mini"
+    "summarization": "env:SUMMARIZATION_MODEL",
+    "research": "env:RESEARCH_MODEL",
+    "compression": "env:COMPRESSION_MODEL",
+    "final_report": "env:FINAL_REPORT_MODEL",
+    "judge": "env:EVALUATION_JUDGE_MODEL|fallback:RESEARCH_MODEL",
+    "expected_model_id": "qwen3.7-plus"
+  },
+  "runtime_limits": {
+    "max_concurrent_research_units": 2,
+    "max_concurrent_researcher_tool_calls": 2,
+    "max_researcher_iterations": 4,
+    "max_react_tool_calls": 4,
+    "max_structured_output_retries": 1,
+    "compression_max_retries": 1,
+    "max_queries_per_search_call": 3,
+    "max_results_per_tavily": 3,
+    "timeout_seconds": 900,
+    "provider_max_retries": 0,
+    "evaluation_final_report_max_attempts": 1,
+    "summarization_model_max_tokens": 2048,
+    "research_model_max_tokens": 8192,
+    "compression_model_max_tokens": 8192,
+    "final_report_model_max_tokens": 8192,
+    "judge_model_max_tokens": 2048
+  },
+  "token_budget": {
+    "estimated_total_tokens": {"lower": 22000000, "upper": 38000000},
+    "soft_stop_tokens": 36000000,
+    "hard_stop_tokens": 42000000,
+    "per_research_run_tokens": 800000,
+    "available_user_quota_tokens": {"lower": 50000000, "upper": 60000000},
+    "minimum_reserved_tokens": 8000000
+  },
+  "dispatch_policy": {
+    "waves": [
+      {"id": "canary", "runs": 2, "description": "simple baseline and full variant"},
+      {"id": "calibration_remainder", "runs": 4, "description": "remaining calibration cases"},
+      {"id": "main_simple", "runs": 15},
+      {"id": "main_medium", "runs": 15},
+      {"id": "main_complex", "runs": 15},
+      {"id": "warm", "runs": 9}
+    ],
+    "checkpoint_after_every_run": true,
+    "resume_skips_completed_run_ids": true,
+    "require_projection_after_calibration": true,
+    "projection_safety_multiplier": 1.25
+  },
+  "failure_policy": {
+    "max_consecutive_failed_runs": 2,
+    "same_error_signature_limit": 2,
+    "failure_rate_min_runs": 4,
+    "max_failure_rate": 0.25,
+    "max_failed_run_tokens": 4000000,
+    "retryable_call_retries": 1,
+    "max_retry_token_fraction": 0.10,
+    "unknown_token_usage_action": "stop"
   },
   "judge_metrics_per_run": 7,
-  "estimated_judge_model_calls": {"lower": 756, "upper": 972},
+  "claim_scorer_steps_per_run": 1,
+  "paid_judge_steps_per_run": 8,
+  "estimated_judge_model_calls": {"lower": 810, "upper": 1026},
   "estimated_research_model_calls": {"lower": 540, "upper": 2700},
   "estimated_tavily_basic_credits": {"lower": 54, "upper": 810},
-  "estimated_total_cost_usd": {"lower": 30, "upper": 100},
-  "pricing_snapshot_date": "2026-07-21",
-  "pricing_assumptions": {
-    "gpt-4.1_input_per_million_usd": 2.0,
-    "gpt-4.1_output_per_million_usd": 8.0,
-    "gpt-4.1-mini_input_per_million_usd": 0.4,
-    "gpt-4.1-mini_output_per_million_usd": 1.6,
-    "tavily_payg_per_credit_usd": 0.008
-  },
   "authorization_required": true,
   "deepeval_install_required": true,
+  "evaluation_environment": {
+    "conda_file": "environment.phase7.yml",
+    "constraints_file": "constraints/evaluation-py311.txt",
+    "python": "3.11",
+    "deepeval": "4.1.1",
+    "require_pip_check": true
+  },
   "notes": [
-    "The range is an estimate, not a guaranteed charge, because graph call counts and token usage are data-dependent.",
-    "The run must stop before exceeding the user-approved ceiling; unknown cost is never represented as zero.",
-    "No LangSmith, Deep Research Bench, Confident upload, priority processing, or Batch API is included."
+    "Run a two-run canary, then complete calibration; the main matrix remains unauthorized until its measured token projection is approved.",
+    "Token estimates are not guarantees because graph call counts and prompt sizes are data-dependent.",
+    "Checkpoint after every run; resume skips stable completed run IDs and never repeats a successful paid run.",
+    "Stop on repeated error signatures, excessive failure rate, unknown usage, soft limit, or hard token limit.",
+    "Local artifacts are authoritative; optional LangSmith tracking is a best-effort sanitized mirror and is excluded from token/cost comparisons.",
+    "Deep Research Bench, Confident upload, priority processing, and Batch API are not included."
   ]
 }

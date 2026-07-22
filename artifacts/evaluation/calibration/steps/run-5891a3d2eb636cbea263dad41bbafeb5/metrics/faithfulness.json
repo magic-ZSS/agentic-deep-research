@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-5891a3d2eb636cbea263dad41bbafeb5",
+  "metric_name": "faithfulness",
+  "duration_ms": 10969.235199969262,
+  "result": {
+    "metric_name": "faithfulness",
+    "metric_version": "deepeval-4.1.1",
+    "score": 1.0,
+    "threshold": 0.5,
+    "status": "passed",
+    "reason": "The score is 1.00 because there are no contradictions, indicating the actual output is perfectly faithful to the retrieval context. Great job!",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 1438,
+    "output_tokens": 332,
+    "total_tokens": 1770
+  }
+}

@@ -1,0 +1,8 @@
+# Phase 7 paid-evaluation compatibility lock for Python 3.11.
+#
+# DeepEval 4.1.1 requires click < 8.4.0.  The versions below match the
+# Python >= 3.10 resolution in doc/reference/deepeval/poetry.lock and avoid
+# the click >= 8.4.2 constraint introduced by newer huggingface-hub builds.
+deepeval==4.1.1
+click==8.3.1
+huggingface-hub==1.4.1

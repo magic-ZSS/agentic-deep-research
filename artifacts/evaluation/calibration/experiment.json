@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "cal-34e1ee27efd02bab2423df3b516472d2",
+  "mode": "calibration",
+  "status": "stopped",
+  "dataset_version": "v1",
+  "case_ids": [
+    "simple-001",
+    "medium-001",
+    "complex-001"
+  ],
+  "variants": [
+    "baseline",
+    "citation_validator"
+  ],
+  "repeats": 1,
+  "planned_runs": 6,
+  "hard_token_limit": 3000000,
+  "model_ids": {
+    "summarization": "openai:qwen3.7-plus",
+    "research": "openai:qwen3.7-plus",
+    "compression": "openai:qwen3.7-plus",
+    "final_report": "openai:qwen3.7-plus",
+    "judge": "openai:qwen3.7-plus"
+  },
+  "plan_sha256": "b05bbb22b74ee5beda3cc96a3c38b515e958ee900dabd662b1d3762ad3086983",
+  "ablation_sha256": "8e4020a458085e53b10b3a2f60f8d083c1d17ab56674e13b8f8aa314616ef68c",
+  "git_head": "d8be3f8fe0e6415221777d24b616cbc18be3ae15",
+  "dirty_diff_sha256": "2dfd9e86f10ee91b5228c11be4fd063b86ad77ca05ec858d9569b0895ffa8a59",
+  "claims": {
+    "full_matrix_complete": false,
+    "quality_uplift_established": false,
+    "cold_warm_established": false
+  },
+  "completed_run_records": 3,
+  "stopped_reason": "judge:task_completion:LiveTokenBudgetFailClosed",
+  "updated_at": "2026-07-21T03:18:07.081940+00:00"
+}

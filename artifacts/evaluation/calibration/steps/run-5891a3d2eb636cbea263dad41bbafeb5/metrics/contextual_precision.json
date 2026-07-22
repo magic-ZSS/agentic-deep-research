@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-5891a3d2eb636cbea263dad41bbafeb5",
+  "metric_name": "contextual_precision",
+  "duration_ms": 13324.246299976949,
+  "result": {
+    "metric_name": "contextual_precision",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The score is 0.00 because all retrieved nodes are irrelevant to the input query. The first node in retrieval contexts provides no information regarding Python version constraints, conda steps, or project entry points. Similarly, the second node is irrelevant to the query about running the project in a Windows conda environment, and the third node does not contain any facts about Python versions, LangGraph, or test constraints. Furthermore, the fourth node is unrelated to the expected output which requires details on Python 3.11+, conda, and entry points, while the fifth node offers no useful information for determining the minimum steps or constraints for the project.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 1188,
+    "output_tokens": 412,
+    "total_tokens": 1600
+  }
+}

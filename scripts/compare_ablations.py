@@ -26,7 +26,9 @@ def main(argv: list[str] | None = None) -> int:
     source = args.input / "runs.jsonl" if args.input.is_dir() else args.input
     report = aggregate_runs(load_jsonl(source, ExperimentRun))
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    args.output.write_bytes(
+        (json.dumps(report, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    )
     return 0
 
 

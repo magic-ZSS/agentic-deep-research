@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-559f4d582628ee4ee4933301471aba1d",
+  "metric_name": "contextual_recall",
+  "duration_ms": 5300.234300026204,
+  "result": {
+    "metric_name": "contextual_recall",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The score is 0.00 because the expected output requests specific constraints (Python 3.11+, conda, LangGraph entry, offline-versus-paid test) that are entirely absent from the nodes in retrieval context, which only cover general Python project structures.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 7106,
+    "output_tokens": 173,
+    "total_tokens": 7279
+  }
+}

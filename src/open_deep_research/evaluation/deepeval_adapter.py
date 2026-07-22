@@ -14,7 +14,7 @@ from open_deep_research.evaluation.models import BaselineCase, BaselineRunRecord
 
 
 EXPECTED_DEEPEVAL_VERSION = "4.1.1"
-_DEEPEVAL_IMPORT_LOCK = threading.Lock()
+_DEEPEVAL_IMPORT_LOCK = threading.RLock()
 _DEEPEVAL_SAFE_IMPORT_ENV = {
     "DEEPEVAL_DISABLE_DOTENV": "1",
     "DEEPEVAL_DISABLE_LEGACY_KEYFILE": "1",

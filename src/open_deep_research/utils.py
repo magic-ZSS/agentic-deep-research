@@ -157,6 +157,19 @@ TAVILY_SEARCH_DESCRIPTION = (
     "A search engine optimized for comprehensive, accurate, and trusted results. "
     "Useful for when you need to answer questions about current events."
 )
+
+
+def _evaluation_provider_retry_kwargs(config: RunnableConfig) -> dict[str, int]:
+    """Return an opt-in zero-retry override used only by paid evaluation."""
+    raw_config = (config or {}).get("configurable", {})
+    if "max_retries" not in raw_config:
+        return {}
+    value = raw_config["max_retries"]
+    if isinstance(value, bool) or not isinstance(value, int) or value != 0:
+        raise ValueError("evaluation max_retries must be exactly 0 when set")
+    return {"max_retries": value}
+
+
 @tool(description=TAVILY_SEARCH_DESCRIPTION)
 async def tavily_search(
     queries: List[str],
@@ -233,7 +246,8 @@ async def tavily_search(
         max_tokens=configurable.summarization_model_max_tokens,
         api_key=model_api_key,
         extra_body={"enable_thinking": False},
-        tags=["langsmith:nostream"]
+        tags=["langsmith:nostream"],
+        **_evaluation_provider_retry_kwargs(config),
     ).with_structured_output(Summary).with_retry(
         stop_after_attempt=configurable.max_structured_output_retries
     )

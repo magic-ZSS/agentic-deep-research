@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-559f4d582628ee4ee4933301471aba1d",
+  "metric_name": "plan_adherence",
+  "duration_ms": 16034.547699964605,
+  "result": {
+    "metric_name": "plan_adherence",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The agent failed to execute any of the planned steps (verifying Python version, identifying entry points) because it did not access project files. Instead, it performed extraneous web searches for generic documentation and concluded the task was impossible, resulting in zero plan adherence.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 27589,
+    "output_tokens": 219,
+    "total_tokens": 27808
+  }
+}

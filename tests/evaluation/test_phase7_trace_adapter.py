@@ -12,7 +12,12 @@ def test_parallel_trace_preserves_parent_and_stable_order():
             TraceEvent(event_id="e", kind="tool", name="bad", sequence=3, status="failed"),
         ]
     )
-    assert [item["name"] for item in trace.tool_calls] == ["one", "two", "bad"]
+    assert [item["name"] for item in trace.tool_calls] == [
+        "one",
+        "two",
+        "kb",
+        "bad",
+    ]
     assert trace.tool_calls[0]["parent_id"] == "root"
     assert trace.plan == ["search", "write"]
     assert trace.retrieval_context == ["ctx"]
@@ -32,4 +37,3 @@ def test_missing_plan_cannot_pass_plan_adherence_default():
     assert result.score == 0
     assert result.status.value == "failed"
     assert "absent" in result.reason
-

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-5891a3d2eb636cbea263dad41bbafeb5",
+  "metric_name": "contextual_recall",
+  "duration_ms": 10779.99790001195,
+  "result": {
+    "metric_name": "contextual_recall",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The score is 0.00 because the node(s) in retrieval context only contain error type dictionaries and lack any information regarding Python 3.11+, conda, LangGraph, or test constraints required by the expected output.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 811,
+    "output_tokens": 138,
+    "total_tokens": 949
+  }
+}

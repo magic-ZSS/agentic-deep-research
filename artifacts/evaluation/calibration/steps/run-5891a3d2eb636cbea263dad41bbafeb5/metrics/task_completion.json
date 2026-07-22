@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-5891a3d2eb636cbea263dad41bbafeb5",
+  "metric_name": "task_completion",
+  "duration_ms": 7427.788999979384,
+  "result": {
+    "metric_name": "task_completion",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The actual outcome failed to achieve the task entirely. The system encountered errors during tool execution and only produced a research plan outlining what needs to be done, rather than providing the specific factual steps, Python version constraints, entry file, or test entry as requested.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 3287,
+    "output_tokens": 254,
+    "total_tokens": 3541
+  }
+}

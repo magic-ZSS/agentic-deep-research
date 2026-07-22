@@ -6,6 +6,7 @@ import argparse
 import ast
 import asyncio
 import configparser
+import hashlib
 import importlib
 import json
 import os
@@ -13,39 +14,47 @@ import re
 import subprocess
 import sys
 import tomllib
+import types
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 from uuid import uuid4
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from open_deep_research.evaluation.baseline import (  # noqa: E402
-    create_replay_record,
-    live_authorization_refusal,
-    load_cases,
-    load_replay_fixture,
-    run_replay,
-    select_case,
-)
-from open_deep_research.evaluation.manifest import sha256_file  # noqa: E402
-from open_deep_research.evaluation.models import (  # noqa: E402
-    BaselineRunRecord,
-    RunStatus,
-)
+
+def _install_windows_validation_uuid_fallback() -> None:
+    """Keep the offline validator usable when App Control blocks uuid_utils.
+
+    This process-local compatibility module is deliberately confined to the
+    deterministic phase validator.  Paid calibration/full entry points still
+    execute the dedicated-environment import smoke without this fallback.
+    """
+    try:
+        import uuid_utils  # noqa: F401
+    except ImportError as error:
+        if sys.platform != "win32" or "_uuid_utils" not in str(error):
+            raise
+        package = types.ModuleType("uuid_utils")
+        compatibility = types.ModuleType("uuid_utils.compat")
+        package.uuid7 = uuid4
+        package.compat = compatibility
+        package.__path__ = []
+        compatibility.uuid7 = uuid4
+        sys.modules["uuid_utils"] = package
+        sys.modules["uuid_utils.compat"] = compatibility
+
+
+_install_windows_validation_uuid_fallback()
+
 from open_deep_research.evaluation.reporting import (  # noqa: E402
     validate_artifact_manifest,
 )
 from open_deep_research.evaluation.storage import load_jsonl  # noqa: E402
-from open_deep_research.evaluation.telemetry import (  # noqa: E402
-    ainvoke_with_evaluation_telemetry,
-)
-
 
 EXPECTED_REFERENCE_IDS = {
     "paper-qa",
@@ -85,6 +94,8 @@ def _read_json(path: Path) -> dict:
 
 
 def _check_refs(root: Path, refs_lock_path: Path) -> str:
+    from open_deep_research.evaluation.manifest import sha256_file
+
     lock = _read_json(refs_lock_path)
     if lock.get("schema_version") != "1.0":
         raise ValueError("refs lock schema_version must be 1.0")
@@ -162,6 +173,8 @@ def _check_refs(root: Path, refs_lock_path: Path) -> str:
 
 
 def _check_dataset(cases_path: Path) -> str:
+    from open_deep_research.evaluation.baseline import load_cases
+
     cases = load_cases(cases_path)
     counts = Counter(case.difficulty.value for case in cases)
     if counts != Counter({"simple": 3, "medium": 3, "complex": 3}):
@@ -215,6 +228,12 @@ def _check_offline_imports(root: Path) -> str:
 def _replay_record(
     root: Path, cases_path: Path, fixture_path: Path, manifest: dict
 ):
+    from open_deep_research.evaluation.baseline import (
+        create_replay_record,
+        load_replay_fixture,
+        select_case,
+    )
+
     case = select_case("simple-001", cases_path)
     fixture = load_replay_fixture(case, fixture_path.parent)
     return case, create_replay_record(
@@ -223,6 +242,9 @@ def _replay_record(
 
 
 def _check_replay(root: Path, cases_path: Path, fixture_path: Path, manifest: dict) -> str:
+    from open_deep_research.evaluation.baseline import run_replay, select_case
+    from open_deep_research.evaluation.models import BaselineRunRecord, RunStatus
+
     case = select_case("simple-001", cases_path)
     temporary_root = root / ".phase-validation-tmp"
     temporary_root.mkdir(parents=True, exist_ok=True)
@@ -250,6 +272,8 @@ def _check_replay(root: Path, cases_path: Path, fixture_path: Path, manifest: di
 
 
 def _check_live_refusal(root: Path) -> str:
+    from open_deep_research.evaluation.baseline import live_authorization_refusal
+
     refusal = live_authorization_refusal(
         "simple-001", confirm_cost=False, environment={}
     )
@@ -289,6 +313,10 @@ def _check_live_refusal(root: Path) -> str:
 
 
 def _check_disabled_wrapper() -> str:
+    from open_deep_research.evaluation.telemetry import (
+        ainvoke_with_evaluation_telemetry,
+    )
+
     class IdentityRunnable:
         def __init__(self) -> None:
             self.input_value = None
@@ -1984,9 +2012,10 @@ def _check_phase4_suite(root: Path) -> str:
 
 
 def _check_phase4_static(root: Path) -> str:
+    from validate_mcp_config import validate
+
     from open_deep_research.configuration import Configuration
     from open_deep_research.mcp.config import FILESYSTEM_PACKAGE_VERSION
-    from validate_mcp_config import validate
 
     configuration = Configuration()
     if configuration.enable_filesystem_mcp or configuration.enable_knowledge_mcp:
@@ -2193,8 +2222,9 @@ def _check_phase6_suite(root: Path) -> str:
 
 def _check_phase6_static(root: Path) -> str:
     """Check default-off isolation, package discovery and graph placement."""
-    from open_deep_research.configuration import Configuration
     from validate_report import validate_payload
+
+    from open_deep_research.configuration import Configuration
 
     config = Configuration()
     if config.citation_validation_mode != "off":
@@ -2281,6 +2311,8 @@ def _check_phase7_suite(root: Path) -> str:
         "test_offline_smoke_runs_all_cases_variants_and_writes_consistent_artifacts",
         "test_full_cli_refuses_before_output_or_external_call",
         "test_readme_section_is_generated_from_machine_report",
+        "test_qwen_plan_has_calibration_and_hard_token_limits",
+        "test_token_ledger_stops_on_unknown_per_run_soft_and_hard_limits",
     }
     discovered: set[str] = set()
     for path in (root / "tests/evaluation").glob("test_phase7_*.py"):
@@ -2294,14 +2326,19 @@ def _check_phase7_suite(root: Path) -> str:
     missing = required - discovered
     if missing:
         raise ValueError(f"missing named Phase 7 tests: {sorted(missing)}")
-    if len(discovered) < 16:
+    if len(discovered) < 22:
         raise ValueError("Phase 7 test inventory is smaller than expected")
     return f"named offline evaluation inventory is complete ({len(discovered)} tests)"
 
 
 def _check_phase7_smoke(root: Path) -> str:
+    from open_deep_research.evaluation.claim_scorer import CLAIM_SCORER_VERSION
     from open_deep_research.evaluation.dataset import merge_evaluation_dataset
     from open_deep_research.evaluation.experiment_models import ExperimentRun
+    from open_deep_research.evaluation.runner import deterministic_experiment_id
+    from open_deep_research.evaluation.source_gate import (
+        capture_evaluation_source_snapshot,
+    )
     from open_deep_research.evaluation.variants import load_variants
 
     output = root / "artifacts/evaluation/smoke"
@@ -2312,26 +2349,670 @@ def _check_phase7_smoke(root: Path) -> str:
     )
     variants = load_variants(root / "tests/evaluation/ablations.v1.json")
     records = load_jsonl(output / "runs.jsonl", ExperimentRun)
+    experiment = _read_json(output / "experiment.json")
+    manifest = _read_json(output / "manifest.json")
     if len(cases) != 9 or len(variants) != 5 or len(records) != 45:
         raise ValueError("expected 9 canonical cases, 5 variants and 45 smoke records")
     if validate_artifact_manifest(output):
         raise ValueError("smoke artifact manifest integrity failed")
     if any(item.status.value != "passed" for item in records):
         raise ValueError("smoke contains failed/skipped/error records")
-    return "9 cases x 5 variants produced 45 integrity-checked smoke records"
+    expected_pairs = {
+        (case.case_id, variant.variant_id)
+        for case in cases
+        for variant in variants
+    }
+    observed_pairs = {(item.case_id, item.variant_id) for item in records}
+    if observed_pairs != expected_pairs or len({item.run_id for item in records}) != 45:
+        raise ValueError("smoke records do not form the exact case/variant matrix")
+    if (
+        experiment.get("scorer_version") != CLAIM_SCORER_VERSION
+        or any(item.scorer_version != CLAIM_SCORER_VERSION for item in records)
+    ):
+        raise ValueError("smoke artifact uses a stale evaluation scorer")
+
+    current_snapshot = capture_evaluation_source_snapshot(root)
+    persisted_snapshot = experiment.get("source_snapshot")
+    if (
+        not isinstance(persisted_snapshot, dict)
+        or persisted_snapshot.get("source_sha256")
+        != current_snapshot.source_sha256
+        or persisted_snapshot.get("checked_paths")
+        != list(current_snapshot.checked_paths)
+        or not isinstance(persisted_snapshot.get("clean"), bool)
+        or isinstance(persisted_snapshot.get("untracked_file_count"), bool)
+        or not isinstance(persisted_snapshot.get("untracked_file_count"), int)
+        or persisted_snapshot.get("untracked_file_count") < 0
+        or not isinstance(persisted_snapshot.get("git_head"), str)
+    ):
+        raise ValueError("smoke artifact does not match the current evaluation source")
+    if (
+        persisted_snapshot["clean"] is False
+        and persisted_snapshot["git_head"] != current_snapshot.git_head
+    ):
+        raise ValueError(
+            "dirty-source smoke must be regenerated after its source is committed"
+        )
+    expected_experiment_id = deterministic_experiment_id(
+        source_snapshot_sha256=current_snapshot.source_sha256,
+        dataset_version="v1",
+        variant_ids=[item.variant_id for item in variants],
+        mode="smoke",
+        repeats=1,
+        scorer_version=CLAIM_SCORER_VERSION,
+    )
+    if (
+        experiment.get("experiment_id") != expected_experiment_id
+        or any(item.experiment_id != expected_experiment_id for item in records)
+        or any(
+            item.project_commit != persisted_snapshot["git_head"] for item in records
+        )
+        or manifest.get("experiment_id") != expected_experiment_id
+        or manifest.get("dataset_version") != "v1"
+        or manifest.get("project_commit") != persisted_snapshot["git_head"]
+        or any(
+            item.trace.get("source_snapshot_sha256")
+            != persisted_snapshot["source_sha256"]
+            or item.trace.get("source_snapshot_clean")
+            is not persisted_snapshot["clean"]
+            for item in records
+        )
+    ):
+        raise ValueError("smoke run identities are not bound to the current source")
+    return (
+        "9 cases x 5 variants produced 45 integrity-checked smoke records "
+        f"with {CLAIM_SCORER_VERSION} and source snapshot "
+        f"{current_snapshot.source_sha256[:12]}"
+    )
+
+
+def _check_phase7_calibration(root: Path) -> str:
+    """Validate an optional paid calibration without treating it as full evidence."""
+    output = root / "artifacts/evaluation/calibration"
+    if not output.exists():
+        return "no optional calibration artifact is present"
+
+    required = {
+        "budget.json",
+        "experiment.json",
+        "journal.json",
+        "manifest.json",
+        "report.json",
+        "runs.jsonl",
+    }
+    missing = sorted(name for name in required if not (output / name).is_file())
+    if missing:
+        raise ValueError(f"calibration artifact is incomplete: {missing}")
+    errors = validate_artifact_manifest(output)
+    if errors:
+        raise ValueError(f"calibration artifact manifest integrity failed: {errors}")
+
+    manifest = _read_json(output / "manifest.json")
+    listed = {str(item.get("path")) for item in manifest.get("files", [])}
+    actual = {
+        path.relative_to(output).as_posix()
+        for path in output.rglob("*")
+        if path.is_file() and path.name != "manifest.json"
+    }
+    if listed != actual:
+        raise ValueError("calibration manifest file inventory differs from disk")
+
+    report = _read_json(output / "report.json")
+    budget = _read_json(output / "budget.json")
+    journal = _read_json(output / "journal.json")
+    experiment = _read_json(output / "experiment.json")
+    identity = journal.get("identity")
+    ledger = budget.get("ledger")
+    if not isinstance(identity, dict) or not isinstance(ledger, dict):
+        raise ValueError("calibration identity or token ledger is invalid")
+    if budget.get("calibration_identity") != identity:
+        raise ValueError("calibration budget identity differs from journal")
+    if report.get("token_budget") != ledger:
+        raise ValueError("calibration report token budget differs from durable ledger")
+
+    experiment_id = identity.get("experiment_id")
+    dataset_id = identity.get("dataset_id")
+    git_head = identity.get("git_head")
+    if (
+        manifest.get("experiment_id") != experiment_id
+        or manifest.get("dataset_version") != dataset_id
+        or manifest.get("project_commit") != git_head
+        or experiment.get("experiment_id") != experiment_id
+        or report.get("experiment_id") != experiment_id
+    ):
+        raise ValueError("calibration artifact identity is inconsistent")
+
+    status = report.get("calibration_status")
+    if status not in {"completed", "stopped"} or experiment.get("status") != status:
+        raise ValueError("calibration terminal status is inconsistent")
+    if status == "stopped" and not report.get("stopped_reason"):
+        raise ValueError("stopped calibration has no reason")
+    if experiment.get("claims", {}).get("full_matrix_complete") is not False:
+        raise ValueError("calibration must not claim full-matrix completion")
+
+    committed = ledger.get("committed_tokens")
+    hard_limit = ledger.get("hard_token_limit")
+    if (
+        isinstance(committed, bool)
+        or not isinstance(committed, int)
+        or isinstance(hard_limit, bool)
+        or not isinstance(hard_limit, int)
+        or committed < 0
+        or committed > hard_limit
+        or hard_limit != experiment.get("hard_token_limit")
+    ):
+        raise ValueError("calibration token ceiling evidence is invalid")
+    if ledger.get("active_calls") != 0 or ledger.get("active_reserved_tokens") != 0:
+        raise ValueError("terminal calibration retains an active token reservation")
+
+    run_count = sum(
+        1
+        for line in (output / "runs.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    )
+    if report.get("completed_run_records") != run_count:
+        raise ValueError("calibration report run count differs from runs.jsonl")
+    if experiment.get("completed_run_records") != run_count:
+        raise ValueError("calibration experiment run count differs from runs.jsonl")
+    return (
+        f"optional calibration is integrity-checked ({run_count}/"
+        f"{report.get('planned_runs')} records, {committed} committed tokens, {status})"
+    )
 
 
 def _check_phase7_full(root: Path, acceptance_id: str) -> str:
-    path = root / "artifacts/evaluation/full/report.json"
-    if not path.is_file():
+    """Reconstruct paid full evidence instead of trusting a report decision."""
+    from open_deep_research.evaluation.calibration_runner import (
+        _observation_from_payload,
+        _read_hashed_json,
+    )
+    from open_deep_research.evaluation.calibration_state import (
+        CalibrationJournalStore,
+        sha256_path,
+    )
+    from open_deep_research.evaluation.claim_scorer import (
+        CLAIM_SCORER_STEP_NAME,
+        CLAIM_SCORER_VERSION,
+        ClaimScorerResult,
+    )
+    from open_deep_research.evaluation.custom_metrics import (
+        score_citations,
+        source_quality_metric,
+    )
+    from open_deep_research.evaluation.eval_environment import EXPECTED_PACKAGES
+    from open_deep_research.evaluation.experiment_models import (
+        ExperimentMetricResult,
+        ExperimentRun,
+    )
+    from open_deep_research.evaluation.full_metrics import FULL_JUDGE_STEP_NAMES
+    from open_deep_research.evaluation.full_reporting import (
+        build_full_report,
+        render_full_report_markdown,
+    )
+    from open_deep_research.evaluation.full_state import build_full_run_definitions
+    from open_deep_research.evaluation.live_budget import LiveTokenReservationLedger
+    from open_deep_research.evaluation.source_gate import EVALUATION_SOURCE_PATHS
+
+    output = root / "artifacts/evaluation/full"
+    required = {
+        "budget.json",
+        "experiment.json",
+        "journal.json",
+        "manifest.json",
+        "report.json",
+        "report.md",
+        "runs.jsonl",
+    }
+    missing = sorted(name for name in required if not (output / name).is_file())
+    if missing:
         raise ValueError(
-            f"{acceptance_id} requires user-authorized live/full artifacts; none exist"
+            f"{acceptance_id} requires a complete user-authorized full artifact; "
+            f"missing={missing}"
         )
-    report = _read_json(path)
-    decisions = report.get("acceptance", {})
-    if decisions.get(acceptance_id) != "passed":
-        raise ValueError(f"authorized full report does not pass {acceptance_id}")
-    return "user-authorized full artifact records a passing decision"
+    try:
+        manifest_errors = validate_artifact_manifest(output)
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+        raise ValueError("full artifact manifest cannot be validated") from exc
+    if manifest_errors:
+        raise ValueError(f"full artifact manifest integrity failed: {manifest_errors}")
+
+    manifest = _read_json(output / "manifest.json")
+    manifest_files = manifest.get("files")
+    if not isinstance(manifest_files, list):
+        raise ValueError("full manifest file inventory is invalid")
+    listed = {
+        str(item.get("path"))
+        for item in manifest_files
+        if isinstance(item, dict) and isinstance(item.get("path"), str)
+    }
+    actual = {
+        path.relative_to(output).as_posix()
+        for path in output.rglob("*")
+        if path.is_file() and path.name != "manifest.json"
+    }
+    if len(listed) != len(manifest_files) or listed != actual:
+        raise ValueError("full manifest inventory differs from disk")
+    if not required - {"manifest.json"} <= listed:
+        raise ValueError("full manifest omits a required top-level artifact")
+
+    plan_path = root / "tests/evaluation/full_plan.v1.json"
+    ablation_path = root / "tests/evaluation/ablations.v1.json"
+    plan = _read_json(plan_path)
+    definitions = build_full_run_definitions(plan)
+    expected_definition_keys = {
+        (
+            item.case_id,
+            item.journal_variant_id,
+            item.repeat,
+        ): item
+        for item in definitions
+    }
+    try:
+        runs = load_jsonl(output / "runs.jsonl", ExperimentRun)
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise ValueError("full runs.jsonl cannot be loaded as ExperimentRun") from exc
+    if len(runs) != 54 or len({run.run_id for run in runs}) != 54:
+        raise ValueError("full artifact must contain exactly 54 unique ExperimentRun records")
+
+    journal_store = CalibrationJournalStore(output / "journal.json")
+    try:
+        journal = journal_store.load()
+        resume = journal_store.resume_summary()
+    except (OSError, ValueError, RuntimeError) as exc:
+        raise ValueError("full paid-step journal cannot be recovered") from exc
+    if len(journal.runs) != 54:
+        raise ValueError("full journal must contain exactly 54 run plans")
+    journal_by_definition = {
+        (item.case_id, item.variant_id, item.repeat): item for item in journal.runs
+    }
+    if (
+        len(journal_by_definition) != 54
+        or set(journal_by_definition) != set(expected_definition_keys)
+    ):
+        raise ValueError("full journal does not match the fixed 45 main + 9 warm matrix")
+    if any(
+        set(item.judge_step_ids) != set(FULL_JUDGE_STEP_NAMES)
+        for item in journal.runs
+    ):
+        raise ValueError(
+            "full journal judge plan differs from seven DeepEval metrics plus the claim scorer"
+        )
+    if (
+        not resume.can_resume
+        or len(resume.completed_run_ids) != 54
+        or resume.terminal_noncompleted_run_ids
+        or resume.pending_step_ids
+        or resume.blocked_in_flight_step_ids
+        or resume.unknown_usage_step_ids
+        or len(resume.completed_metric_step_ids) != 54 * len(FULL_JUDGE_STEP_NAMES)
+    ):
+        raise ValueError("full journal is not terminal-complete for all 54 runs")
+
+    run_by_id = {run.run_id: run for run in runs}
+    if set(run_by_id) != set(resume.completed_run_ids):
+        raise ValueError("ExperimentRun IDs differ from completed journal run IDs")
+    main_count = 0
+    warm_count = 0
+    cold_by_pair: dict[str, ExperimentRun] = {}
+    warm_by_pair: dict[str, ExperimentRun] = {}
+    for journal_key, definition in expected_definition_keys.items():
+        journal_plan = journal_by_definition[journal_key]
+        try:
+            run = run_by_id[journal_plan.run_id]
+        except KeyError as exc:
+            raise ValueError("fixed journal run has no ExperimentRun record") from exc
+        protocol = run.trace.get("protocol")
+        if not isinstance(protocol, dict):
+            raise ValueError(f"full run has no structured protocol: {run.run_id}")
+        expected_kind = definition.kind
+        expected_phase = definition.phase
+        if (
+            run.case_id != definition.case_id
+            or run.variant_id != definition.variant_id
+            or run.repeat != definition.repeat
+            or protocol.get("kind") != expected_kind
+            or protocol.get("phase") != expected_phase
+            or protocol.get("pair_id") != definition.pair_id
+            or protocol.get("paired_key") != definition.paired_key
+        ):
+            raise ValueError(f"full run differs from its fixed protocol plan: {run.run_id}")
+        if run.difficulty != definition.case_id.split("-", 1)[0]:
+            raise ValueError(f"full run difficulty differs from canonical case ID: {run.run_id}")
+        if run.trace.get("evaluation_provenance") != "live":
+            raise ValueError("fake/offline/calibration records cannot satisfy live full gates")
+        if expected_kind == "main":
+            main_count += 1
+            if (
+                definition.case_id == plan["cold_warm"]["case_id"]
+                and definition.variant_id in plan["cold_warm"]["variants"]
+            ):
+                cold_by_pair[definition.pair_id] = run
+        else:
+            warm_count += 1
+            warm_by_pair[definition.pair_id] = run
+    if main_count != 45 or warm_count != 9:
+        raise ValueError("full run protocol must contain exactly 45 main and 9 warm records")
+    if set(cold_by_pair) != set(warm_by_pair) or len(warm_by_pair) != 9:
+        raise ValueError("full cold/warm records are not paired one-to-one")
+    for pair_id, warm in warm_by_pair.items():
+        cold_protocol = cold_by_pair[pair_id].trace["protocol"]
+        warm_protocol = warm.trace["protocol"]
+        snapshot = cold_protocol.get("snapshot_sha256")
+        if not isinstance(snapshot, str) or not snapshot or snapshot != warm_protocol.get(
+            "snapshot_sha256"
+        ):
+            raise ValueError(
+                "full cold/warm pair does not share one fixed initial snapshot"
+            )
+        runtime_state = cold_protocol.get("runtime_state_sha256")
+        if (
+            not isinstance(runtime_state, str)
+            or not runtime_state
+            or runtime_state != warm_protocol.get("runtime_state_sha256")
+        ):
+            raise ValueError(
+                "full cold/warm pair does not share one fixed post-cold runtime state"
+            )
+
+    identity = journal.identity
+    identity_payload = identity.model_dump(mode="json")
+    experiment_ids = {run.experiment_id for run in runs}
+    dataset_versions = {run.dataset_version for run in runs}
+    project_commits = {run.project_commit for run in runs}
+    scorer_versions = {run.scorer_version for run in runs}
+    if experiment_ids != {identity.experiment_id}:
+        raise ValueError("full run experiment identity is not uniform")
+    if dataset_versions != {identity.dataset_id} or identity.dataset_id != plan.get(
+        "dataset_version"
+    ):
+        raise ValueError("full run dataset identity is not uniform")
+    if project_commits != {identity.git_head}:
+        raise ValueError("full run project commit is not uniform")
+    if scorer_versions != {CLAIM_SCORER_VERSION}:
+        raise ValueError("full run scorer identity is not uniform or canonical")
+    if identity.plan_sha256 != sha256_path(plan_path) or identity.ablation_sha256 != sha256_path(
+        ablation_path
+    ):
+        raise ValueError("full journal is bound to stale plan or ablation inputs")
+    if (
+        identity.model_ids.get("protocol") != "phase7-full-v1"
+        or identity.model_ids.get("provenance") != "live"
+    ):
+        raise ValueError("full journal identity does not declare the live full protocol")
+
+    experiment = _read_json(output / "experiment.json")
+    if (
+        experiment.get("experiment_id") != identity.experiment_id
+        or experiment.get("mode") != "full"
+        or experiment.get("status") != "completed"
+        or experiment.get("provenance") != "live"
+        or experiment.get("dataset_version") != identity.dataset_id
+        or experiment.get("git_head") != identity.git_head
+        or experiment.get("plan_sha256") != identity.plan_sha256
+        or experiment.get("ablation_sha256") != identity.ablation_sha256
+        or experiment.get("planned_runs") != 54
+        or experiment.get("completed_run_records") != 54
+        or experiment.get("paired_main_runs") != 45
+        or experiment.get("additional_warm_runs") != 9
+        or experiment.get("stopped_reason") is not None
+    ):
+        raise ValueError("full experiment metadata is incomplete, stale, or non-terminal")
+    if experiment.get("case_ids") != list(plan["case_ids"]) or experiment.get(
+        "variants"
+    ) != list(plan["variants"]):
+        raise ValueError("full experiment matrix metadata differs from the fixed plan")
+    expected_models = {
+        name: value
+        for name, value in identity.model_ids.items()
+        if name not in {"protocol", "provenance"}
+    }
+    if experiment.get("model_ids") != expected_models:
+        raise ValueError("full experiment model identities differ from the journal")
+    if (
+        experiment.get("soft_token_limit") != 36_000_000
+        or experiment.get("hard_token_limit") != 42_000_000
+        or experiment.get("per_run_token_limit") != 800_000
+    ):
+        raise ValueError("full experiment token ceilings differ from the fixed plan")
+
+    budget = _read_json(output / "budget.json")
+    ledger_payload = budget.get("ledger")
+    if budget.get("calibration_identity") != identity_payload or not isinstance(
+        ledger_payload, dict
+    ):
+        raise ValueError("full budget is not bound to the journal identity")
+    try:
+        ledger = LiveTokenReservationLedger.from_snapshot(ledger_payload)
+    except (ValueError, RuntimeError) as exc:
+        raise ValueError("full token ledger cannot be recovered") from exc
+    normalized_ledger = ledger.snapshot()
+    if normalized_ledger != ledger_payload:
+        raise ValueError("full token ledger is not canonical")
+    if (
+        normalized_ledger["hard_token_limit"] != 42_000_000
+        or normalized_ledger["per_run_token_limit"] != 800_000
+        or normalized_ledger["committed_tokens"] > 42_000_000
+        or normalized_ledger["active_calls"] != 0
+        or normalized_ledger["active_reserved_tokens"] != 0
+        or normalized_ledger["unknown_usage"] is not False
+        or normalized_ledger["fail_closed"] is not False
+        or normalized_ledger["error_count"] != 0
+        or normalized_ledger["unknown_charged_tokens"] != 0
+    ):
+        raise ValueError("full token ledger is unsafe, non-terminal, or over budget")
+
+    journal_tokens = {run_id: 0 for run_id in resume.completed_run_ids}
+    for event in journal.events:
+        if event.event_type not in {"research_completed", "judge_metric_terminal"}:
+            continue
+        if event.total_tokens is None:
+            raise ValueError("full journal contains unknown paid-step token usage")
+        journal_tokens[event.run_id] += event.total_tokens
+
+    terminal_by_step = {
+        event.step_id: event
+        for event in journal.events
+        if event.event_type in {"research_completed", "judge_metric_terminal"}
+        and event.step_id is not None
+    }
+    for run_plan in journal.runs:
+        run = run_by_id[run_plan.run_id]
+        run_record = ExperimentRun.model_validate(
+            _read_hashed_json(output / "run-records" / f"{run.run_id}.json")
+        )
+        if run_record != run:
+            raise ValueError("full hashed run record differs from runs.jsonl")
+
+        research_payload = _read_hashed_json(
+            output / "steps" / run.run_id / "research.json"
+        )
+        observation = _observation_from_payload(research_payload)
+        research_event = terminal_by_step.get(run_plan.research_step_id)
+        if (
+            research_event is None
+            or observation.output != run.output
+            or observation.telemetry.total_tokens != research_event.total_tokens
+            or observation.telemetry.input_tokens != research_event.input_tokens
+            or observation.telemetry.output_tokens != research_event.output_tokens
+        ):
+            raise ValueError("full research step, journal, and run record diverge")
+
+        claim_result: ClaimScorerResult | None = None
+        for step_name, step_id in run_plan.judge_step_ids.items():
+            step_payload = _read_hashed_json(
+                output
+                / "steps"
+                / run.run_id
+                / "metrics"
+                / f"{step_name}.json"
+            )
+            step_event = terminal_by_step.get(step_id)
+            if step_event is None or step_event.metric_name != step_name:
+                raise ValueError("full judge artifact has no matching journal terminal")
+            if step_name == CLAIM_SCORER_STEP_NAME:
+                if step_payload.get("status") != "passed":
+                    raise ValueError("full claim scorer step is not a successful terminal")
+                claim_result = ClaimScorerResult.model_validate(step_payload.get("result"))
+                payload_usage = (
+                    step_payload.get("input_tokens"),
+                    step_payload.get("output_tokens"),
+                    step_payload.get("total_tokens"),
+                )
+            else:
+                result = ExperimentMetricResult.model_validate(step_payload.get("result"))
+                if result.metric_name != step_name:
+                    raise ValueError("full DeepEval artifact metric identity drift")
+                payload_usage = (
+                    result.input_tokens,
+                    result.output_tokens,
+                    result.total_tokens,
+                )
+            if payload_usage != (
+                step_event.input_tokens,
+                step_event.output_tokens,
+                step_event.total_tokens,
+            ):
+                raise ValueError("full judge artifact and journal token usage diverge")
+
+        if claim_result is None:
+            raise ValueError("full run has no persisted claim scorer result")
+        expected_output_hash = hashlib.sha256((run.output or "").encode("utf-8")).hexdigest()
+        if (
+            claim_result.scorer_version != CLAIM_SCORER_VERSION
+            or claim_result.report_sha256 != expected_output_hash
+            or claim_result.coverage_complete is not True
+            or run.trace.get("claim_scorer_report_sha256") != expected_output_hash
+            or run.trace.get("evaluation_claim_results")
+            != claim_result.observations_payload
+            or run.trace.get("claim_observations")
+            != claim_result.observations_payload
+        ):
+            raise ValueError("full claim scorer artifact is not bound to the immutable report")
+        actual_metrics = {item.metric_name: item for item in run.metric_results}
+        recomputed_claim_metrics = [
+            *score_citations(run.output or "", claim_result.to_claim_observations()),
+            source_quality_metric(claim_result.to_claim_observations()),
+        ]
+        if any(actual_metrics.get(item.metric_name) != item for item in recomputed_claim_metrics):
+            raise ValueError("full claim-level custom metrics do not reproduce")
+
+    artifact_tokens: dict[str, int] = {}
+    for run in runs:
+        telemetry = run.telemetry
+        if (
+            telemetry.input_tokens is None
+            or telemetry.output_tokens is None
+            or telemetry.total_tokens is None
+            or telemetry.input_tokens + telemetry.output_tokens
+            != telemetry.total_tokens
+        ):
+            raise ValueError("full ExperimentRun contains unknown or inconsistent token usage")
+        artifact_tokens[run.run_id] = telemetry.total_tokens
+    ledger_tokens = {
+        run_id: int(value["committed_tokens"])
+        for run_id, value in normalized_ledger["runs"].items()
+    }
+    if (
+        artifact_tokens != journal_tokens
+        or ledger_tokens != journal_tokens
+        or sum(journal_tokens.values()) != normalized_ledger["committed_tokens"]
+        or normalized_ledger["actual_input_tokens"]
+        + normalized_ledger["actual_output_tokens"]
+        != normalized_ledger["committed_tokens"]
+    ):
+        raise ValueError("full run, journal, and ledger token totals do not agree")
+
+    projection = experiment.get("calibration_projection")
+    if not isinstance(projection, dict):
+        raise ValueError("full experiment has no calibration projection evidence")
+    environment = projection.get("evaluation_environment")
+    source_attestation = projection.get("source_attestation")
+    observed_tokens = projection.get("observed_tokens")
+    projected_tokens = projection.get("projected_tokens")
+    if (
+        projection.get("full_runs") != 54
+        or projection.get("calibration_runs") != int(
+            plan["calibration"]["research_runs"]
+        )
+        or projection.get("requested_max_tokens") != 42_000_000
+        or isinstance(projected_tokens, bool)
+        or not isinstance(projected_tokens, int)
+        or projected_tokens < 1
+        or projected_tokens > 42_000_000
+        or not isinstance(observed_tokens, list)
+        or len(observed_tokens) != int(plan["calibration"]["research_runs"])
+        or any(
+            isinstance(value, bool) or not isinstance(value, int) or value < 0
+            for value in observed_tokens
+        )
+    ):
+        raise ValueError("full calibration projection is incomplete or exceeds its ceiling")
+    if not isinstance(environment, dict):
+        raise ValueError("full calibration projection has no evaluation environment evidence")
+    if (
+        not isinstance(source_attestation, dict)
+        or source_attestation.get("clean") is not True
+        or source_attestation.get("git_head") != identity.git_head
+        or source_attestation.get("checked_paths") != list(EVALUATION_SOURCE_PATHS)
+    ):
+        raise ValueError("full experiment has no matching clean-source attestation")
+    imports = environment.get("import_smoke")
+    packages = environment.get("packages")
+    if (
+        environment.get("python") != "3.11"
+        or environment.get("pip_check") != "passed"
+        or not isinstance(imports, list)
+        or not {
+            "deepeval",
+            "open_deep_research.evaluation.full_runner",
+        }.issubset(set(imports))
+        or not isinstance(packages, dict)
+        or any(packages.get(name) != version for name, version in EXPECTED_PACKAGES.items())
+    ):
+        raise ValueError("full evaluation environment evidence is incomplete or incompatible")
+
+    report = _read_json(output / "report.json")
+    if (
+        report.get("experiment_id") != identity.experiment_id
+        or report.get("mode") != "full"
+        or report.get("status") != "completed"
+        or report.get("full_status") != "completed"
+        or report.get("run_count") != 54
+        or report.get("planned_runs") != 54
+        or report.get("completed_run_records") != 54
+        or report.get("main_run_records") != 45
+        or report.get("warm_run_records") != 9
+        or report.get("stopped_reason") is not None
+        or report.get("token_budget") != normalized_ledger
+        or report.get("calibration_projection") != projection
+        or report.get("claims", {}).get("full_matrix_complete") is not True
+    ):
+        raise ValueError("full report metadata differs from durable run evidence")
+    recomputed = build_full_report(runs)
+    reproduced_keys = set(recomputed) - {"limitations"}
+    if any(report.get(key) != recomputed[key] for key in reproduced_keys):
+        raise ValueError("full report decisions do not reproduce from runs.jsonl")
+    recomputed_limitations = recomputed["limitations"]
+    if report.get("limitations", [])[: len(recomputed_limitations)] != recomputed_limitations:
+        raise ValueError("full report limitations do not preserve computed caveats")
+    if (output / "report.md").read_text(encoding="utf-8") != render_full_report_markdown(
+        report
+    ):
+        raise ValueError("full Markdown report does not reproduce from report.json")
+    decisions = report.get("acceptance")
+    if not isinstance(decisions, dict) or decisions.get(acceptance_id) != "passed":
+        raise ValueError(f"authorized live full evidence does not pass {acceptance_id}")
+    if (
+        manifest.get("experiment_id") != identity.experiment_id
+        or manifest.get("dataset_version") != identity.dataset_id
+        or manifest.get("project_commit") != identity.git_head
+    ):
+        raise ValueError("full manifest metadata differs from the durable identity")
+    return (
+        "authorized live full artifact is reproducible and complete "
+        f"(54 runs, {normalized_ledger['committed_tokens']} tokens); "
+        f"{acceptance_id}=passed"
+    )
 
 
 def validate_phase7(root: Path) -> list[CheckResult]:
@@ -2339,15 +3020,16 @@ def validate_phase7(root: Path) -> list[CheckResult]:
     try:
         suite = _check_phase7_suite(root)
         smoke = _check_phase7_smoke(root)
+        calibration = _check_phase7_calibration(root)
         offline_error: BaseException | None = None
     except BaseException as exc:
-        suite = smoke = ""
+        suite = smoke = calibration = ""
         offline_error = exc
 
     def offline(detail: str) -> str:
         if offline_error is not None:
             raise offline_error
-        return f"{detail}; {suite}; {smoke}"
+        return f"{detail}; {suite}; {smoke}; {calibration}"
 
     checks: dict[str, Callable[[], str]] = {
         "T7-1": lambda: offline("canonical v1 has three cases in every difficulty"),

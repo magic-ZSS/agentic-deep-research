@@ -5,45 +5,45 @@
       "variant_id": "baseline",
       "feature_flags": {"enable_knowledge_base": false, "enable_paperqa_retrieval": false, "enable_knowledge_tools": false, "enable_agentic_rag": false, "enable_knowledge_writeback": false, "enable_memory": false, "enable_memory_writes": false, "citation_validation_mode": "off"},
       "dataset_version": "v1",
-      "model_config": {"summarization_model": "openai:gpt-4.1-mini", "research_model": "openai:gpt-4.1", "compression_model": "openai:gpt-4.1", "final_report_model": "openai:gpt-4.1", "judge_model": "openai:gpt-4.1-mini"},
+      "model_config": {"summarization_model": "env:SUMMARIZATION_MODEL", "research_model": "env:RESEARCH_MODEL", "compression_model": "env:COMPRESSION_MODEL", "final_report_model": "env:FINAL_REPORT_MODEL", "judge_model": "env:EVALUATION_JUDGE_MODEL|fallback:RESEARCH_MODEL"},
       "search_config": {"provider": "tavily", "max_queries_per_call": 3, "max_results_per_query": 3},
-      "budget": {"max_researcher_iterations": 5, "max_react_tool_calls": 5, "timeout_seconds": 900},
+      "budget": {"max_researcher_iterations": 4, "max_react_tool_calls": 4, "timeout_seconds": 900},
       "available_tools": ["ResearchComplete", "think_tool", "tavily_search"]
     },
     {
       "variant_id": "paperqa",
       "feature_flags": {"enable_knowledge_base": true, "enable_paperqa_retrieval": true, "enable_knowledge_tools": true, "enable_agentic_rag": false, "enable_knowledge_writeback": false, "enable_memory": false, "enable_memory_writes": false, "citation_validation_mode": "off"},
       "dataset_version": "v1",
-      "model_config": {"summarization_model": "openai:gpt-4.1-mini", "research_model": "openai:gpt-4.1", "compression_model": "openai:gpt-4.1", "final_report_model": "openai:gpt-4.1", "judge_model": "openai:gpt-4.1-mini"},
+      "model_config": {"summarization_model": "env:SUMMARIZATION_MODEL", "research_model": "env:RESEARCH_MODEL", "compression_model": "env:COMPRESSION_MODEL", "final_report_model": "env:FINAL_REPORT_MODEL", "judge_model": "env:EVALUATION_JUDGE_MODEL|fallback:RESEARCH_MODEL"},
       "search_config": {"provider": "tavily", "max_queries_per_call": 3, "max_results_per_query": 3},
-      "budget": {"max_researcher_iterations": 5, "max_react_tool_calls": 5, "timeout_seconds": 900},
+      "budget": {"max_researcher_iterations": 4, "max_react_tool_calls": 4, "timeout_seconds": 900},
       "available_tools": ["ResearchComplete", "think_tool", "tavily_search", "knowledge_search", "knowledge_read"]
     },
     {
       "variant_id": "agentic_rag",
       "feature_flags": {"enable_knowledge_base": true, "enable_paperqa_retrieval": true, "enable_knowledge_tools": true, "enable_agentic_rag": true, "enable_knowledge_writeback": true, "enable_memory": false, "enable_memory_writes": false, "citation_validation_mode": "off"},
       "dataset_version": "v1",
-      "model_config": {"summarization_model": "openai:gpt-4.1-mini", "research_model": "openai:gpt-4.1", "compression_model": "openai:gpt-4.1", "final_report_model": "openai:gpt-4.1", "judge_model": "openai:gpt-4.1-mini"},
+      "model_config": {"summarization_model": "env:SUMMARIZATION_MODEL", "research_model": "env:RESEARCH_MODEL", "compression_model": "env:COMPRESSION_MODEL", "final_report_model": "env:FINAL_REPORT_MODEL", "judge_model": "env:EVALUATION_JUDGE_MODEL|fallback:RESEARCH_MODEL"},
       "search_config": {"provider": "tavily", "max_queries_per_call": 3, "max_results_per_query": 3},
-      "budget": {"max_researcher_iterations": 5, "max_react_tool_calls": 5, "timeout_seconds": 900},
+      "budget": {"max_researcher_iterations": 4, "max_react_tool_calls": 4, "timeout_seconds": 900},
       "available_tools": ["ResearchComplete", "think_tool", "governed_retrieval"]
     },
     {
       "variant_id": "memory",
       "feature_flags": {"enable_knowledge_base": true, "enable_paperqa_retrieval": true, "enable_knowledge_tools": true, "enable_agentic_rag": true, "enable_knowledge_writeback": true, "enable_memory": true, "enable_memory_writes": true, "citation_validation_mode": "off"},
       "dataset_version": "v1",
-      "model_config": {"summarization_model": "openai:gpt-4.1-mini", "research_model": "openai:gpt-4.1", "compression_model": "openai:gpt-4.1", "final_report_model": "openai:gpt-4.1", "judge_model": "openai:gpt-4.1-mini"},
+      "model_config": {"summarization_model": "env:SUMMARIZATION_MODEL", "research_model": "env:RESEARCH_MODEL", "compression_model": "env:COMPRESSION_MODEL", "final_report_model": "env:FINAL_REPORT_MODEL", "judge_model": "env:EVALUATION_JUDGE_MODEL|fallback:RESEARCH_MODEL"},
       "search_config": {"provider": "tavily", "max_queries_per_call": 3, "max_results_per_query": 3},
-      "budget": {"max_researcher_iterations": 5, "max_react_tool_calls": 5, "timeout_seconds": 900},
+      "budget": {"max_researcher_iterations": 4, "max_react_tool_calls": 4, "timeout_seconds": 900},
       "available_tools": ["ResearchComplete", "think_tool", "governed_retrieval"]
     },
     {
       "variant_id": "citation_validator",
       "feature_flags": {"enable_knowledge_base": true, "enable_paperqa_retrieval": true, "enable_knowledge_tools": true, "enable_agentic_rag": true, "enable_knowledge_writeback": true, "enable_memory": true, "enable_memory_writes": true, "citation_validation_mode": "enforce"},
       "dataset_version": "v1",
-      "model_config": {"summarization_model": "openai:gpt-4.1-mini", "research_model": "openai:gpt-4.1", "compression_model": "openai:gpt-4.1", "final_report_model": "openai:gpt-4.1", "judge_model": "openai:gpt-4.1-mini"},
+      "model_config": {"summarization_model": "env:SUMMARIZATION_MODEL", "research_model": "env:RESEARCH_MODEL", "compression_model": "env:COMPRESSION_MODEL", "final_report_model": "env:FINAL_REPORT_MODEL", "judge_model": "env:EVALUATION_JUDGE_MODEL|fallback:RESEARCH_MODEL"},
       "search_config": {"provider": "tavily", "max_queries_per_call": 3, "max_results_per_query": 3},
-      "budget": {"max_researcher_iterations": 5, "max_react_tool_calls": 5, "timeout_seconds": 900},
+      "budget": {"max_researcher_iterations": 4, "max_react_tool_calls": 4, "timeout_seconds": 900},
       "available_tools": ["ResearchComplete", "think_tool", "governed_retrieval"]
     }
   ]

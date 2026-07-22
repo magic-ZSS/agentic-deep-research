@@ -1,0 +1,9 @@
+name: open-deep-research-eval
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - -c constraints/evaluation-py311.txt
+      - -e .[dev,eval,knowledge,memory]

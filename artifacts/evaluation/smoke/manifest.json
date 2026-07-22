@@ -1,29 +1,29 @@
 {
   "schema_version": "1.0",
-  "experiment_id": "a15ae705ce2c1fdfd94b",
+  "experiment_id": "6088b139518032413089",
   "dataset_version": "v1",
-  "project_commit": "2109d65e4ebcdaace6ff05766456e5fcc114ec7c",
-  "generated_at": "2026-07-21T01:12:55.332743Z",
+  "project_commit": "d8be3f8fe0e6415221777d24b616cbc18be3ae15",
+  "generated_at": "2026-07-22T15:22:43.441790Z",
   "files": [
     {
       "path": "experiment.json",
-      "sha256": "7736d87ad2e4869c86fc576216ef1556db02bf4b8d5f9c8bbce7b3a480268ca6",
-      "size_bytes": 6058
+      "sha256": "56a562580b87550729b7149f868a0d578557c2c1fb72c1d56cd69f2ce2243ea9",
+      "size_bytes": 6744
     },
     {
       "path": "report.json",
-      "sha256": "981dd4fdfdd52fd8fabe01870e914d0f3b7c83e707c361caeb7b3218bb5d282a",
-      "size_bytes": 3899
+      "sha256": "4735071b02129a3a2ecb9fa195e33a87bd73c53d24a98b2d7487282d9da1b06c",
+      "size_bytes": 3707
     },
     {
       "path": "report.md",
-      "sha256": "4c7b68da749aaa2c1e32a243066557dcda01301e37911d67251f02cedd310721",
-      "size_bytes": 1009
+      "sha256": "9f302571bdf2bb7a732bd9ff4a43bb079c824079aac1b8d60be8a3e285ed44ab",
+      "size_bytes": 982
     },
     {
       "path": "runs.jsonl",
-      "sha256": "898754326e52ea1b23139264a5d2bab973f44dc792225ab534fbe68b3261b040",
-      "size_bytes": 77424
+      "sha256": "e7d6034379f63e212afe4d8c81dada24ef3ed61730b111dc6a57df0285709586",
+      "size_bytes": 101364
     }
   ]
 }

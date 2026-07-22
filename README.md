@@ -82,6 +82,11 @@ See the fields in the [configuration.py](https://github.com/langchain-ai/open_de
 
 ### 📊 Evaluation
 
+There are two separate evaluation paths:
+
+- The new default for this repository is the local, resumable 54-run Phase 7 workflow documented in [docs/phase7-local-full-evaluation.md](docs/phase7-local-full-evaluation.md). Local artifacts are authoritative and LangSmith tracking is optional.
+- `tests/run_evaluate.py` below is the legacy Deep Research Bench/LangSmith workflow. It is not the Phase 7 execution engine and may incur substantial external cost.
+
 Open Deep Research is configured for evaluation with [Deep Research Bench](https://huggingface.co/spaces/Ayanami0730/DeepResearch-Leaderboard). This benchmark has 100 PhD-level research tasks (50 English, 50 Chinese), crafted by domain experts across 22 fields (e.g., Science & Tech, Business & Finance) to mirror real-world deep-research needs. It has 2 evaluation metrics, but the leaderboard is based on the RACE score. This uses LLM-as-a-judge (Gemini) to evaluate research reports against a golden set of reports compiled by experts across a set of metrics.
 
 #### Usage
@@ -151,7 +156,7 @@ The `src/legacy/` folder contains two earlier implementations that provide alter
 <!-- phase7-eval:start -->
 ### Evidence-governed evaluation (generated)
 
-Latest committed artifact mode: `smoke`. Smoke validates contracts only; it is not evidence of live quality uplift or cost savings.
+Latest source-bound local artifact mode: `smoke`. Smoke validates contracts only; it is not evidence of live quality uplift or cost savings.
 
 | Variant | Runs | Contract passes |
 |---|---:|---:|

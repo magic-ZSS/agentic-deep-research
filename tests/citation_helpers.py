@@ -19,15 +19,15 @@ from open_deep_research.evidence.run_store import (
 from open_deep_research.knowledge.in_memory_repository import InMemoryRepository
 from open_deep_research.knowledge.models import (
     AuthorityClass,
+    Chunk,
     ChunkInput,
     ChunkLocatorType,
     ContentBlob,
     Document,
     DocumentVersion,
-    Source,
-    Chunk,
     KnowledgeAccessContext,
     KnowledgeScope,
+    Source,
     SourceKind,
     VersionLifecycleStatus,
     Visibility,
@@ -211,7 +211,10 @@ async def seed_transient(
         version=version,
         chunk=chunk,
         evidence=evidence,
-        ttl=timedelta(hours=1),
+        # The evidence validity interval is evaluated against the fixed NOW
+        # fixture.  Keep the run-store TTL far enough in the future that the
+        # deterministic fixture does not expire according to wall-clock time.
+        ttl=timedelta(days=36_500),
         now=NOW,
     )
     await store.put(context, bundle)

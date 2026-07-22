@@ -140,7 +140,7 @@ module = [
 ignore_errors = true
 
 [tool.pytest.ini_options]
-addopts = "-p no:deepeval -p no:cacheprovider --basetemp=.pytest-tmp"
+addopts = "-p no:deepeval -p no:langsmith_plugin -p no:cacheprovider --basetemp=.pytest-tmp"
 testpaths = ["tests"]
 norecursedirs = ["doc/reference", "artifacts", ".git", ".venv", "venv"]
 markers = [

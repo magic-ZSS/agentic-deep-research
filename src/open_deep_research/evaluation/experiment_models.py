@@ -95,6 +95,9 @@ class ExperimentMetricResult(EvaluationStrictModel):
     deterministic: bool
     judge_model: str | None = None
     estimated_cost_usd: float | None = Field(default=None, ge=0)
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
+    total_tokens: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def validate_status(self) -> ExperimentMetricResult:
@@ -113,8 +116,17 @@ class ExperimentTelemetry(EvaluationStrictModel):
     input_tokens: int | None = Field(default=None, ge=0)
     output_tokens: int | None = Field(default=None, ge=0)
     total_tokens: int | None = Field(default=None, ge=0)
+    research_input_tokens: int | None = Field(default=None, ge=0)
+    research_output_tokens: int | None = Field(default=None, ge=0)
+    research_total_tokens: int | None = Field(default=None, ge=0)
+    judge_input_tokens: int | None = Field(default=None, ge=0)
+    judge_output_tokens: int | None = Field(default=None, ge=0)
+    judge_total_tokens: int | None = Field(default=None, ge=0)
+    retry_tokens: int | None = Field(default=None, ge=0)
     estimated_cost_usd: float | None = Field(default=None, ge=0)
     wall_time_ms: float | None = Field(default=None, ge=0)
+    research_model_calls: int | None = Field(default=None, ge=0)
+    judge_model_calls: int | None = Field(default=None, ge=0)
     tool_calls_by_name: dict[str, int] = Field(default_factory=dict)
     search_calls: int | None = Field(default=None, ge=0)
     researcher_runs: int | None = Field(default=None, ge=0)
@@ -130,7 +142,7 @@ class ExperimentRun(EvaluationStrictModel):
     case_id: str
     difficulty: str
     repeat: int = Field(ge=1)
-    mode: Literal["smoke", "full"]
+    mode: Literal["smoke", "calibration", "full"]
     project_commit: str = Field(pattern=r"^[0-9a-f]{40}$")
     dataset_version: str
     scorer_version: str

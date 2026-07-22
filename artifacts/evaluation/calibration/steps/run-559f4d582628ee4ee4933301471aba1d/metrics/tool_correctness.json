@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-559f4d582628ee4ee4933301471aba1d",
+  "metric_name": "tool_correctness",
+  "duration_ms": 3344.3277000333183,
+  "result": {
+    "metric_name": "tool_correctness",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "[\n\t Tool Calling Reason: Incomplete tool usage: missing tools []; expected [], called ['tavily_search', 'think_tool', 'tavily_search']. See more details above.\n\t Tool Selection Reason: The agent selected `tavily_search`, a web search tool, to analyze a specific local project's files, which is fundamentally misaligned with the task requirement to verify facts directly from project files. The available tools lack any filesystem access capabilities (e.g., `read_file`, `list_dir`), making it impossible to fulfill the user's request regardless of search results. While the agent correctly identified this limitation in its reasoning, the initial selection of a search tool for a local file inspection task constitutes a poor tool choice.\n]\n",
+    "deterministic": false,
+    "judge_model": null,
+    "estimated_cost_usd": null,
+    "input_tokens": 8309,
+    "output_tokens": 124,
+    "total_tokens": 8433
+  }
+}

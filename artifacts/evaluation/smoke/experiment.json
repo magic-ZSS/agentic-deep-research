@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "experiment_id": "a15ae705ce2c1fdfd94b",
+  "experiment_id": "6088b139518032413089",
   "mode": "smoke",
   "dataset_version": "v1",
   "canonical_cases": "tests/baseline/cases.jsonl",
@@ -20,11 +20,11 @@
       },
       "dataset_version": "v1",
       "model_settings": {
-        "summarization_model": "openai:gpt-4.1-mini",
-        "research_model": "openai:gpt-4.1",
-        "compression_model": "openai:gpt-4.1",
-        "final_report_model": "openai:gpt-4.1",
-        "judge_model": "openai:gpt-4.1-mini"
+        "summarization_model": "env:SUMMARIZATION_MODEL",
+        "research_model": "env:RESEARCH_MODEL",
+        "compression_model": "env:COMPRESSION_MODEL",
+        "final_report_model": "env:FINAL_REPORT_MODEL",
+        "judge_model": "env:EVALUATION_JUDGE_MODEL|fallback:RESEARCH_MODEL"
       },
       "search_config": {
         "provider": "tavily",
@@ -32,8 +32,8 @@
         "max_results_per_query": 3
       },
       "budget": {
-        "max_researcher_iterations": 5,
-        "max_react_tool_calls": 5,
+        "max_researcher_iterations": 4,
+        "max_react_tool_calls": 4,
         "timeout_seconds": 900
       },
       "available_tools": [
@@ -56,11 +56,11 @@
       },
       "dataset_version": "v1",
       "model_settings": {
-        "summarization_model": "openai:gpt-4.1-mini",
-        "research_model": "openai:gpt-4.1",
-        "compression_model": "openai:gpt-4.1",
-        "final_report_model": "openai:gpt-4.1",
-        "judge_model": "openai:gpt-4.1-mini"
+        "summarization_model": "env:SUMMARIZATION_MODEL",
+        "research_model": "env:RESEARCH_MODEL",
+        "compression_model": "env:COMPRESSION_MODEL",
+        "final_report_model": "env:FINAL_REPORT_MODEL",
+        "judge_model": "env:EVALUATION_JUDGE_MODEL|fallback:RESEARCH_MODEL"
       },
       "search_config": {
         "provider": "tavily",
@@ -68,8 +68,8 @@
         "max_results_per_query": 3
       },
       "budget": {
-        "max_researcher_iterations": 5,
-        "max_react_tool_calls": 5,
+        "max_researcher_iterations": 4,
+        "max_react_tool_calls": 4,
         "timeout_seconds": 900
       },
       "available_tools": [
@@ -94,11 +94,11 @@
       },
       "dataset_version": "v1",
       "model_settings": {
-        "summarization_model": "openai:gpt-4.1-mini",
-        "research_model": "openai:gpt-4.1",
-        "compression_model": "openai:gpt-4.1",
-        "final_report_model": "openai:gpt-4.1",
-        "judge_model": "openai:gpt-4.1-mini"
+        "summarization_model": "env:SUMMARIZATION_MODEL",
+        "research_model": "env:RESEARCH_MODEL",
+        "compression_model": "env:COMPRESSION_MODEL",
+        "final_report_model": "env:FINAL_REPORT_MODEL",
+        "judge_model": "env:EVALUATION_JUDGE_MODEL|fallback:RESEARCH_MODEL"
       },
       "search_config": {
         "provider": "tavily",
@@ -106,8 +106,8 @@
         "max_results_per_query": 3
       },
       "budget": {
-        "max_researcher_iterations": 5,
-        "max_react_tool_calls": 5,
+        "max_researcher_iterations": 4,
+        "max_react_tool_calls": 4,
         "timeout_seconds": 900
       },
       "available_tools": [
@@ -130,11 +130,11 @@
       },
       "dataset_version": "v1",
       "model_settings": {
-        "summarization_model": "openai:gpt-4.1-mini",
-        "research_model": "openai:gpt-4.1",
-        "compression_model": "openai:gpt-4.1",
-        "final_report_model": "openai:gpt-4.1",
-        "judge_model": "openai:gpt-4.1-mini"
+        "summarization_model": "env:SUMMARIZATION_MODEL",
+        "research_model": "env:RESEARCH_MODEL",
+        "compression_model": "env:COMPRESSION_MODEL",
+        "final_report_model": "env:FINAL_REPORT_MODEL",
+        "judge_model": "env:EVALUATION_JUDGE_MODEL|fallback:RESEARCH_MODEL"
       },
       "search_config": {
         "provider": "tavily",
@@ -142,8 +142,8 @@
         "max_results_per_query": 3
       },
       "budget": {
-        "max_researcher_iterations": 5,
-        "max_react_tool_calls": 5,
+        "max_researcher_iterations": 4,
+        "max_react_tool_calls": 4,
         "timeout_seconds": 900
       },
       "available_tools": [
@@ -166,11 +166,11 @@
       },
       "dataset_version": "v1",
       "model_settings": {
-        "summarization_model": "openai:gpt-4.1-mini",
-        "research_model": "openai:gpt-4.1",
-        "compression_model": "openai:gpt-4.1",
-        "final_report_model": "openai:gpt-4.1",
-        "judge_model": "openai:gpt-4.1-mini"
+        "summarization_model": "env:SUMMARIZATION_MODEL",
+        "research_model": "env:RESEARCH_MODEL",
+        "compression_model": "env:COMPRESSION_MODEL",
+        "final_report_model": "env:FINAL_REPORT_MODEL",
+        "judge_model": "env:EVALUATION_JUDGE_MODEL|fallback:RESEARCH_MODEL"
       },
       "search_config": {
         "provider": "tavily",
@@ -178,8 +178,8 @@
         "max_results_per_query": 3
       },
       "budget": {
-        "max_researcher_iterations": 5,
-        "max_react_tool_calls": 5,
+        "max_researcher_iterations": 4,
+        "max_react_tool_calls": 4,
         "timeout_seconds": 900
       },
       "available_tools": [
@@ -189,7 +189,26 @@
       ]
     }
   ],
-  "scorer_version": "evaluation-claim-scorer-v1",
+  "scorer_version": "evaluation-claim-scorer-v3",
+  "source_snapshot": {
+    "git_head": "d8be3f8fe0e6415221777d24b616cbc18be3ae15",
+    "source_sha256": "67446f46bef1838f1421c15813545682b8a358732626368d80f7251d9c4c2eef",
+    "clean": false,
+    "checked_paths": [
+      "src/open_deep_research",
+      "scripts/run_eval.py",
+      "scripts/validate_phase.py",
+      "scripts/compare_ablations.py",
+      "scripts/render_eval_report.py",
+      "tests/evaluation",
+      "tests/baseline/cases.jsonl",
+      "pyproject.toml",
+      "langgraph.json",
+      "environment.phase7.yml",
+      "constraints/evaluation-py311.txt"
+    ],
+    "untracked_file_count": 39
+  },
   "claims": {
     "live_quality": false,
     "citation_uplift": false,

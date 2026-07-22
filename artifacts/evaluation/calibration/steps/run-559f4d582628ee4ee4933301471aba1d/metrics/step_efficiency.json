@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-559f4d582628ee4ee4933301471aba1d",
+  "metric_name": "step_efficiency",
+  "duration_ms": 9301.695900037885,
+  "result": {
+    "metric_name": "step_efficiency",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.0,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The agent performed two unnecessary web searches for generic documentation instead of recognizing it lacked access to the specific local project files. It failed to identify the fundamental impossibility of the task given its tool constraints, resulting in wasted resources and no valid output.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 18986,
+    "output_tokens": 123,
+    "total_tokens": 19109
+  }
+}

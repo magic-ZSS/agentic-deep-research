@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-5891a3d2eb636cbea263dad41bbafeb5",
+  "metric_name": "tool_correctness",
+  "duration_ms": 2437.6410000259057,
+  "result": {
+    "metric_name": "tool_correctness",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.25,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "[\n\t Tool Calling Reason: All expected tools ['governed_retrieval'] were called (order not considered).\n\t Tool Selection Reason: The agent correctly identified the need to inspect project files but failed to select appropriate tools, as all available tools have null descriptions and the chosen 'governed_retrieval' repeatedly failed. The agent's reflection mentions using 'tavily_search', which is not in the list of available tools, indicating a mis-selection or hallucination of tool capabilities.\n]\n",
+    "deterministic": false,
+    "judge_model": null,
+    "estimated_cost_usd": null,
+    "input_tokens": 1800,
+    "output_tokens": 90,
+    "total_tokens": 1890
+  }
+}

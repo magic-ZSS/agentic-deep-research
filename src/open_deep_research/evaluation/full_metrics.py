@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from open_deep_research.evaluation.claim_scorer import CLAIM_SCORER_STEP_NAME
 from open_deep_research.evaluation.deepeval_adapter import (
     DeepEvalUnavailableError,
     _guarded_deepeval_import,
@@ -24,8 +25,15 @@ FULL_METRIC_NAMES = (
     "contextual_recall",
 )
 
+# DeepEval contributes the seven public metrics above.  Claim/citation scoring
+# is a separate paid Qwen step so its result can be checkpointed and resumed
+# without replaying either DeepEval or research calls.
+FULL_JUDGE_STEP_NAMES = (*FULL_METRIC_NAMES, CLAIM_SCORER_STEP_NAME)
 
-def build_full_metrics(*, judge_model: str) -> list[Any]:
+
+def build_full_metrics(
+    *, judge_model: Any, available_tool_names: list[str] | None = None
+) -> list[Any]:
     """Construct all paid metrics lazily with platform upload disabled by adapter guards."""
     if deepeval_version() != "4.1.1":
         raise DeepEvalUnavailableError("full metrics require deepeval==4.1.1")
@@ -39,10 +47,17 @@ def build_full_metrics(*, judge_model: str) -> list[Any]:
             TaskCompletionMetric,
             ToolCorrectnessMetric,
         )
+        from deepeval.test_case import ToolCall  # type: ignore[import-not-found]
 
         return [
             TaskCompletionMetric(model=judge_model),
-            ToolCorrectnessMetric(model=judge_model),
+            ToolCorrectnessMetric(
+                model=judge_model,
+                available_tools=[
+                    ToolCall(name=name, input_parameters={})
+                    for name in (available_tool_names or [])
+                ],
+            ),
             StepEfficiencyMetric(model=judge_model),
             PlanAdherenceMetric(model=judge_model),
             FaithfulnessMetric(model=judge_model),
@@ -51,7 +66,13 @@ def build_full_metrics(*, judge_model: str) -> list[Any]:
         ]
 
 
-def metric_result_from_deepeval(metric: Any, *, plan_present: bool) -> ExperimentMetricResult:
+def metric_result_from_deepeval(
+    metric: Any,
+    *,
+    plan_present: bool,
+    input_tokens: int | None = None,
+    output_tokens: int | None = None,
+) -> ExperimentMetricResult:
     """Project one DeepEval metric while enforcing the missing-plan hard gate."""
     name = metric.__class__.__name__.removesuffix("Metric")
     normalized = "".join(("_" + char.lower()) if char.isupper() else char for char in name).lstrip("_")
@@ -75,6 +96,13 @@ def metric_result_from_deepeval(metric: Any, *, plan_present: bool) -> Experimen
         deterministic=False,
         judge_model=getattr(metric, "evaluation_model", None),
         estimated_cost_usd=getattr(metric, "evaluation_cost", None),
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        total_tokens=(
+            input_tokens + output_tokens
+            if input_tokens is not None and output_tokens is not None
+            else None
+        ),
     )
 
 

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-559f4d582628ee4ee4933301471aba1d",
+  "metric_name": "contextual_precision",
+  "duration_ms": 16906.749600020703,
+  "result": {
+    "metric_name": "contextual_precision",
+    "metric_version": "deepeval-4.1.1",
+    "score": 0.1,
+    "threshold": 0.5,
+    "status": "failed",
+    "reason": "The score is 0.10 because the only relevant node in retrieval contexts appears at rank 10, while the first nine nodes are irrelevant nodes. Specifically, the first node is irrelevant because 'The context discusses PhpStorm directory structures for PHP projects, which is irrelevant to the Python/Conda/LangGraph specific question.', and subsequent irrelevant nodes like the second node fail because 'The context describes a generic project directory structure without mentioning Python, Conda, or the specific constraints requested.' This poor ranking of irrelevant nodes before the single relevant result significantly lowers the precision.",
+    "deterministic": false,
+    "judge_model": "openai:qwen3.7-plus",
+    "estimated_cost_usd": null,
+    "input_tokens": 7833,
+    "output_tokens": 871,
+    "total_tokens": 8704
+  }
+}

@@ -1,8 +1,24 @@
 import asyncio
 import json
+import sys
+import types
+import uuid
 from pathlib import Path
 
 import pytest
+
+# These offline registry tests do not exercise UUIDv7 semantics. Keep the
+# compatibility shim local so the paid-environment import smoke remains strict.
+try:
+    import uuid_utils  # noqa: F401
+except ImportError:
+    uuid_fallback = types.ModuleType("uuid_utils")
+    uuid_compat = types.ModuleType("uuid_utils.compat")
+    uuid_fallback.uuid7 = uuid.uuid4
+    uuid_fallback.compat = uuid_compat
+    uuid_compat.uuid7 = uuid.uuid4
+    sys.modules["uuid_utils"] = uuid_fallback
+    sys.modules["uuid_utils.compat"] = uuid_compat
 
 from open_deep_research.evaluation.dataset import (
     merge_evaluation_dataset,

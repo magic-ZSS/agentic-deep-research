@@ -24,6 +24,25 @@ def test_unreferenced_checkable_claim_cannot_receive_false_full_score():
     assert hashlib.sha256(output.encode()).hexdigest() == digest
 
 
+def test_zero_citations_fail_completeness_even_if_observation_claims_support():
+    results = score_citations(
+        "An uncited factual claim.",
+        [
+            ClaimObservation(
+                "c1",
+                True,
+                citation_ids=(),
+                validation_status="fully_supported",
+                evidence_valid=True,
+                source_authority="official",
+            )
+        ],
+    )
+
+    assert results[0].score == 0
+    assert results[1].score == 0
+
+
 def test_claim_statuses_are_scored_independently():
     claims = [
         ClaimObservation("a", True, (1,), "fully_supported", True, "official"),
@@ -58,6 +77,18 @@ def test_memory_and_cost_metrics_preserve_hard_errors_and_unknowns():
     assert memory_reuse_metric(
         useful_hits=2, eligible_cases=4, cross_namespace_errors=1, stale_recalls=0
     ).score == 0
-    assert cost_completeness_metric(tokens=None, cost=None).score == 1
-    assert cost_completeness_metric(tokens=10, cost=None).score == 0
-
+    assert cost_completeness_metric(
+        tokens=None, cost=None, pricing_available=False
+    ).score == 1
+    assert cost_completeness_metric(
+        tokens=10, cost=None, pricing_available=False
+    ).score == 1
+    assert cost_completeness_metric(
+        tokens=10, cost=None, pricing_available=True
+    ).score == 0
+    assert cost_completeness_metric(
+        tokens=10, cost=0.01, pricing_available=True
+    ).score == 1
+    assert cost_completeness_metric(
+        tokens=10, cost=0.01, pricing_available=False
+    ).score == 0

@@ -1,0 +1,105 @@
+{
+  "schema_version": "1.0",
+  "calibration_identity": {
+    "schema_version": "1.0",
+    "experiment_id": "cal-34e1ee27efd02bab2423df3b516472d2",
+    "git_head": "d8be3f8fe0e6415221777d24b616cbc18be3ae15",
+    "dirty_diff_sha256": "2dfd9e86f10ee91b5228c11be4fd063b86ad77ca05ec858d9569b0895ffa8a59",
+    "plan_sha256": "b05bbb22b74ee5beda3cc96a3c38b515e958ee900dabd662b1d3762ad3086983",
+    "ablation_sha256": "8e4020a458085e53b10b3a2f60f8d083c1d17ab56674e13b8f8aa314616ef68c",
+    "dataset_id": "v1",
+    "model_ids": {
+      "compression": "openai:qwen3.7-plus",
+      "final_report": "openai:qwen3.7-plus",
+      "judge": "openai:qwen3.7-plus",
+      "research": "openai:qwen3.7-plus",
+      "summarization": "openai:qwen3.7-plus"
+    }
+  },
+  "ledger": {
+    "schema_version": "1.1",
+    "revision": 276,
+    "hard_token_limit": 3000000,
+    "per_run_token_limit": 800000,
+    "committed_tokens": 632627,
+    "active_reserved_tokens": 0,
+    "accounted_tokens": 632627,
+    "remaining_tokens": 2367373,
+    "actual_input_tokens": 561343,
+    "actual_output_tokens": 71284,
+    "unknown_charged_tokens": 0,
+    "unknown_usage": false,
+    "fail_closed": true,
+    "fail_closed_reason": "actual_usage_exceeded_reservation",
+    "error_count": 1,
+    "dispatched_calls": 138,
+    "settled_calls": 138,
+    "error_calls": 1,
+    "active_calls": 0,
+    "categories": {
+      "research": {
+        "committed_tokens": 516605,
+        "actual_input_tokens": 450332,
+        "actual_output_tokens": 66273,
+        "active_reserved_tokens": 0,
+        "dispatched_calls": 106,
+        "settled_calls": 106,
+        "error_calls": 1,
+        "active_calls": 0
+      },
+      "judge": {
+        "committed_tokens": 116022,
+        "actual_input_tokens": 111011,
+        "actual_output_tokens": 5011,
+        "active_reserved_tokens": 0,
+        "dispatched_calls": 32,
+        "settled_calls": 32,
+        "error_calls": 0,
+        "active_calls": 0
+      },
+      "retry": {
+        "committed_tokens": 0,
+        "actual_input_tokens": 0,
+        "actual_output_tokens": 0,
+        "active_reserved_tokens": 0,
+        "dispatched_calls": 0,
+        "settled_calls": 0,
+        "error_calls": 0,
+        "active_calls": 0
+      }
+    },
+    "runs": {
+      "run-559f4d582628ee4ee4933301471aba1d": {
+        "committed_tokens": 199752,
+        "active_reserved_tokens": 0,
+        "accounted_tokens": 199752,
+        "remaining_tokens": 600248,
+        "dispatched_calls": 39,
+        "settled_calls": 39,
+        "error_calls": 0,
+        "active_calls": 0
+      },
+      "run-5891a3d2eb636cbea263dad41bbafeb5": {
+        "committed_tokens": 74731,
+        "active_reserved_tokens": 0,
+        "accounted_tokens": 74731,
+        "remaining_tokens": 725269,
+        "dispatched_calls": 31,
+        "settled_calls": 31,
+        "error_calls": 0,
+        "active_calls": 0
+      },
+      "run-6c62856486a15fd6a6a8c8e6b24dea9d": {
+        "committed_tokens": 358144,
+        "active_reserved_tokens": 0,
+        "accounted_tokens": 358144,
+        "remaining_tokens": 441856,
+        "dispatched_calls": 68,
+        "settled_calls": 68,
+        "error_calls": 1,
+        "active_calls": 0
+      }
+    },
+    "active_reservations": []
+  }
+}

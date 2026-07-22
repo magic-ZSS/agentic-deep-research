@@ -27,7 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     report = json.loads(args.input.read_text(encoding="utf-8"))
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(render_markdown(report), encoding="utf-8")
+    args.output.write_bytes(render_markdown(report).encode("utf-8"))
     if args.readme is not None:
         update_readme_from_report(args.readme, report)
     return 0
