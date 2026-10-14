@@ -7,7 +7,7 @@ authors = [
 ]
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "langgraph>=0.5.4",
     "langchain-community>=0.3.9",
@@ -48,48 +48,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["mypy>=1.11.1", "ruff>=0.6.1"]
-eval = ["deepeval==4.1.1"]
-knowledge = [
-    "paper-qa==2026.3.18",
-    "paper-qa-pypdf==2026.3.18",
-    "tantivy==0.26.0",
-    "fhaviary==0.34.0",
-    "fhlmi==0.45.0",
-    "litellm==1.82.4",
-]
-memory = [
-    "langgraph-checkpoint-sqlite==3.1.0",
-    "langmem==0.0.30",
-]
 
 [build-system]
 requires = ["setuptools>=73.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = [
-    "open_deep_research",
-    "open_deep_research.evaluation",
-    "open_deep_research.knowledge",
-    "open_deep_research.knowledge.ingestion",
-    "open_deep_research.knowledge.ingestion.parsers",
-    "open_deep_research.knowledge.lifecycle",
-    "open_deep_research.knowledge.retrieval",
-    "open_deep_research.knowledge.validation",
-    "open_deep_research.evidence",
-    "open_deep_research.evidence.validation",
-    "open_deep_research.reporting",
-    "open_deep_research.research",
-    "open_deep_research.storage",
-    "open_deep_research.storage.migrations",
-    "open_deep_research.tools",
-    "open_deep_research.mcp",
-    "open_deep_research.mcp_servers",
-    "open_deep_research.runtime",
-    "open_deep_research.memory",
-    "legacy",
-    "tests",
-]
+packages = ["open_deep_research", "legacy", "tests"]
 
 [tool.setuptools.package-dir]
 "open_deep_research" = "src/open_deep_research"
@@ -119,33 +84,6 @@ lint.ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D", "UP"]
-"src/open_deep_research/evidence/models.py" = ["D102"]
-"src/open_deep_research/evidence/run_store.py" = ["D102", "D107"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
-
-[tool.mypy]
-mypy_path = "src"
-namespace_packages = true
-explicit_package_bases = true
-
-[[tool.mypy.overrides]]
-module = [
-    "open_deep_research.configuration",
-    "open_deep_research.knowledge.*",
-    "open_deep_research.evidence.models",
-    "open_deep_research.evidence.run_store",
-]
-ignore_errors = true
-
-[tool.pytest.ini_options]
-addopts = "-p no:deepeval -p no:langsmith_plugin -p no:cacheprovider --basetemp=.pytest-tmp"
-testpaths = ["tests"]
-norecursedirs = ["doc/reference", "artifacts", ".git", ".venv", "venv"]
-markers = [
-    "smoke: deterministic offline evaluation tests",
-    "live: tests that may call external models or search services",
-    "full_eval: high-cost or LLM-judge evaluation tests",
-    "windows_stdio: local fixed-package Windows MCP subprocess smoke",
-]

@@ -1,125 +1,90 @@
 # 会话进度记录
 
-## 当前状态
+## 当前状态（Current State）
 
-**最后更新：** 2026-07-23
+**最后更新（Last Updated）：** 2026-07-09
+**当前功能：** `process-trace-001`
+**状态：** completed
 
-**当前功能：** `phase-7-evaluation-showcase-001`
+## 已完成（What's Done）
 
-**状态：** in-progress（本地 full 执行与验收框架已完成；真实 calibration/full 尚未重新授权执行）
+- 新增 `Configuration.print_process_info`，默认值为 `False`，OAP UI metadata 为 boolean；可通过 `PRINT_PROCESS_INFO=true` 或 runnable config 开启。
+- 在 `src/open_deep_research/utils.py` 新增集中 trace helper：
+  - `process_print_enabled(config)`
+  - `process_print(config, event, name, title=None, round_id=None, item_id=None, concurrency_id=None, tools=None)`
+  - `next_process_id(config, prefix)`
+  - `with_process_context(config, **context)`
+- trace 输出使用短分隔块和 `print()`；统一截断 title 到 80 字、brief 到 240 字。
+- 在主流程插入精简 trace 点：
+  - `write_research_brief`：打印短版 research brief。
+  - `supervisor`：打印 supervisor 轮次、tool call 数量和工具名。
+  - `supervisor_tools`：为并发 `ConductResearch` 子图注入 `supervisor:N/researcher:M` context。
+  - `researcher`：打印 researcher 轮次、工具名和 research topic 短标题。
+  - `researcher_tools`：为并发工具调用注入 `researcher:N/tool:M` context。
+  - `tavily_search`：每次搜索完成后打印 `S0` 风格 search id 和首个 query 短标题。
+  - `summarize_webpage`：每个 source 摘要前打印 `S0.0` 风格 summary id、父 search id 和 source title/URL。
+  - `compress_research`：压缩前打印 compression id、topic 和 researcher context。
+  - `final_report_generation`：最终报告生成前打印一次，不输出报告正文。
+- 扩展 `tests/test_research_limits.py`，覆盖 helper 默认静默、开启后的格式、fake Tavily/search summary trace、fake researcher tool call trace。
+- 局部更新 `docs/codebase/STACK.md`、`ARCHITECTURE.md`、`CONVENTIONS.md`、`TESTING.md`，记录新增配置、trace 架构和测试入口。
 
-## 阶段门禁
+## 设计决定（Decisions）
 
-- 阶段 0–5 均保持 `completed`。
-- 开始阶段 6 前运行 `scripts/validate_phase.py --phase 5`，退出码 0；T5-1 至 T5-16 全部 PASS。
-- 阶段 6 最终运行 `scripts/validate_phase.py --phase 6`，退出码 0；T6-1 至 T6-18 全部 PASS。
-- 未下载 STORM、OpenFactVerification 或 FIRE；未调用真实模型、Web、LangSmith、Deep Research Bench 或 LLM Judge。
+- 使用 `print()` 而不是切换到 logging；唯一直接 `print()` 集中在 `process_print`，并用 `# noqa: T201` 标注。
+- 默认关闭，不改变现有运行输出。
+- 不打印搜索结果正文、summary 正文、compression 正文或 final report 正文。
+- trace context 只通过 `RunnableConfig["configurable"]` 下的私有 `_process_context` / `_process_counters` 传递，不写入 graph state。
+- 本次只做流程可视化，不处理 token budget、错误停止、摘要超时策略或 provider-aware throttling/backoff。
 
-## Phase 7 本地完整评测实现（2026-07-22）
+## 本次修改文件（Files Modified This Session）
 
-### 终端失败诊断与费用安全修复（2026-07-23）
+- `src/open_deep_research/configuration.py`
+- `src/open_deep_research/utils.py`
+- `src/open_deep_research/deep_researcher.py`
+- `tests/test_research_limits.py`
+- `docs/codebase/STACK.md`
+- `docs/codebase/ARCHITECTURE.md`
+- `docs/codebase/CONVENTIONS.md`
+- `docs/codebase/TESTING.md`
+- `feature_list.json`
+- `progress.md`
+- `session-handoff.md`
 
-- 已读取并保留 `artifacts/evaluation/calibration-current/`：6 个计划 run 中 2 个 completed，第 3 个 `medium-001/baseline` terminal failed，剩余 3 个未派发。账本 committed 973,999 Token（input 857,144、output 86,003、unknown charged 30,852），以 `model_call_error:LengthFinishReasonError` fail closed。
-- 根因是旧 `evaluation-claim-scorer-v3` 要求 Qwen 在单次 2,048 output-token 上限内回传 36 个 Claim 的原文、引用与分类，结构化结果被截断；不是 `.env` 模型选择或 API Key 错误。
-- `evaluation-claim-scorer-v4` 固定每批 6 Claim，Judge 只返回 global ordinal 与分类；文本和 citation IDs 由本地投影持有。真实失败报告离线解析为 36 candidates、17 bibliography source，6 个 provider batch；Tavily/governed context 只按 canonical URL 或 Evidence ID 绑定，歧义 fail closed。
-- 单 run scorer 固定最多 22 provider call（132 candidates）。HTML/不支持结构和候选上限均在构造或调用 7 个 DeepEval Judge 前做无模型 preflight；Markdown table 行可稳定覆盖。`ClaimScorerCoverageError`/`ClaimScorerResponseError` 立即停止，不继续派发下一 run。
-- `LengthFinishReasonError` 等供应商异常若携带完整 completion usage，sync/async 与 plain/structured 路径都会精确结算后继续抛出；usage 真正缺失时仍按 unknown fail closed。
-- terminal failed run 现在令 core journal `can_resume=false`；calibration/full direct resume 与 Windows wrapper 都在新付费调用前拒绝。默认新目录为 `artifacts/evaluation/calibration-v4`；`calibration-current` 不修改、不删除、不得恢复。
-- 离线聚焦回归最终 `95 passed`；另有费用安全快速回归 `6 passed`。Ruff、compileall、PowerShell parser 通过；`--follow-imports=skip` 隔离 Mypy 3 个核心修改文件通过。更宽 Mypy 仍被既有跨模块 73 个错误阻塞，本轮未冒充通过。
-- smoke 已离线重建为 45 records、`evaluation-claim-scorer-v4`，source snapshot `c5b0341cdf83...`。Phase 7 validator 仍仅 T7-3/4/6/9 因缺少真实 full artifact FAIL，其余 PASS；本次排障没有调用 Qwen、Tavily、DeepEval Judge 或 LangSmith。
+## 验证证据（Verification Evidence）
 
-### 当前环境依赖修复（2026-07-23）
+- `conda run --no-capture-output -n open-deep-research python -m compileall -q src tests/test_research_limits.py`：通过。
+- `conda run --no-capture-output -n open-deep-research python -m pytest -q tests/test_research_limits.py`：通过，`7 passed`；仅有既有 Pydantic/LangGraph deprecation warnings 和 `.pytest_cache` WinError 5 warning。
+- `bash ./init.sh`：沙箱内失败，输出 `Bash/Service/CreateInstance/E_ACCESSDENIED`。
+- `bash ./init.sh`（沙箱外批准运行）：返回 0，但仍混入 mojibake、CRLF/WSL 输出、`set: -\r: invalid option`、`python: command not found`；不能作为干净通过证据。
+- `Get-Content -Raw -Encoding UTF8 feature_list.json | ConvertFrom-Json | Out-Null`：通过。
+- `git diff --check`：失败；仅报告会话开始前已有的 `author_notes/context budgeting.md` 和 `src/open_deep_research/prompts.py` trailing whitespace / EOF 空白问题，本次未清理无关改动。
+- `git status --short`：已执行；仍包含会话开始前已有改动和本次相关改动，并继续提示 `pytest-cache-files-*` 权限 warning。
 
-- 已复现终端首个错误：`huggingface-hub 1.24.0` 要求 `click>=8.4.2`，而环境中的 `click 8.3.3` 与 `deepeval 4.1.1` 的 `click<8.4.0` 约束不可同时满足。
-- 已在现有 `open-deep-research` conda 环境按仓库约束安装 `click==8.3.1` 与 `huggingface-hub==1.4.1`；`deepeval==4.1.1` 保持不变。Python 3.11.15、`pip check` 和 `import deepeval; import open_deep_research.evaluation.full_runner` 均通过。
-- 一键入口默认环境改为 `open-deep-research`，因此正常命令缩短为 `.\scripts\run_phase7_full.cmd -ConfirmCost`。新增本地 Git 预检，在 import/付费调用前列出未提交评测文件并以退出码 4 停止，不再输出路径乱码 traceback。
-- 入口与 Source Gate 聚焦回归 `13 passed`，Ruff、compileall 和 PowerShell parser 通过；最新 45-record smoke 与源码快照见上方终端失败修复记录。
-- 当前唯一启动阻塞是评测相关源码尚未提交；这是设计中的 clean-source 可复现性门禁，不能通过放宽检查绕过。未调用 Qwen、Tavily、Judge 或 LangSmith。
+## 阻塞项与风险（Blockers / Risks）
 
-### Windows 一键启动收口
+- `init.sh` 在当前 Windows/WSL/conda 链路仍不能作为可靠验证入口。
+- `python -m pytest` 仍提示 `.pytest_cache` 创建失败 / 权限 warning，且 `git status` 会提示 `pytest-cache-files-*` 目录权限问题；这不是本次 trace 功能导致的测试失败。
+- Pydantic `Field(..., metadata=...)` 与 LangGraph `config_schema/input/output` deprecation warnings 是既有问题，本次未重构。
 
-- 新增 `scripts/run_phase7_full.cmd` 与 ASCII-safe `scripts/run_phase7_full.ps1`。首次运行使用 `.\scripts\run_phase7_full.cmd -ConfirmCost`；只有健康的 run 间中断才显式增加 `-ResumeCalibration`。
-- 入口固定串联 `pip check`/import/clean-source 门禁、无网络 smoke、新 6-run calibration（最多 300 万 Token）、只读 full 投影、`FULL` 二次确认、固定 54-run full、报告渲染与 Phase 7 validator。`-ApproveFull` 仅供已审阅投影后显式跳过交互；tracking 默认 `local`。
-- calibration 默认新目录为 `artifacts/evaluation/calibration-v4`。已有目录默认拒绝；只有显式 `-ResumeCalibration` 且 journal/ledger/identity 全部安全时才增加 `--resume`。stopped、fail-closed、unknown usage、未结算调用或 terminal failed 目录保持原样并拒绝恢复；脚本没有循环重试或删除逻辑。
-- 聚焦离线验证 `30 passed`；PowerShell parser 通过；缺少 `-ConfirmCost` 时在 conda/外部调用前以退出码 2 拒绝；缺失评测环境时不创建 calibration/full 输出；精确 Ruff 与 compileall 通过。
-- 重新生成 45-record smoke；最新源码快照见上方终端失败修复记录。直接 Phase 7 validator 仍按设计仅 T7-3/4/6/9 因缺少真实 full artifact FAIL，其余 PASS。
+## 下次会话说明
 
-- `scripts/run_eval.py --mode full` 已接入真实调度内核，固定生成 45 个 main 与 9 个 warm 定义，共 54 个稳定 run ID；不允许缩减五组 variant 或改变 repeats。
-- 每个 variant/output 使用隔离的知识、Memory、checkpoint、writeback runtime；cold/warm 同时校验初始只读快照与 cold 后运行态快照。
-- 每个 run 将 research、7 个 DeepEval metric、独立 `evaluation-claim-scorer-v4` 和终态 record 分别持久化；恢复按 terminal step 跳过，报告、manifest 或 tracking 失败不会重放已完成付费步骤。任何 terminal failed run 禁止后续自动恢复。
-- Token ledger 固定为 3600 万停止派发、4200 万硬上限、单 run 80 万；unknown usage、异常 reservation、重复错误、失败率/失败 Token/retry Token 越界均 fail closed。Calibration/full 均有 output-scoped 跨进程 lease和逐 run journal/ledger/record 对账。
-- 本地 `experiment.json`、`runs.jsonl`、`report.json`、`report.md`、`budget.json`、`journal.json`、step/run-record hashes 与 `manifest.json` 是验收权威；LangSmith 是默认关闭、失败不重跑的去敏镜像。
-- 新增 `environment.phase7.yml` 与 `constraints/evaluation-py311.txt`；真实付费入口要求 Python 3.11、锁定 DeepEval/Click/Hugging Face Hub、`pip check`、import smoke、clean evaluation source、双环境门禁、`--confirm-cost` 和显式 Token 上限全部先通过。
-- 严格 validator 会读取 54 条 run、全部 step artifact、journal、ledger、claim report hash、source attestation、Markdown 与 manifest，重算指标和 T7-3/T7-4/T7-6/T7-9；fake/skip/error/unknown cost 均不能计 pass。
-- 离线验证：core suite `131 passed`；54-run/resume/failure full runner suite `14 passed`；strict validator suite `4 passed`；其余 Phase 7 contract suite `20 passed`，合计 169 passed。`compileall` 通过，Phase 7 新增精确范围 Ruff 通过。
-- `scripts/validate_phase.py --phase 7` 恢复为预期语义：T7-1/2/5/7/8/10-17 PASS，T7-3/4/6/9 因没有真实 full artifact FAIL，命令退出码 1；不会把 fake 或 stopped calibration 计为通过。
-- 已离线重生成 `artifacts/evaluation/smoke/` 的 45 条记录、报告与 manifest，全部绑定 `evaluation-claim-scorer-v4`；validator 会拒绝旧 scorer、重复/缺失 case×variant 或非唯一 run ID。
-- smoke 现同时记录生成时 `HEAD`，并将限定评测文件的路径/bytes 快照 SHA-256、scorer version 与矩阵参数绑定到实验 ID；当前快照前缀为 `c5b0341cdf83`。内容 hash 在同一源码提交前后稳定，排除文档/状态/artifact，并在写入前二次采样；dirty-source smoke 在源码 commit 后必须重建，clean-source smoke 可随展示 artifact 一同后续提交而不自引用。
-- 通用 Markdown/README renderer 已识别 rich full report；真实 full 完成后可从同一 `report.json` 生成 README 表格。`scripts/compare_ablations.py` 仅用于 smoke，不得覆盖 full runner 已生成的统计报告。
-- 新增 `--mode full --preflight-only` 只读入口：在不读取费用授权、不构造 tracking sink、不运行图/模型/搜索/full executor的前提下，验证 calibration、环境、clean source和保守投影，并输出模型、矩阵、Token/调用区间和 `estimated_cost_usd=null`，供 full 二次授权决策。
-- 本次收口聚焦回归 `53 passed`（source gate、smoke/report、full reporting、full entry/preflight、strict full validator、phase validator），compileall、3 个 source file 的隔离 Mypy与精确 Ruff 通过。直接 Phase 7 validator 退出码 `1`，仅 T7-3/4/6/9 因缺少真实 full artifact FAIL，其余 PASS；这是当前正确语义。
-- 未带 `--confirm-cost` 的真实 full CLI 在创建 output 或加载外部执行器前返回 `not_run_no_authorization`（退出码 3，output 不存在）。新增 scorer/full metric 的隔离 Mypy 检查通过；更宽的 13-file 检查只剩既有 `evaluation/models.py` 4 个 Literal typing 错误。
-- 全目录收集仍会在当前 Windows 开发环境被系统应用控制阻止 `uuid_utils._uuid_utils` DLL；两项旧 Phase 0 测试因此无法在该环境形成全目录通过证据。Phase 7 测试使用 test-local UUID shim，真实付费环境的 import smoke 仍严格 fail closed。
-- `artifacts/evaluation/calibration/` 仍是 3/6、632,627 Token 的旧 stopped diagnostic；`artifacts/evaluation/calibration-current/` 是 2 completed + 1 terminal failed、973,999 Token 的新诊断记录。两者都保持原样、不得恢复或冒充 full evidence。
+1. 先阅读 `AGENTS.md`、`feature_list.json`、`progress.md`、`session-handoff.md` 和相关 `docs/codebase/` 文档。
+2. 若继续调整运行流程可观测性，优先检查 `process_print` 的输出字段和 `with_process_context` 的上下文传递，不要把正文内容加入 trace。
+3. 不要主动运行 `tests/run_evaluate.py` 或真实外部搜索/模型调用，除非用户明确确认成本与外部服务调用。
 
-## 阶段 7 离线交付（2026-07-21）
+## 2026-07-23：CLI 澄清模式与 LangSmith 追踪
 
-- `tests/baseline/cases.jsonl` 继续作为唯一 prompt/Requirement 来源；`goldens.v1.jsonl` 仅保存 supplemental full-eval 字段。
-- 固定五组公平消融 manifest，并用实际 `get_all_tools` registry 校验 variant-specific expected tools。
-- 实现版本化 Experiment/Metric/Telemetry/Artifact schema、trace adapter、DeepEval lazy full metrics、自定义 Citation/Source/Memory/Cost 指标和只读统一 scorer。
-- smoke runner 生成 45 条结构记录及 `runs.jsonl`、`report.json`、`report.md`、`experiment.json`、`manifest.json`；README 表格由机器 report 生成。
-- 无网络 evaluation suite：66 passed、1 deselected；生命周期/Memory 回归：25 passed；新增范围 Ruff 和增量 Mypy 9 source files 通过。
-- `validate_phase --phase 7`：T7-1/2/5/7/8/10-17 PASS；T7-3/4/6/9 缺少用户授权 live/full evidence，按设计 FAIL，退出码 1。
-- 完整 `mypy src/open_deep_research/evaluation` 仍被 Phase 0 既有 typing 与跨模块历史错误阻塞（138 errors）；未以新增阶段结果冒充通过。
+- 仅修改 `src/open_deep_research/run.py`：在 graph 导入前加载 `.env`，通过 RunnableConfig 开启 `allow_clarification`，并添加 `thread_id`、`run_name=open-deep-research-cli` 和 `cli`/`clarification` tags。
+- 如果主图返回澄清问题，CLI 会读取用户补充回答，保留完整 messages 再次调用主图。
+- 新增 `tests/test_run.py`，使用假 graph 验证两轮对话与 tracing config 复用，不调用外部服务。
+- 验证：`compileall` 通过；显式指向当前仓库 `src` 后，`pytest -q -p no:cacheprovider tests/test_run.py` 通过，`1 passed`；仅有既有 Pydantic/LangGraph deprecation warnings。
+- 未运行真实模型、搜索或 LangSmith 请求，因此未产生外部调用成本。
 
-## Full 授权点
+## 2026-08-03：CLI 导入失败诊断
 
-- 模型沿用 `.env` 中此前已验证的 `qwen3.7-plus`；模型标识只读取四个既有 MODEL 环境变量，Judge 可由 `EVALUATION_JUDGE_MODEL` 覆盖，否则回退 Research model；不读取或记录 secret。
-- 新付费运行必须先提交或隔离评测相关改动，使 clean-source gate 通过，再在独立 Python 3.11 conda 环境运行 6-run calibration；校准 token 上限仍为 300 万。只有“已消耗 calibration + p95 × 54 × 1.25”投影通过后才能进入主矩阵。
-- 固定子集仍为 `simple-001`、`medium-001`、`complex-001`；45 次主配对加 9 次 warm，共 54 次研究运行。
-- 主计划预计 2200–3800 万 tokens；3600 万停止派发、4200 万硬停止、单 run 80 万上限，为用户估计 5000–6000 万额度至少保留 800 万。
-- 每个付费步骤 checkpoint并用稳定 run/step ID恢复去重；连续 2 次失败、同一错误 2 次、失败率超过 25%、失败 run消耗超过 400 万、retry超过总预算10%或 usage未知会立即停止。未经新的明确授权不得启动 calibration/full。
-
-## 阶段 6 交付
-
-- `src/open_deep_research/reporting/`：checkpoint-safe Draft/Section/AtomicClaim/link/result/patch/registry/artifact 模型，确定性 claim extraction、hash-guarded section-local repair、按 `(source_id, version_id)` 构建的 registry 与程序化 renderer。
-- `src/open_deep_research/evidence/validation/`：canonical 与同 run transient EvidenceResolver、claim-local retriever、可注入 entailment evaluator，以及 directness/temporal/authority/numeric 硬门禁。
-- `configuration.py`：新增默认关闭的 `citation_validation_mode=off|audit|enforce` 及版本化 policy 配置。
-- `state.py`：仅新增轻量 citation artifact/ID/registry 引用字段，保留 `notes/raw_notes/compressed_research`。
-- `deep_researcher.py`：legacy Writer 后最小挂接独立 `citation_validation` 节点；`off` 为 no-op，`audit` 保留原报告，`enforce` 依赖缺失时 fail closed。
-- `scripts/validate_report.py` 与 `scripts/validate_phase.py --phase 6`：验证 registry 双向一致、时间有效性、失败 claim、路径去敏及 T6 evidence。
-- `tests/unit/evidence/validation/`、`tests/unit/reporting/`、`tests/integration/citation_pipeline/`：全部使用 InMemory/fake/deterministic fixtures。
-
-## 处置与安全决策
-
-- `fully_supported` 保留；`partially_supported` 限定表达；`unsupported`、`contradicted`、`not_checkable` 在默认 enforce policy 下移除，或按显式配置标记证据不足。
-- 显式 Draft citation 必须独立通过；supplemental Evidence 不能覆盖或洗白显式错误，只能触发后续 repair/rebind。
-- corporate self-report 只可支持明确归因的企业宣称，不可提升为行业事实。
-- registry 只接收 accepted links，编号在全部验证完成后确定性生成；同 source/version 合并 locator，不同 version 不合并。
-- 本地 Source 只渲染 public alias/root-relative locator；Windows 绝对路径、blob/internal storage ref 不进入报告或 artifact。
-- 所有新功能默认关闭；关闭后 Writer 输出不被 citation node 修改。
-
-## 最终验证证据
-
-- Phase 5 前置门禁：退出码 0，T5-1～T5-16 PASS。
-- Phase 6 unit：20 passed，退出码 0。
-- Phase 6 integration：9 passed，退出码 0。
-- `scripts/validate_report.py --input tests/fixtures/citations/valid_report.json`：VALID，退出码 0。
-- Phase 6 validator：T6-1～T6-18 PASS，内部 29 tests，退出码 0。
-- 阶段 3/5 回归：35 passed，退出码 0。
-- Ruff：All checks passed，退出码 0。
-- Mypy：18 source files 无问题，退出码 0；对既有未类型化 configuration/knowledge/run-store 使用显式增量 overrides，新 Phase 6 模块仍严格检查。
-- `git diff --check`：退出码 0。
-- 测试仅出现既有 Pydantic/LangGraph deprecation warnings，无测试失败。
-
-## 风险与回退
-
-- 当前默认 entailment fallback 是保守的确定性 token overlap；真实模型 adapter 和质量评测留待后续明确授权/阶段 7。
-- `citation_validation_mode=off` 可立即恢复 legacy Writer；`audit` 可在不改报告的情况下观察 artifact。
-- `enforce` 在 pipeline 未注入时 fail closed，不会静默退回未经验证的确定性结论。
-- 当前 claim extraction 是确定性句子/分号拆分；复杂 AST、跨句指代和真实模型质量不在本阶段承诺内。
-- `environment.phase7.yml` 与版本门禁已有离线测试，但尚未在一个全新独立 conda 环境实际完成创建、`pip check` 和真实 import smoke；在这三项成功前不得运行新的付费 calibration。
-
-## 下一步
-
-阶段 7 保持 `in-progress`。先审阅并提交当前评测修复，使 clean-source gate 绑定固定 commit；随后首次运行 `.\scripts\run_phase7_full.cmd -ConfirmCost`，它会使用全新 `artifacts/evaluation/calibration-v4`。仅健康中断才使用 `-ResumeCalibration`，不得对 `calibration-current` 使用。脚本完成新的最多 300 万 Token calibration并展示保守投影后，只有用户输入 `FULL` 才开始 4200 万硬上限的 full；此前不得把 T7-3/4/6/9 标为通过。
+- 已在普通 `import open_deep_research.run` 和 pytest 启动路径稳定复现 `ImportError: DLL load failed while importing _uuid_utils: 应用程序控制策略已阻止此文件`。
+- Windows Code Integrity Operational 日志事件 `3033` / `3077` 确认：`uuid_utils/_uuid_utils.cp311-win_amd64.pyd` 未满足 Enterprise signing level，被 Policy ID `{0283ac0f-fff1-49ae-ada1-8a933130cad6}` 拒绝。
+- 当前 `uuid_utils` 版本为 `0.16.2`，目标 `.pyd` 为 `NotSigned`，SHA256 为 `CCBF1339939996265C20F388249E0E209F9ABF7258AEA39BC062FBBBBAF50B7E`。
+- 该失败发生在 `langchain_core` 导入阶段，早于澄清流程和 LangSmith 请求；关闭 tracing 不能解决。
+- 未在项目中伪造 `uuid_utils` 兼容模块或绕过企业安全策略；需管理员放行该文件，或提供组织批准的签名构建。
+- `compileall` 对 `run.py` 和 `tests/test_run.py` 通过；pytest 和运行入口均被上述环境策略阻塞。

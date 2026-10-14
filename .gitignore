@@ -68,16 +68,4 @@ temp/
 
 .langgraph_api
 
-# Local evaluation artifacts and isolated optional-tool caches
-/artifacts/baseline/
-/artifacts/phase2/
-/.deepeval/
-/pytest-cache-files-*/
-/.pytest-tmp/
-/.pytest-tmp-*/
-/.phase-validation-tmp/
-
-# Local MCP roots/configuration (the placeholder example remains tracked)
-/config/mcp.local.json
-/data/mcp-staging/
 

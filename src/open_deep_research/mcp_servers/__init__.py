@@ -1,2 +1,0 @@
-"""Project-owned MCP servers."""
-

@@ -65,76 +65,12 @@
       "evidence": "已更新 src/open_deep_research/configuration.py、src/open_deep_research/utils.py、src/open_deep_research/deep_researcher.py 和 tests/test_research_limits.py；新增 process_print_enabled/process_print/next_process_id/with_process_context helper；主流程在 brief、supervisor、researcher、Tavily search、source summary、compression、final report 前输出精简 trace；compileall 通过；pytest tests/test_research_limits.py 通过（7 passed）；bash ./init.sh 沙箱内 E_ACCESSDENIED，沙箱外返回 0 但仍混入 CRLF/WSL 与 python: command not found，不能作为干净通过证据。"
     },
     {
-      "id": "development-plan-001",
-      "name": "规划 Evidence-Governed Agentic RAG 分阶段改造",
-      "description": "基于当前源码、测试、状态文件和五个固定提交的参考仓库，在 doc/development_plan 下生成目标架构、参考映射、执行协议及阶段 0–7 的可独立执行与验收方案；本功能仅代表规划完成，不代表任何实施阶段已开始。",
-      "dependencies": ["codebase-onboarding-001", "author-decisions-001"],
+      "id": "cli-clarification-001",
+      "name": "为本地运行入口开启澄清模式与 LangSmith 追踪",
+      "description": "最小化适配 run.py，开启主图已有的澄清能力，支持终端补充回答，并为 LangSmith trace 提供稳定运行元数据。",
+      "dependencies": ["cli-runner-001"],
       "status": "completed",
-      "evidence": "已创建 doc/development_plan/README.md、architecture_target.md、reference_repositories.md、execution_protocol.md 和 phase_0 至 phase_7 共 12 份文档；8 份阶段文档均含连续 1–16 节、连续 Tn-* 验收编号和停止门禁；相对 Markdown 文件链接校验通过；参考仓库提交 SHA 与许可证已记录；未修改功能源码或执行阶段 0。"
-    },
-    {
-      "id": "phase-0-baseline-references-001",
-      "name": "固定参考仓库与离线 Baseline 评测骨架",
-      "description": "执行开发计划阶段 0：固定参考仓库提交与许可证，建立版本化 baseline schema、确定性 replay/smoke、默认关闭的 telemetry、付费调用门禁、可选 DeepEval 适配和 T0 阶段验证，不改变 Supervisor、Researcher、搜索或 Writer 核心行为。",
-      "dependencies": ["development-plan-001"],
-      "status": "completed",
-      "evidence": "doc/reference/refs.lock.json 固定 5 个参考仓库；tests/baseline/cases.jsonl 含 3 simple、3 medium、3 complex；evaluation 子包、replay/live runner、DeepEval adapter、pytest 成本门禁与 scripts/validate_phase.py 已实现。离线全套测试 51 passed、1 skipped；validate_phase --phase 0 对 T0-1 至 T0-12 全部 PASS；replay 记录可加载；未授权 live 在外部调用前返回 not_run_no_authorization/退出码 3 且不写伪结果；真实 live、LangSmith、LLM Judge 均未运行；ruff/mypy 因环境未安装而未执行成功。"
-    },
-    {
-      "id": "phase-1-knowledge-evidence-models-001",
-      "name": "建立知识、来源、证据与本地存储契约",
-      "description": "执行开发计划阶段 1：建立 scope-aware 领域模型、稳定 ID、InMemory/SQLite metadata Repository、InMemory/Local Blob Repository、迁移 v1、软删除、审计、确定性 reducer 和 additive graph state 引用；不接入主图或 PaperQA2。",
-      "dependencies": ["phase-0-baseline-references-001"],
-      "status": "completed",
-      "evidence": "2026-07-21 运行 scripts/validate_phase.py --phase 1（退出码 0）：T1-1 同内容幂等、T1-2 新内容不可变版本、T1-3 Evidence 外键回溯、T1-4 page/heading locator、T1-5 确定性 reducer、T1-6 SQLite 重开持久化、T1-7 UNIQUE/事务并发去重、T1-8 soft delete/audit、T1-9 Python 3.11+/包发现/仓库外导入、T1-10 默认关闭兼容、T1-11 双后端 contract suite、T1-12 schema v1/status 边界、T1-13 scope-local blob 去重、T1-14 原始快照、T1-15 引用资格派生、T1-16 scope/private 隔离全部 PASS；全量离线 pytest 81 passed、1 skipped（退出码 0）；Phase 0 回归 T0-1 至 T0-12 全部 PASS。"
-    },
-    {
-      "id": "phase-2-document-ingestion-paperqa-001",
-      "name": "实现本地文档导入与受控 PaperQA 检索适配",
-      "description": "执行开发计划阶段 2：实现四类本地 candidate 导入、原始 ContentBlob、ImportJob、结构化 locator、KnowledgeRetriever、受控 PaperQA Adapter 和仅供内部 inspection 的 knowledge_search/read contract；不接入生产 Researcher。",
-      "dependencies": ["phase-1-knowledge-evidence-models-001"],
-      "status": "completed",
-      "evidence": "2026-07-21 运行 scripts/validate_phase.py --phase 2（退出码 0）：内部阶段 2 suite 83 passed、0 skipped，T2-1 至 T2-15 全部 PASS，覆盖四格式 candidate 导入、PDF/Markdown/HTML locator、空结果、禁止 PaperQA Agent API、幂等与新 Version、稳定 ID/排序、默认关闭和生产 Researcher 隔离、结构化失败重试、stable-ID read、Windows 依赖、candidate 不可引用、三格式源文件改写/删除后的 Blob/hash 恢复，以及真实 PaperQA 从权威 Repository rehydrate 和 scope/filter/as_of。目标环境为 Windows AMD64/Python 3.11.15；固定并实际安装 paper-qa 2026.3.18、paper-qa-pypdf 2026.3.18、tantivy 0.26.0、fhaviary 0.34.0、fhlmi 0.45.0、litellm 1.82.4；依赖 smoke 与 pip check 均退出码 0。全量离线 pytest 为 147 passed、1 skipped；T0 与 T1 回归全部 PASS；未调用真实模型、Web、LangSmith、Deep Research Bench 或 LLM Judge。"
-    },
-    {
-      "id": "phase-3-agentic-rag-lifecycle-001",
-      "name": "实现证据治理的 Agentic RAG 与知识生命周期",
-      "description": "执行开发计划阶段 3：建立稳定 RequirementSet、程序化完成门禁、RunEvidenceStore、共享预算、受治理本地/Web 检索、统一候选验证、六态生命周期、提议/软删除/审计，以及默认关闭的最小 Supervisor/Researcher 工具路由；不实现阶段 4 MCP 或后续 Memory/Citation Validator。",
-      "dependencies": ["phase-2-document-ingestion-paperqa-001"],
-      "status": "completed",
-      "evidence": "2026-07-21 已先运行 scripts/validate_phase.py --phase 2（退出码 0，内部 83 passed、T2-1 至 T2-15 全部 PASS）后实施阶段 3。最终离线阶段 3 映射 suite 退出码 0：103 passed、0 skipped，T3-1 至 T3-20 均有确定性测试 evidence；阶段 1/2 knowledge regression 19 passed，compileall 与 git diff --check 退出码 0。实现覆盖 brief→稳定 RequirementSet、同轮 ConductResearch/ResearchComplete 保序、必需 gap+预算 completion gate、active-only legacy augmentation、Agentic 模式无 Tavily/provider-native/MCP 旁路、local sufficient 时 Web=0、missing-only Web、统一 ValidationGate、run-first evidence、可选 candidate writeback、六态原子 transition/proposal/soft delete/audit、并发预算与稳定去重、compression 真实重试及诊断 ToolMessage 过滤。所有新增开关默认关闭，未调用真实模型、Web 或付费评测。最终再次执行聚合 scripts/validate_phase.py --phase 3 时，功能测试已完成但 pytest session-finish 受 Windows 沙箱临时目录 WinError 5 影响而无法形成新的干净 wrapper 退出码；较早版本的同一 wrapper 曾退出码 0（101 passed、T3-1 至 T3-20 PASS），最终新增/修正后的映射测试和 validator 自测均单独退出码 0；该 ACL 限制已如实记录，未伪报。ruff/mypy 未安装。"
-    },
-    {
-      "id": "phase-4-mcp-integration-001",
-      "name": "实现受限 Filesystem MCP 与 Knowledge MCP",
-      "description": "执行开发计划阶段 4：建立多 server MCP 配置/客户端/registry、Windows Allowed Roots、只读文件服务、exclusive-create staging、可信 KnowledgeScope 的 Knowledge MCP 读工具与 lifecycle proposal 工具；不实现 Memory、硬删除或强制写入能力。",
-      "dependencies": ["phase-3-agentic-rag-lifecycle-001"],
-      "status": "completed",
-      "evidence": "2026-07-21 阶段 3 前置门禁直接 suite 103 passed；Phase 4 单元/安全测试 21 passed、0 skipped，离线集成 9 passed；固定 @modelcontextprotocol/server-filesystem@2026.1.14 Windows stdio handshake/tools-list/read smoke 1 passed；scripts/validate_mcp_config.py 退出码 0；scripts/validate_phase.py --phase 4 退出码 0，T4-1 至 T4-16 全部 PASS，内部 30 passed。Phase 3 首轮回归因新增合法 propose_ingest 枚举导致旧精确集合断言 1 failed/102 passed，更新该契约测试后复验通过。compileall/git diff --check 通过；ruff/mypy 在目标 conda 环境未安装（退出码 1），未伪报。全部文件测试使用 pytest 临时 roots，未调用模型、Web、LangSmith、LLM Judge 或用户真实文件。"
-    },
-    {
-      "id": "phase-5-memory-system-001",
-      "name": "实现分层记忆与可恢复运行状态",
-      "description": "执行开发计划阶段 5：managed SQLite checkpointer/store、可信 RuntimeIdentity/Namespace、五类 Memory、Repository、七项 Write Gate、受控 recall、只读 memory_search 与 RunEvidenceStore 引用恢复；不实现阶段 6 引用验证。",
-      "dependencies": ["phase-4-mcp-integration-001"],
-      "status": "completed",
-      "evidence": "2026-07-21 开始前 scripts/validate_phase.py --phase 4 退出码 0，T4-1 至 T4-16 全部 PASS。固定并安装 langgraph-checkpoint-sqlite==3.1.0、langmem==0.0.30；阶段 5 单元/安全/集成套件 21 passed；scripts/resume_research.py --self-test 使用真实 SQLite 跨 lifespan 恢复并退出码 0；scripts/validate_phase.py --phase 5 退出码 0，T5-1 至 T5-16 全部 PASS；阶段 3/baseline 回归 30 passed；Phase 4 MCP 回归 30 passed、1 skipped（显式 Windows stdio marker）；Ruff 精确范围通过；mypy 阶段 5 隔离范围 13 source files 通过；compileall 与 git diff --check 通过。未调用远程模型、Web、LangSmith 或 LLM Judge。"
-    },
-    {
-      "id": "phase-6-citation-validation-001",
-      "name": "实现证据治理的引用验证与局部报告修复",
-      "description": "执行开发计划阶段 6：建立 Draft/Section/AtomicClaim/link/result/patch/registry 模型、scope-aware EvidenceResolver、五态验证、局部修复、程序化来源编号与 off/audit/enforce 报告流水线；不实现阶段 7 完整评测。",
-      "dependencies": ["phase-5-memory-system-001"],
-      "status": "completed",
-      "evidence": "2026-07-21 开始前 scripts/validate_phase.py --phase 5 退出码 0，T5-1 至 T5-16 全部 PASS。Phase 6 最终离线 unit 20 passed、integration 9 passed、阶段 3/5 回归 35 passed；scripts/validate_report.py 合法 fixture 退出码 0；scripts/validate_phase.py --phase 6 退出码 0，T6-1 至 T6-18 全部 PASS（内部 29 tests）；Ruff、Mypy（18 source files）和 git diff --check 均退出码 0。未调用真实模型、Web、LangSmith、Deep Research Bench 或 LLM Judge。"
-    },
-    {
-      "id": "phase-7-evaluation-showcase-001",
-      "name": "建立完整评测、消融与可复现展示",
-      "description": "执行开发计划阶段 7：统一 canonical dataset/golden overlay、五组公平消融、DeepEval adapter、自定义治理指标、smoke/full runner、机器报告、成本门禁和 README 展示。",
-      "dependencies": ["phase-6-citation-validation-001"],
-      "status": "in-progress",
-      "evidence": "固定 45 main + 9 warm=54-run 本地 full 内核、五 variant 隔离、逐步骤 journal/hash artifact、单调 Token ledger（3600 万停派、4200 万硬限、单 run 80 万）、跨进程 lease、可选去敏 LangSmith 镜像和严格 validator 已实现。2026-07-23 复盘 artifacts/evaluation/calibration-current：2 个 run completed，第 3 个 medium-001/baseline 在 evaluation-claim-scorer-v3 一次回传 36 Claim 时触发 LengthFinishReasonError；账本 973999 Token、unknown 30852、fail_closed，剩余 3 run 未派发且原目录未改写。已升级 evaluation-claim-scorer-v4：6-Claim 小批、project-owned 文本/引用、canonical URL/Evidence ID 绑定、Markdown table、22-call/132-candidate 上限；完整 coverage 在 7 个 Judge 前无模型检查；异常 completion usage 可精确结算；terminal failed 目录在 core runner 和 Windows wrapper 都禁止恢复。入口默认使用全新 artifacts/evaluation/calibration-v4，恢复必须显式 -ResumeCalibration 且通过本地检查。相关离线回归 95 passed，Ruff/compileall/PowerShell parse 通过，隔离 Mypy 3 source files 通过；smoke 45 records、scorer v4、source snapshot c5b0341cdf83。T7-1/2/5/7/8/10-17 PASS，T7-3/4/6/9 因真实 full 缺失按设计 FAIL；未再次调用 Qwen、Tavily、DeepEval Judge 或 LangSmith。Phase 7 保持 in-progress。"
+      "evidence": "已更新 src/open_deep_research/run.py 并新增 tests/test_run.py；.env 在 graph 导入前加载，ainvoke config 开启 allow_clarification 并携带 thread_id、run_name 和 tags；假 graph 测试验证澄清对话续调与配置复用；compileall 通过；pytest tests/test_run.py 通过（1 passed）。"
     }
   ]
 }

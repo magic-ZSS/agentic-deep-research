@@ -2,12 +2,10 @@
 
 import os
 from enum import Enum
-from typing import Any, Literal, Optional
+from typing import Any, List, Optional
 
 from langchain_core.runnables import RunnableConfig
-from pydantic import BaseModel, Field, model_validator
-
-from open_deep_research.mcp.config import MCPConfig, MCPServerConfig
+from pydantic import BaseModel, Field
 
 
 class SearchAPI(Enum):
@@ -17,6 +15,30 @@ class SearchAPI(Enum):
     OPENAI = "openai"
     TAVILY = "tavily"
     NONE = "none"
+
+class MCPConfig(BaseModel):
+    """Configuration for Model Context Protocol (MCP) servers."""
+
+    # 配置 MCP 服务地址。
+    url: Optional[str] = Field(
+        default=None,
+        optional=True,
+    )
+    """The URL of the MCP server"""
+
+    # 配置允许使用的 MCP 工具。
+    tools: Optional[List[str]] = Field(
+        default=None,
+        optional=True,
+    )
+    """The tools to make available to the LLM"""
+
+    # 配置 MCP 服务是否需要鉴权。
+    auth_required: Optional[bool] = Field(
+        default=False,
+        optional=True,
+    )
+    """Whether the MCP server requires authentication"""
 
 class Configuration(BaseModel):
     """Main configuration class for the Deep Research agent."""
@@ -39,7 +61,7 @@ class Configuration(BaseModel):
 
     # 配置是否允许先向用户澄清问题。
     allow_clarification: bool = Field(
-        default=False,
+        default=True,
         metadata={
             "x_oap_ui_config": {
                 "type": "boolean",
@@ -60,59 +82,6 @@ class Configuration(BaseModel):
             }
         }
     )
-
-    # Structured evidence storage remains disconnected from the research graph
-    # until a later phase explicitly enables that integration.
-    enable_structured_evidence: bool = False
-    knowledge_repository_backend: Literal["memory", "sqlite"] = "sqlite"
-    knowledge_tenant_id: Optional[str] = None
-    knowledge_project_id: Optional[str] = None
-    knowledge_db_path: str = "data/knowledge/knowledge.db"
-    knowledge_blob_dir: str = "data/knowledge/blobs"
-    sqlite_busy_timeout_ms: int = Field(default=5000, ge=1, le=120000)
-
-    # Phase 2 knowledge ingestion/retrieval remains opt-in and is deliberately
-    # disconnected from the production Researcher tool set. Candidate visibility
-    # is granted by a trusted inspection context, never by model configuration.
-    enable_knowledge_base: bool = False
-    enable_paperqa_retrieval: bool = False
-    knowledge_import_roots: tuple[str, ...] = ()
-    knowledge_import_staging: str = "data/knowledge/import"
-    paperqa_index_dir: str = "data/knowledge/paperqa-index"
-    knowledge_search_visibility: Literal["active_only"] = "active_only"
-    knowledge_search_limit: int = Field(default=8, ge=1, le=50)
-    knowledge_chunk_size_chars: int = Field(default=4000, ge=256, le=20000)
-    knowledge_chunk_overlap_chars: int = Field(default=200, ge=0, le=4000)
-    paperqa_contextual_summarization: bool = False
-    paperqa_evidence_k: int = Field(default=8, ge=1, le=50)
-    paperqa_contextual_max_concurrency: int = Field(default=2, ge=1, le=8)
-    paperqa_contextual_timeout_seconds: float = Field(default=30.0, ge=1, le=300)
-    paperqa_contextual_token_limit: int = Field(default=4000, ge=256, le=20000)
-
-    # Phase 3 governance modes are mutually exclusive at the tool-routing layer.
-    # Defaults deliberately preserve the Phase 0/2 production path.
-    enable_knowledge_tools: bool = False
-    enable_agentic_rag: bool = False
-    enable_knowledge_writeback: bool = False
-    agentic_web_provider: Literal["tavily"] = "tavily"
-    run_evidence_store_backend: Literal["memory", "sqlite"] = "memory"
-    run_evidence_db_path: str = "data/run-evidence/run-evidence.db"
-    run_evidence_ttl_seconds: int = Field(default=86400, ge=60, le=2592000)
-    requirement_extraction_model: Optional[str] = None
-    requirement_completion_policy_version: str = "phase3-completion-v1"
-    knowledge_lifecycle_policy_version: str = "phase3-lifecycle-v1"
-    knowledge_coverage_threshold: float = Field(default=1.0, ge=0, le=1)
-    min_direct_evidence: int = Field(default=1, ge=1, le=10)
-    min_source_authority: Literal[
-        "unknown", "self_reported", "secondary", "primary", "official"
-    ] = "secondary"
-    max_evidence_age_days: Optional[int] = Field(default=None, ge=1, le=36500)
-    candidate_min_content_chars: int = Field(default=40, ge=1, le=10000)
-    candidate_min_confidence: float = Field(default=0.7, ge=0, le=1)
-    max_web_queries_per_run: int = Field(default=5, ge=0, le=50)
-    max_web_results_per_query: int = Field(default=3, ge=1, le=20)
-    max_web_results_per_run: int = Field(default=15, ge=1, le=200)
-    max_concurrent_web_requests: int = Field(default=2, ge=1, le=20)
 
     # 配置同时运行的研究子任务数量。
     max_concurrent_research_units: int = Field(
@@ -201,11 +170,11 @@ class Configuration(BaseModel):
 
     # 配置 supervisor 最大研究迭代次数。
     max_researcher_iterations: int = Field(
-        default=5,
+        default=3,
         metadata={
             "x_oap_ui_config": {
                 "type": "slider",
-                "default": 5,
+                "default": 3,
                 "min": 1,
                 "max": 10,
                 "step": 1,
@@ -315,7 +284,6 @@ class Configuration(BaseModel):
             }
         }
     )
-    compression_max_retries: int = Field(default=2, ge=1, le=10)
 
     # 配置最终报告生成使用的模型。
     final_report_model: str = Field(
@@ -353,40 +321,6 @@ class Configuration(BaseModel):
             }
         }
     )
-    mcp_servers: dict[str, MCPServerConfig] = Field(default_factory=dict)
-    enable_filesystem_mcp: bool = False
-    enable_knowledge_mcp: bool = False
-
-    # Phase 5 persistence and long-term memory are opt-in. Checkpoint, memory,
-    # knowledge, and transient evidence files must remain physically separate.
-    enable_memory: bool = False
-    enable_memory_writes: bool = False
-    checkpointer_backend: Literal["off", "memory", "sqlite"] = "off"
-    checkpoint_db_path: str = "data/checkpoints/checkpoints.db"
-    checkpoint_store_db_path: str = "data/checkpoints/store.db"
-    memory_repository_backend: Literal["memory", "sqlite"] = "sqlite"
-    memory_db_path: str = "data/memory/memory.db"
-    memory_recall_limit: int = Field(default=5, ge=1, le=20)
-    memory_recall_token_budget: int = Field(default=800, ge=64, le=8000)
-    memory_min_importance: float = Field(default=0.5, ge=0, le=1)
-    memory_episodic_score_threshold: float = Field(default=0.75, ge=0, le=1)
-    memory_procedural_min_successes: int = Field(default=3, ge=3, le=100)
-
-    # Phase 6 report governance remains opt-in. ``off`` preserves the legacy
-    # Writer bytes; audit records artifacts, and enforce fails closed.
-    citation_validation_mode: Literal["off", "audit", "enforce"] = "off"
-    citation_policy_version: str = "citation-policy-v1"
-    citation_min_entailment: float = Field(default=0.75, ge=0, le=1)
-    citation_require_temporal_validity: bool = True
-    citation_min_source_authority: Literal[
-        "unknown", "self_reported", "secondary", "primary", "official"
-    ] = "secondary"
-    citation_unsupported_action: Literal["remove", "mark"] = "remove"
-    claim_extraction_model: Optional[str] = None
-    citation_entailment_model: Optional[str] = None
-    report_repair_model: Optional[str] = None
-    citation_model_timeout_seconds: float = Field(default=30.0, ge=1, le=300)
-    citation_model_token_limit: int = Field(default=4000, ge=256, le=20000)
 
     # 配置传给 MCP 工具的额外提示词。
     mcp_prompt: Optional[str] = Field(
@@ -399,51 +333,6 @@ class Configuration(BaseModel):
             }
         }
     )
-
-    @model_validator(mode="after")
-    def validate_knowledge_chunking(self) -> "Configuration":
-        """Reject overlap settings that cannot advance the chunk window."""
-        if self.knowledge_chunk_overlap_chars >= self.knowledge_chunk_size_chars:
-            raise ValueError(
-                "knowledge_chunk_overlap_chars must be smaller than "
-                "knowledge_chunk_size_chars"
-            )
-        if self.enable_knowledge_writeback and not self.enable_agentic_rag:
-            raise ValueError(
-                "enable_knowledge_writeback requires enable_agentic_rag"
-            )
-        if self.enable_agentic_rag and self.search_api in {
-            SearchAPI.OPENAI,
-            SearchAPI.ANTHROPIC,
-        }:
-            raise ValueError(
-                "Agentic RAG cannot govern provider-native Web search; "
-                "use Tavily or disable Web search"
-            )
-        if (
-            self.run_evidence_store_backend == "sqlite"
-            and os.path.normcase(os.path.abspath(self.run_evidence_db_path))
-            == os.path.normcase(os.path.abspath(self.knowledge_db_path))
-        ):
-            raise ValueError(
-                "run evidence SQLite storage must be isolated from the canonical "
-                "knowledge database"
-            )
-        persistence_paths = [
-            self.knowledge_db_path,
-            self.run_evidence_db_path,
-            self.checkpoint_db_path,
-            self.checkpoint_store_db_path,
-            self.memory_db_path,
-        ]
-        normalized = [os.path.normcase(os.path.abspath(path)) for path in persistence_paths]
-        if len(normalized) != len(set(normalized)):
-            raise ValueError("knowledge, run evidence, checkpoint/store, and memory SQLite files must be separate")
-        if self.enable_memory_writes and not self.enable_memory:
-            raise ValueError("enable_memory_writes requires enable_memory")
-        if not self.citation_policy_version.strip():
-            raise ValueError("citation_policy_version cannot be blank")
-        return self
 
 
     @classmethod

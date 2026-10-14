@@ -8,8 +8,10 @@ These are the messages that have been exchanged so far from the user asking for 
 
 Today's date is {date}.
 
-Assess whether you need to ask a clarifying question, or if the user has already provided enough information for you to start research.
+Assess whether you need to ask a clarifying question, or if the user has already provided enough information for you to start research.Plase try your best to ask a clarifying question if you think it is necessary to clarify the research scope, requirements, or constraints. If you can see in the messages history that you have already asked a clarifying question, you almost always do not need to ask another one. Only ask another question if ABSOLUTELY NECESSARY.
+You should try to clarify with users as much as possible, rather than conducting research arbitrarily.
 IMPORTANT: If you can see in the messages history that you have already asked a clarifying question, you almost always do not need to ask another one. Only ask another question if ABSOLUTELY NECESSARY.
+
 
 If there are acronyms, abbreviations, or unknown terms, ask the user to clarify.
 If you need to ask a question, follow these guidelines:
@@ -446,32 +448,6 @@ or a separate source list that duplicates the URLs already provided with the
 evidence.
 
 </Output Format>
-"""
-
-# These additions describe the opt-in Phase 3 tool surface. They are appended only
-# when the corresponding programmatic gates are active; they do not replace those
-# gates and therefore cannot authorize a Web bypass or knowledge transition.
-agentic_rag_supervisor_prompt = """
-
-The run is using evidence-governed retrieval. A programmatic Requirement coverage
-gate will evaluate ResearchComplete. If it reports required gaps and budget remains,
-delegate only those gaps. A ResearchComplete request cannot override that gate.
-"""
-
-agentic_rag_researcher_prompt = """
-
-The only information-retrieval tool for this run is governed_retrieval. It searches
-eligible local evidence first and may use the configured Web adapter only for an
-uncovered requirement. Do not request or infer a direct Tavily/provider-native Web
-path. Treat returned evidence/source/requirement IDs as the authoritative structured
-handoff; diagnostic, reflection, overflow, and error messages are not evidence.
-"""
-
-knowledge_augmented_legacy_prompt = """
-
-This run exposes active, validated local knowledge as optional read/search tools in
-addition to the legacy Web path. Candidate, stale, superseded, quarantined, archived,
-rejected, and pending records are never available through those production tools.
 """
 
 

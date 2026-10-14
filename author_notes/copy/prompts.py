@@ -74,6 +74,7 @@ clarify_with_user_instructions = """
 
 
 
+
 ## 优化后提示词：中文
 
 transform_messages_into_research_topic_prompt = """你将获得一组目前为止用户与你之间已经交换的消息。

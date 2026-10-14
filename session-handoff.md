@@ -1,65 +1,84 @@
 # 会话交接
 
-## 当前目标
+## 当前目标（Current Objective）
 
-- `phase-0-baseline-references-001` 至 `phase-6-citation-validation-001` 均为 `completed`。
-- `phase-7-evaluation-showcase-001` 为 `in-progress`：本地 54-run full 执行、恢复、预算、报告与 validator 已完成；真实 calibration/full 尚未重新授权执行。
-- 不得自动安装 DeepEval、运行模型/Tavily/LLM Judge、push 或发布。
+- 目标：新增 `print_process_info` 总开关，开启后用 `print()` 输出精简运行流程 trace。
+- 当前状态：completed。
+- 分支 / 提交：当前工作树，未创建提交。
 
-## 恢复入口
+## 本次已完成
 
-1. 读取 `AGENTS.md`、`feature_list.json`、`progress.md` 和本文件。
-2. 读取 `doc/development_plan/{README,architecture_target,reference_repositories,execution_protocol}.md`。
-3. 读取 `phase_7_evaluation_and_showcase.md` 和 `tests/evaluation/full_plan.v1.json`。
-4. 先运行 `git status --short` 并保留用户改动。
-5. 阶段 6 门禁已复核通过；不要重复执行付费任务。
+- 在 `Configuration` 中新增 `print_process_info`：
+  - 默认值：`False`
+  - OAP UI metadata：boolean
+  - 支持环境变量 `PRINT_PROCESS_INFO=true` 或 runnable config 开启
+- 在 `utils.py` 中集中封装 trace helper：
+  - `process_print_enabled`
+  - `process_print`
+  - `next_process_id`
+  - `with_process_context`
+- 在 `deep_researcher.py` 的关键流程点加入 helper 调用：
+  - research brief
+  - supervisor tool calls
+  - researcher tool calls
+  - researcher/tool 并发 context 传递
+  - compression
+  - final report generation
+- 在 `utils.py` 的 Tavily 路径加入 trace：
+  - search id：`S0`, `S1`
+  - summary id：`S0.0`, `S0.1`
+  - 父 search id 和 summary 并发 context
+- 扩展 `tests/test_research_limits.py` 到 `7` 个不触网测试，覆盖 trace helper、Tavily search/summary trace、researcher tool call trace。
+- 局部更新 `docs/codebase/` 中配置、架构、约定和测试相关文档。
 
-## 阶段 7 恢复点
+## 验证证据
 
-- 2026-07-23 终端失败已定位：`artifacts/evaluation/calibration-current/` 为 2 completed + 1 terminal failed + 3 pending，账本 committed 973,999 Token，其中 unknown charged 30,852；`evaluation-claim-scorer-v3` 对 36 Claim 的单次结构化输出触发 `LengthFinishReasonError`。该目录保持原样，绝对不得 `--resume`。
-- 修复为 `evaluation-claim-scorer-v4`：每批 6 Claim，仅返回 global ordinal/分类；文本与 citation IDs 留在本地；Tavily/governed evidence 仅按 canonical URL/Evidence ID 绑定。22 provider-call/132-candidate 硬上限和报告结构在 7 个 Judge 前无模型检查。
-- Qwen 异常 completion usage 可精确结算，真正未知才 fail closed；Claim coverage/response 错误立即停止。terminal failed journal 令 core direct resume 和 wrapper 都在任何新付费调用前拒绝。
-- Windows 首次运行默认新目录 `artifacts/evaluation/calibration-v4`；命令仍为 `.\scripts\run_phase7_full.cmd -ConfirmCost`。只有确认 run 间健康中断才增加 `-ResumeCalibration`，已有失败/停止目录不会自动恢复。
-- 本次最终离线聚焦回归 `95 passed`；费用安全快速回归 `6 passed`；Ruff、compileall、PowerShell parse 与隔离 Mypy 3 source files 通过。smoke 为 45 records、scorer v4、source snapshot `c5b0341cdf83...`。没有调用 Qwen、Tavily、DeepEval Judge 或 LangSmith。
-- 2026-07-23 已修复现有 `open-deep-research` 环境的依赖冲突：Python 3.11.15、`deepeval==4.1.1`、`click==8.3.1`、`huggingface-hub==1.4.1`，`pip check` 与真实评测 import smoke 均通过。
-- 一键入口现默认使用 `open-deep-research`；新增 Git 状态预检，未提交评测源码会被清晰列出并以退出码4停止，不再产生路径乱码 traceback。相关离线回归13 passed，Ruff、compileall与PowerShell parse通过。
-- 2026-07-22 离线精确套件共 169 passed：core 131、full runner 14、strict validator 4、其余 Phase 7 contracts 20；新增范围 Ruff 与 compileall 通过。
-- Windows 入口已收口为 `.\scripts\run_phase7_full.cmd -ConfirmCost`：自动执行环境/source门禁、smoke、最多300万Token calibration、只读投影、`FULL`二次确认、54-run full、报告与验收；恢复必须显式 `-ResumeCalibration` 并通过本地安全检查，不会循环自动重试。
-- 一键入口聚焦离线回归 `30 passed`，PowerShell parse通过；缺少`-ConfirmCost`时退出码2且不读取conda/调用外部服务，缺失评测环境时不创建付费输出；Ruff和compileall通过。
-- `validate_phase --phase 7` 当前按设计仅 T7-3/4/6/9 FAIL（缺少真实 full artifact），其余验收 PASS；Phase 7 因此保持 `in-progress`。
-- smoke artifact：45 records，manifest 校验通过，README 由机器 JSON 驱动。
-- smoke artifact 已离线刷新为统一 `evaluation-claim-scorer-v4`，并记录生成时 `HEAD`、绑定按限定文件路径/bytes 计算的评测源码快照 `c5b0341cdf83...`；validator 会拒绝旧 scorer、不完整矩阵或源码内容漂移。
-- source snapshot 的内容 hash 在相同源码提交前后稳定，且排除 docs/status/artifacts，因而结果提交不会造成自引用；dirty-source smoke 在源码提交后须重建，paid calibration/full 始终要求相关源码 clean。新增收口聚焦回归 53 passed，精确 Ruff、隔离 Mypy 与 compileall 通过。
-- 新增 read-only `--preflight-only`：完成新 calibration 后先输出实测 projection和调用区间，再等待用户单独授权 full；该路径不会调用图、模型、搜索、Judge或LangSmith，也不会写 output。
-- `scripts/render_eval_report.py` 现在可直接渲染 full rich report 和机器驱动 README 表格；不要对 full 目录运行仅适用于 smoke 的 `scripts/compare_ablations.py`。
-- full runner 固定 45 main + 9 warm；每 run 依次持久化 research、7 个 DeepEval metric、独立 v4 claim scorer 与终态。completed step 不重放，terminal failed run 禁止自动恢复。
-- 反浪费门禁：3600 万停派、4200 万硬限、单 run 80 万；跨进程 lease、逐 run 对账、unknown usage、异常 reservation、连续失败、重复错误签名、失败率、失败/retry Token与校准投影均可熔断。
-- 本地 artifact 是权威；`--tracking langsmith` 只镜像去敏元数据和指标，失败记本地 tracking error，不重跑研究。
-- 真实入口要求 clean evaluation source，并默认使用已验证的 `open-deep-research` Python 3.11 conda 环境；环境中的 `pip check` 与 import smoke 已通过。全目录 pytest 仍可能受 Windows `uuid_utils` DLL 策略影响，但付费入口会在外部调用前 fail closed。
-- 既有 `artifacts/evaluation/calibration/` 是 3/6、632,627 Token 的旧 stopped diagnostic；`calibration-current` 是 973,999 Token 的 terminal failure diagnostic。两者均保持原样且不得恢复；新的 calibration 使用 `calibration-v4`。
+| 检查 | 命令 | 结果 | 备注 |
+|---|---|---|---|
+| 编译 | `conda run --no-capture-output -n open-deep-research python -m compileall -q src tests/test_research_limits.py` | 通过 | 未调用外部服务 |
+| 针对性测试 | `conda run --no-capture-output -n open-deep-research python -m pytest -q tests/test_research_limits.py` | 通过 | `7 passed`；仅有既有 deprecation warnings 和 `.pytest_cache` 权限 warning |
+| 初始化脚本 | `bash ./init.sh` | 失败 | 沙箱内 WSL `E_ACCESSDENIED` |
+| 初始化脚本（批准沙箱外） | `bash ./init.sh` | 输出不可靠 | 返回 0，但仍有 CRLF/WSL、mojibake 和 `python: command not found`，不能作为干净通过证据 |
+| JSON 格式 | `Get-Content -Raw -Encoding UTF8 feature_list.json | ConvertFrom-Json | Out-Null` | 通过 | 验证状态索引 JSON 可解析 |
+| 空白检查 | `git diff --check` | 失败 | 仅报告会话开始前已有的 `author_notes/context budgeting.md` 和 `src/open_deep_research/prompts.py` 空白问题；本次未清理无关改动 |
 
-## 阶段 6 核心契约
+## 修改文件（Files Changed）
 
-- citation identity 固定为 `(source_id, version_id)`；locator 不参与身份，但在同一 registry entry 内合并。
-- Claim 各自拥有 evidence links/results，不继承相邻句引用。
-- EvidenceResolver 只解析授权 scope 的 canonical Evidence 或同 run transient Evidence；跨 run/scope fail closed。
-- directness、temporal、authority 和数字一致性是独立硬门禁，不能用综合分数覆盖。
-- 显式错误引用保留 `explicit_draft_citation` 失败记录；supplemental evidence 不能洗白。
-- repair 以 section original hash 防护，只修改失败 Claim 所在局部；未受影响 section hash 不变。
-- 最终编号和来源表只由程序生成；legacy `SOURCE n/[n]` 与诊断消息先剥离。
-- `off` 为 legacy no-op，`audit` 不改 Writer 报告，`enforce` 对失败 Claim 和依赖缺失 fail closed。
-- 本地路径/internal storage ref 不得进入正文、来源表或 validation artifact。
+- `src/open_deep_research/configuration.py`
+- `src/open_deep_research/utils.py`
+- `src/open_deep_research/deep_researcher.py`
+- `tests/test_research_limits.py`
+- `docs/codebase/STACK.md`
+- `docs/codebase/ARCHITECTURE.md`
+- `docs/codebase/CONVENTIONS.md`
+- `docs/codebase/TESTING.md`
+- `feature_list.json`
+- `progress.md`
+- `session-handoff.md`
 
-## 已验证命令
+## 注意事项与风险（Notes / Risks）
 
-- Phase 5 gate：退出码 0，T5 全 PASS。
-- Phase 6 unit：20 passed。
-- Phase 6 integration：9 passed。
-- Phase 6 validator：退出码 0，T6-1～T6-18 全 PASS，内部 29 tests。
-- Phase 3/5 regression：35 passed。
-- `validate_report.py`、Ruff、Mypy（18 files）、`git diff --check`：均退出码 0。
-- 未调用远程模型、Web、LangSmith、Deep Research Bench 或 LLM Judge。
+- `author_notes/context budgeting.md` 是会话开始前已有改动，本次未触碰。
+- 工作树在本次开始前已有未提交改动：`feature_list.json`、`progress.md`、`session-handoff.md`、`src/open_deep_research/configuration.py`、`prompts.py`、`state.py`、`utils.py`、`tests/test_research_limits.py` 等；本次在相关文件上做增量修改，没有回退已有内容。
+- trace 默认关闭；开启后仍不打印搜索正文、summary 正文、compression 正文或 final report 正文。
+- pytest 运行后仍有 `.pytest_cache` / `pytest-cache-files-*` 权限 warning；不要为了清理它而误删用户文件。
+- `git status --short` 已执行；仍包含会话开始前已有改动，并继续提示 `pytest-cache-files-*` 权限 warning。
+- 未运行真实 Tavily/OpenAI/Anthropic/MCP/LangSmith 调用或任何可能产生成本的 E2E。
 
-## 下一步
+## 下次会话启动（Next Session）
 
-先审阅并提交当前评测修复，使 clean-source gate 可验证固定 commit；随后首次执行 `.\scripts\run_phase7_full.cmd -ConfirmCost`，默认写入新的 `calibration-v4`。只有健康中断才增加 `-ResumeCalibration`，绝不能恢复 `calibration-current`。脚本先运行新的最多 300 万 Token calibration 并展示投影，只有输入 `FULL` 才启动主矩阵；完成前 Phase 7 保持 `in-progress`。
+1. 阅读 `AGENTS.md`、`feature_list.json`、`progress.md`、`session-handoff.md` 和相关 `docs/codebase/` 文档。
+2. 执行 `git status --short`，保留已有改动。
+3. 如果用户继续优化流程可观测性，优先看 `src/open_deep_research/utils.py` 的 `process_print` / `with_process_context` 和 `src/open_deep_research/deep_researcher.py` 的 trace 调用点。
+
+## 2026-07-23 补充交接
+
+- `cli-clarification-001` 已完成：`src/open_deep_research/run.py` 现在开启 `allow_clarification`，支持终端输入澄清回答，并为 LangSmith 传入稳定 `thread_id`、`run_name` 和 tags。
+- 定向测试 `tests/test_run.py` 通过，`1 passed`；测试时需确保 `PYTHONPATH` 指向当前仓库 `src`，因当前 conda editable install 指向了同级另一份工程。
+- 未做真实 LangSmith E2E，避免触发外部模型/搜索调用。
+
+## 2026-08-03 环境阻塞
+
+- `run.py` 当前在导入 `langchain_core` 时被 Windows Enterprise Code Integrity 策略阻止；目标是未签名的 `uuid_utils 0.16.2` 原生扩展 `_uuid_utils.cp311-win_amd64.pyd`。
+- 需由管理员对 SHA256 `CCBF1339939996265C20F388249E0E209F9ABF7258AEA39BC062FBBBBAF50B7E` 放行，或安装组织批准的签名构建；不应在仓库代码中绕过策略。
+- 放行后先验证 `python -c "from uuid_utils.compat import uuid7; print(uuid7())"`，再运行 `python src/open_deep_research/run.py`。

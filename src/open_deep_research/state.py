@@ -1,14 +1,12 @@
 """Graph state definitions and data structures for the Deep Research agent."""
 
 import operator
-from typing import Annotated, Any, Optional
+from typing import Annotated, Optional
 
 from langchain_core.messages import MessageLikeRepresentation
 from langgraph.graph import MessagesState
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import TypedDict
-
-from open_deep_research.evidence.reducers import stable_id_reducer
 
 
 ###################
@@ -91,25 +89,6 @@ class AgentState(MessagesState):
     research_brief: Optional[str]
     raw_notes: Annotated[list[str], override_reducer] = []
     notes: Annotated[list[str], override_reducer] = []
-    source_ids: Annotated[list[str], stable_id_reducer] = []
-    evidence_ids: Annotated[list[str], stable_id_reducer] = []
-    requirement_ids: Annotated[list[str], stable_id_reducer] = []
-    run_evidence_ids: Annotated[list[str], stable_id_reducer] = []
-    coverage_assessment_ids: Annotated[list[str], stable_id_reducer] = []
-    retrieval_decision_ids: Annotated[list[str], stable_id_reducer] = []
-    completion_decision_ids: Annotated[list[str], stable_id_reducer] = []
-    research_run_id: Optional[str]
-    requirement_set: Optional[dict[str, Any]]
-    research_gaps: Annotated[list[str], override_reducer] = []
-    memory_ids: Annotated[list[str], stable_id_reducer] = []
-    memory_proposal_ids: Annotated[list[str], stable_id_reducer] = []
-    working_memory_summary: Optional[str]
-    run_evidence_retention_status: Optional[str]
-    citation_claim_ids: Annotated[list[str], stable_id_reducer] = []
-    citation_validation_result_ids: Annotated[list[str], stable_id_reducer] = []
-    citation_registry_keys: Annotated[list[str], stable_id_reducer] = []
-    citation_validation_artifact: Optional[dict[str, Any]]
-    citation_validation_error: Optional[str]
     final_report: str
 
 class SupervisorState(TypedDict):
@@ -120,16 +99,6 @@ class SupervisorState(TypedDict):
     notes: Annotated[list[str], override_reducer] = []
     research_iterations: int = 0
     raw_notes: Annotated[list[str], override_reducer] = []
-    source_ids: Annotated[list[str], stable_id_reducer] = []
-    evidence_ids: Annotated[list[str], stable_id_reducer] = []
-    requirement_ids: Annotated[list[str], stable_id_reducer] = []
-    run_evidence_ids: Annotated[list[str], stable_id_reducer] = []
-    coverage_assessment_ids: Annotated[list[str], stable_id_reducer] = []
-    retrieval_decision_ids: Annotated[list[str], stable_id_reducer] = []
-    completion_decision_ids: Annotated[list[str], stable_id_reducer] = []
-    research_run_id: str
-    requirement_set: dict[str, Any]
-    research_gaps: Annotated[list[str], override_reducer] = []
 
 class ResearcherState(TypedDict):
     """State for individual researchers conducting research."""
@@ -139,27 +108,9 @@ class ResearcherState(TypedDict):
     research_topic: str
     compressed_research: str
     raw_notes: Annotated[list[str], override_reducer] = []
-    source_ids: Annotated[list[str], stable_id_reducer] = []
-    evidence_ids: Annotated[list[str], stable_id_reducer] = []
-    requirement_ids: Annotated[list[str], stable_id_reducer] = []
-    run_evidence_ids: Annotated[list[str], stable_id_reducer] = []
-    coverage_assessment_ids: Annotated[list[str], stable_id_reducer] = []
-    retrieval_decision_ids: Annotated[list[str], stable_id_reducer] = []
-    completion_decision_ids: Annotated[list[str], stable_id_reducer] = []
-    research_run_id: str
-    requirement_set: dict[str, Any]
-    research_gaps: Annotated[list[str], override_reducer] = []
 
 class ResearcherOutputState(BaseModel):
     """Output state from individual researchers."""
     
     compressed_research: str
     raw_notes: Annotated[list[str], override_reducer] = []
-    source_ids: Annotated[list[str], stable_id_reducer] = []
-    evidence_ids: Annotated[list[str], stable_id_reducer] = []
-    requirement_ids: Annotated[list[str], stable_id_reducer] = []
-    run_evidence_ids: Annotated[list[str], stable_id_reducer] = []
-    coverage_assessment_ids: Annotated[list[str], stable_id_reducer] = []
-    retrieval_decision_ids: Annotated[list[str], stable_id_reducer] = []
-    completion_decision_ids: Annotated[list[str], stable_id_reducer] = []
-    research_gaps: Annotated[list[str], override_reducer] = []

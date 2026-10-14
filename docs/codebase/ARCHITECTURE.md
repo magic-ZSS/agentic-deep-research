@@ -61,8 +61,9 @@ messages
 
 ## 5) 已知架构风险
 
-- MCP 已支持命名多 server 和逐 server 故障隔离；Filesystem/Knowledge 能力需要 trusted runtime 服务注入，配置开关默认关闭。
-- 生产 Windows ACL 是 Allowed Roots/registry 之外的第二层防线，代码无法替代部署权限配置；部署变更后必须重跑 stdio/security 验收。
+- `supervisor_tools` 的异常分支使用 `if is_token_limit_exceeded(...) or True`，所有异常都会结束 research phase；这会掩盖非 token-limit 失败。
+- 当前主实现的 MCP 配置只构造 `"server_1"`，代码 TODO 明确等待 OAP multi-MCP server 支持；作者已确认多 MCP server 支持是明确后续 feature。
+- `load_mcp_tools` 在 MCP 连接失败时返回空列表；如果同时没有搜索工具，`researcher` 才会抛出 "No tools found"。
 - `MODEL_TOKEN_LIMITS` 注释说明 token limit map 可能过时或不适用于用户模型，需要随模型更新维护。
 - `langgraph.json` 配置了 auth path；本地 `langgraph dev` 时若启用该 auth，需要 `SUPABASE_URL` 和 `SUPABASE_KEY`。
 
@@ -75,31 +76,3 @@ messages
 - `src/open_deep_research/utils.py`
 - `src/security/auth.py`
 - `tests/run_evaluate.py`
-
-## 7) 阶段 1：结构化知识与证据边界
-
-- 新增的 `knowledge/`、`evidence/`、`storage/` 是独立领域/持久化层，不在当前 Supervisor—Researcher 主路径中实例化。
-- 权威链为 `KnowledgeScope -> Source -> Document -> DocumentVersion -> Chunk -> Evidence`，原始 bytes 由 scope-local `ContentBlob` 保存，`Requirement` 可与 Evidence 关联。
-- InMemory 与 SQLite metadata 实现同一 async Protocol；InMemory 与 Local Blob 实现同一不可变 blob Protocol。
-- `state.py` 仅增加由确定性 reducer 合并的 ID 引用；`notes/raw_notes/compressed_research` 和 Writer 输入语义未改变。
-- 完整 schema、回退和限制见 `docs/codebase/KNOWLEDGE_EVIDENCE.md`。
-
-证据：`src/open_deep_research/knowledge/`、`src/open_deep_research/evidence/`、`src/open_deep_research/storage/`、`tests/integration/storage/`。
-
-## 8) 阶段 4：MCP 能力边界
-
-- `mcp/` 负责连接配置、tool registry、显式诊断、路径 policy、去敏审计和 staging；`mcp_servers/` 只把已有 Repository/Retriever/Lifecycle service 暴露为工具，不直接访问 SQLite/blob/index。
-- Knowledge MCP 的读路径与内部 Retriever 共用同一实例和 stable ID；proposal 路径不会执行 promotion、soft delete 或 Memory write。
-- 非 Agentic Researcher 可按开关获得受限 MCP tools；Agentic 路径仍只有 `governed_retrieval`，不因阶段 4 重新开放旁路。
-
-证据：`src/open_deep_research/mcp/`、`src/open_deep_research/mcp_servers/`、`src/open_deep_research/utils.py`、`tests/integration/mcp/`。
-
-## 9) 阶段 5：Checkpoint 与 Memory 边界
-
-- 模块级 `deep_researcher` 继续作为默认关闭的兼容导出；`runtime.graph_factory.open_deep_research_graph` 仅在 managed async lifespan 内为 root builder 注入 checkpointer/store。
-- `AsyncSqliteSaver` 与 `AsyncSqliteStore` 在同一 `AsyncExitStack` 内完成 setup/关闭；Checkpoint、Store、Knowledge、Run Evidence 与长期 Memory 使用不同 SQLite 文件。
-- Working Memory 保存在 checkpoint state；长期 Episodic/Semantic/Procedural/Preference 通过 `MemoryRepository`，不得经 LangGraph raw Store 或 Agent 工具直接写入。
-- Namespace 由可信 `RuntimeIdentity` 生成；长期写入必须经过 proposal 和七项 Gate，Semantic recall 会再次核验 Evidence。
-- `memory_search` 是只读能力，不接受 Namespace 参数；LangMem adapter 只输出 proposal，不持有 Store。
-
-证据：`src/open_deep_research/runtime/`、`src/open_deep_research/memory/`、`src/open_deep_research/tools/memory.py`、`tests/integration/checkpoint/`、`tests/integration/memory/`。

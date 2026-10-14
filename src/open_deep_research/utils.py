@@ -24,13 +24,12 @@ from langchain_core.tools import (
     ToolException,
     tool,
 )
+from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.config import get_store
 from mcp import McpError
 from tavily import AsyncTavilyClient
 
 from open_deep_research.configuration import Configuration, SearchAPI
-from open_deep_research.mcp.client import load_external_mcp_tools
-from open_deep_research.mcp.config import MCPTransport, merge_mcp_servers
 from open_deep_research.prompts import summarize_webpage_prompt
 from open_deep_research.state import ResearchComplete, Summary
 
@@ -157,19 +156,6 @@ TAVILY_SEARCH_DESCRIPTION = (
     "A search engine optimized for comprehensive, accurate, and trusted results. "
     "Useful for when you need to answer questions about current events."
 )
-
-
-def _evaluation_provider_retry_kwargs(config: RunnableConfig) -> dict[str, int]:
-    """Return an opt-in zero-retry override used only by paid evaluation."""
-    raw_config = (config or {}).get("configurable", {})
-    if "max_retries" not in raw_config:
-        return {}
-    value = raw_config["max_retries"]
-    if isinstance(value, bool) or not isinstance(value, int) or value != 0:
-        raise ValueError("evaluation max_retries must be exactly 0 when set")
-    return {"max_retries": value}
-
-
 @tool(description=TAVILY_SEARCH_DESCRIPTION)
 async def tavily_search(
     queries: List[str],
@@ -246,8 +232,7 @@ async def tavily_search(
         max_tokens=configurable.summarization_model_max_tokens,
         api_key=model_api_key,
         extra_body={"enable_thinking": False},
-        tags=["langsmith:nostream"],
-        **_evaluation_provider_retry_kwargs(config),
+        tags=["langsmith:nostream"]
     ).with_structured_output(Summary).with_retry(
         stop_after_attempt=configurable.max_structured_output_retries
     )
@@ -662,52 +647,68 @@ async def load_mcp_tools(
         List of configured MCP tools ready for use
     """
     configurable = Configuration.from_runnable_config(config)
-    servers = merge_mcp_servers(configurable.mcp_config, configurable.mcp_servers)
-    if not servers:
-        return []
-    headers_by_server: dict[str, dict[str, str] | None] = {}
-    for name, server in servers.items():
-        if not server.auth_required:
-            headers_by_server[name] = None
-            continue
-        if server.transport is not MCPTransport.STREAMABLE_HTTP:
-            warnings.warn(f"MCP server '{name}' requires unsupported stdio auth")
-            continue
-        if name == "legacy_http" and configurable.mcp_config is not None:
-            # Preserve the historical LangGraph Store token cache/refresh path.
-            tokens = await fetch_tokens(config)
-        else:
-            supabase_token = config.get("configurable", {}).get(
-                "x-supabase-access-token"
-            )
-            tokens = (
-                await get_mcp_access_token(supabase_token, server.url)
-                if supabase_token and server.url
-                else None
-            )
-        if not tokens or not tokens.get("access_token"):
-            warnings.warn(f"MCP server '{name}' authentication is unavailable")
-            continue
-        headers_by_server[name] = {
-            "Authorization": f"Bearer {tokens['access_token']}"
-        }
-    eligible = {
-        name: server
-        for name, server in servers.items()
-        if not server.auth_required or name in headers_by_server
-    }
-    result = await load_external_mcp_tools(
-        eligible,
-        existing_tool_names=existing_tool_names,
-        headers_by_server=headers_by_server,
+    
+    # Step 1: Handle authentication if required
+    if configurable.mcp_config and configurable.mcp_config.auth_required:
+        mcp_tokens = await fetch_tokens(config)
+    else:
+        mcp_tokens = None
+    
+    # Step 2: Validate configuration requirements
+    config_valid = (
+        configurable.mcp_config and 
+        configurable.mcp_config.url and 
+        configurable.mcp_config.tools and 
+        (mcp_tokens or not configurable.mcp_config.auth_required)
     )
-    for diagnostic in result.diagnostics:
-        if diagnostic.status == "failed":
+    
+    if not config_valid:
+        return []
+    
+    # Step 3: Set up MCP server connection
+    server_url = configurable.mcp_config.url.rstrip("/") + "/mcp"
+    
+    # Configure authentication headers if tokens are available
+    auth_headers = None
+    if mcp_tokens:
+        auth_headers = {"Authorization": f"Bearer {mcp_tokens['access_token']}"}
+    
+    mcp_server_config = {
+        "server_1": {
+            "url": server_url,
+            "headers": auth_headers,
+            "transport": "streamable_http"
+        }
+    }
+    # TODO: When Multi-MCP Server support is merged in OAP, update this code
+    
+    # Step 4: Load tools from MCP server
+    try:
+        client = MultiServerMCPClient(mcp_server_config)
+        available_mcp_tools = await client.get_tools()
+    except Exception:
+        # If MCP server connection fails, return empty list
+        return []
+    
+    # Step 5: Filter and configure tools
+    configured_tools = []
+    for mcp_tool in available_mcp_tools:
+        # Skip tools with conflicting names
+        if mcp_tool.name in existing_tool_names:
             warnings.warn(
-                f"MCP server '{diagnostic.server_name}' failed: "
-                f"{diagnostic.error_type}"
+                f"MCP tool '{mcp_tool.name}' conflicts with existing tool name - skipping"
             )
-    return [wrap_mcp_authenticate_tool(tool) for tool in result.tools]
+            continue
+        
+        # Only include tools specified in configuration
+        if mcp_tool.name not in set(configurable.mcp_config.tools):
+            continue
+        
+        # Wrap tool with authentication handling and add to list
+        enhanced_tool = wrap_mcp_authenticate_tool(mcp_tool)
+        configured_tools.append(enhanced_tool)
+    
+    return configured_tools
 
 
 ##########################
@@ -761,48 +762,14 @@ async def get_all_tools(config: RunnableConfig):
     Returns:
         List of all configured and available tools for research operations
     """
-    configurable = Configuration.from_runnable_config(config)
-    # Agentic mode has exactly one information-retrieval boundary. Native Web
-    # providers are rejected by Configuration validation and MCP is deliberately
-    # not bound here because it may contain an unclassified Web-search bypass.
-    if configurable.enable_agentic_rag:
-        from open_deep_research.tools.governed_retrieval import (
-            governed_retrieval,
-        )
-
-        return [tool(ResearchComplete), think_tool, governed_retrieval]
-
-    # Start with the unchanged baseline research tools.
+    # Start with core research tools
     tools = [tool(ResearchComplete), think_tool]
-
-    # Add configured legacy search tools.
+    
+    # Add configured search tools
+    configurable = Configuration.from_runnable_config(config)
     search_api = SearchAPI(get_config_value(configurable.search_api))
     search_tools = await get_search_tool(search_api)
     tools.extend(search_tools)
-
-    # The non-Agentic ablation exposes only active/validated knowledge while
-    # retaining the legacy Web and MCP path.
-    if configurable.enable_knowledge_tools:
-        from open_deep_research.tools.governed_retrieval import (
-            knowledge_read_active,
-            knowledge_search_active,
-        )
-
-        tools.extend((knowledge_search_active, knowledge_read_active))
-
-    if configurable.enable_knowledge_mcp:
-        from open_deep_research.mcp_servers.tools import KNOWLEDGE_MCP_TOOLS
-
-        tools.extend(KNOWLEDGE_MCP_TOOLS)
-        if configurable.enable_memory:
-            from open_deep_research.tools.memory import MEMORY_TOOLS
-
-            tools.extend(MEMORY_TOOLS)
-
-    if configurable.enable_filesystem_mcp:
-        from open_deep_research.mcp.tools import FILESYSTEM_MCP_TOOLS
-
-        tools.extend(FILESYSTEM_MCP_TOOLS)
     
     # Track existing tool names to prevent conflicts
     existing_tool_names = {
@@ -819,22 +786,6 @@ async def get_all_tools(config: RunnableConfig):
 def get_notes_from_tool_calls(messages: list[MessageLikeRepresentation]):
     """Extract notes from tool call messages."""
     return [tool_msg.content for tool_msg in filter_messages(messages, include_types="tool")]
-
-
-def get_governed_results_from_tool_calls(
-    messages: list[MessageLikeRepresentation],
-):
-    """Return only schema-validated governed artifacts, excluding diagnostics."""
-    from open_deep_research.tools.governed_retrieval import parse_governed_result
-
-    results = []
-    for message in filter_messages(messages, include_types="tool"):
-        if getattr(message, "name", None) != "governed_retrieval":
-            continue
-        parsed = parse_governed_result(message)
-        if parsed is not None:
-            results.append(parsed)
-    return results
 
 ##########################
 # Model Provider Native Websearch Utils

@@ -20,6 +20,7 @@
 # deep_researcher 使用的是 ainvoke(...) 异步调用接口，
 # 因此需要用 asyncio.run(main()) 启动异步主函数。
 import asyncio
+import uuid
 
 # Python 标准库：系统相关功能。
 # 这里主要用到两个能力：
@@ -56,14 +57,10 @@ from langchain_core.messages import HumanMessage
 # 适合在 IDE 中直接修改此变量，然后点击运行当前文件。
 # 如果命令行传入了参数，则命令行参数优先级更高。
 QUESTION = '''
-请查明 LangGraph 项目主要由哪种编程语言编写，并基于其官方 GitHub 仓库或官方文档提供证据。
-
-要求：
-1. 优先使用官方 GitHub 仓库；
-2. 明确给出编程语言名称；
-3. 提供来源链接；
-4. 不要扩展介绍 LangGraph 的功能、架构或使用方法。
+杭州哪区薪资待遇好？
 '''
+
+
 
 
 # 定位项目根目录。
@@ -75,6 +72,11 @@ QUESTION = '''
 # parents[1] 是 src；
 # parents[2] 是项目根目录。
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+# 在导入 graph 前加载环境变量，确保 LangSmith tracing 配置在 LangChain /
+# LangGraph 初始化时已经可用。
+load_dotenv(PROJECT_ROOT / ".env")
 
 
 # 将项目的 src 目录加入 Python 模块搜索路径。
@@ -192,6 +194,16 @@ def print_result(final_state: dict[str, Any]) -> None:
     sys.stdout.write(str(final_state).rstrip() + "\n")
 
 
+def get_clarification_answer(question: str) -> str:
+    """显示 graph 生成的澄清问题并读取用户回答。"""
+
+    sys.stdout.write(question.rstrip() + "\n")
+    answer = input("请补充：").strip()
+    if not answer:
+        raise ValueError("澄清回答不能为空。")
+    return answer
+
+
 async def main() -> None:
     """运行 Deep Research graph。
 
@@ -203,11 +215,18 @@ async def main() -> None:
     5. 打印最终结果。
     """
 
-    # 加载项目根目录下的 .env 文件。
-    # 里面通常存放 API Key、搜索服务配置、模型配置等环境变量。
-    load_dotenv(PROJECT_ROOT / ".env")
+    # 同一次交互使用同一 thread_id，并为 LangSmith 根 trace 设置名称。
+    config = {
+        "configurable": {
+            "allow_clarification": True,
+            "thread_id": str(uuid.uuid4()),
+        },
+        "run_name": "open-deep-research-cli",
+        "tags": ["cli", "clarification"],
+    }
 
-    # 调用 Deep Research graph。
+    # 调用 Deep Research graph。如果 graph 返回澄清问题，将用户的补充回答
+    # 追加到对话后再次调用，直到生成最终报告。
     #
     # 输入状态格式为：
     # {
@@ -216,9 +235,22 @@ async def main() -> None:
     #
     # 这说明该 graph 以对话消息作为入口，
     # HumanMessage 表示用户提出的原始研究问题。
-    final_state = await deep_researcher.ainvoke(
-        {"messages": [HumanMessage(content=get_question())]}
-    )
+    messages = [HumanMessage(content=get_question())]
+    while True:
+        final_state = await deep_researcher.ainvoke(
+            {"messages": messages},
+            config=config,
+        )
+        if final_state.get("final_report"):
+            break
+
+        messages = final_state.get("messages") or messages
+        clarification_question = get_message_content(messages[-1]) if messages else ""
+        if not clarification_question:
+            break
+        messages.append(
+            HumanMessage(content=get_clarification_answer(clarification_question))
+        )
 
     # 从 graph 的最终状态中提取并打印结果。
     print_result(final_state)
